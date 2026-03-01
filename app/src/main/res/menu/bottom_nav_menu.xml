@@ -11,9 +11,9 @@
         android:title="Tìm kiếm" />
     
     <item
-        android:id="@+id/nav_add"
-        android:icon="@drawable/ic_add"
-        android:title="Thêm" />
+        android:id="@+id/nav_message"
+        android:icon="@drawable/ic_message"
+        android:title="Tin nhắn" />
     
     <item
         android:id="@+id/nav_notifications"
