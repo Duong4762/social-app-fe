@@ -1,3 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name">social-app</string>
+
+    <string name="results_with_query">Results: %1$s</string>
+    <string name="tab_users">Users</string>
+    <string name="tab_posts">Posts</string>
+    <string name="search_results">Search results</string>
+    <string name="sample_query">Design trends</string>
+
+    <!-- contentDescription -->
+    <string name="cd_back">Back</string>
+    <string name="cd_search">Search</string>
+    <string name="cd_tabs">Search result tabs</string>
+    <string name="sample_user_name">Jessica Martinez</string>
+    <string name="sample_user_username">\@jess_design</string>
+    <string name="follow">Follow</string>
 </resources>
