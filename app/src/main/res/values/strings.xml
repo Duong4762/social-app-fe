@@ -1,3 +1,37 @@
 <resources>
-    <string name="app_name">social-app</string>
+    <string name="app_name">SocialNine</string>
+
+    <!-- AppBar -->
+    <string name="app_title">SocialNine</string>
+    <string name="notification_bell">Notifications</string>
+
+    <!-- Post Composer -->
+    <string name="composer_placeholder">What\'s new?</string>
+    <string name="btn_post">Post</string>
+    <string name="icon_image">Image</string>
+    <string name="icon_video">Video</string>
+    <string name="icon_location">Location</string>
+    <string name="icon_emoji">Emoji</string>
+
+    <!-- Post Actions -->
+    <string name="action_like">Like</string>
+    <string name="action_comment">Comment</string>
+    <string name="action_share">Share</string>
+    <string name="action_bookmark">Bookmark</string>
+
+    <!-- Bottom Navigation -->
+    <string name="nav_home">Home</string>
+    <string name="nav_search">Search</string>
+    <string name="nav_add">Add</string>
+    <string name="nav_message">Message</string>
+    <string name="nav_profile">Profile</string>
+
+    <!-- Loading States -->
+    <string name="loading">Loading posts...</string>
+    <string name="empty_state">No posts yet. Be the first to share!</string>
+    <string name="error_state">Failed to load posts. Please try again.</string>
+
+    <!-- Accessibility -->
+    <string name="user_avatar">User avatar</string>
+    <string name="post_image">Post image</string>
 </resources>

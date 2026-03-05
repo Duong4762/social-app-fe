@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="400dp"
+    android:height="250dp"
+    android:viewportWidth="400"
+    android:viewportHeight="250">
+
+    <!-- Gradient background -->
+    <path
+        android:pathData="M 0,0 L 400,0 L 400,250 L 0,250 Z"
+        android:fillColor="#10B981" />
+
+    <path
+        android:pathData="M 50,150 L 120,80 L 190,120 L 260,60 L 330,130 L 400,100 L 400,250 L 0,250 Z"
+        android:fillColor="#FFFFFF"
+        android:alpha="0.2" />
+
+</vector>
+

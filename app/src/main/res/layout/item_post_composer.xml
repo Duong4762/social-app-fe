@@ -1,0 +1,118 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:background="?attr/colorSurface"
+    android:padding="16dp">
+
+    <!-- User Avatar -->
+    <ImageView
+        android:id="@+id/composer_avatar"
+        android:layout_width="48dp"
+        android:layout_height="48dp"
+        android:contentDescription="@string/user_avatar"
+        android:src="@drawable/bg_nav_item_selected"
+        android:scaleType="centerCrop"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent" />
+
+    <!-- Input EditText -->
+    <EditText
+        android:id="@+id/composer_input"
+        android:layout_width="0dp"
+        android:layout_height="48dp"
+        android:layout_marginStart="12dp"
+        android:layout_marginEnd="12dp"
+        android:background="@color/dark_bg_secondary"
+        android:hint="@string/composer_placeholder"
+        android:textColorHint="?android:attr/textColorTertiary"
+        android:textSize="16sp"
+        android:paddingStart="16dp"
+        android:paddingEnd="16dp"
+        android:inputType="textMultiLine"
+        android:maxLines="3"
+        android:minLines="1"
+        app:layout_constraintStart_toEndOf="@id/composer_avatar"
+        app:layout_constraintEnd_toStartOf="@id/composer_post_btn"
+        app:layout_constraintTop_toTopOf="parent" />
+
+    <!-- Post Button -->
+    <com.google.android.material.button.MaterialButton
+        android:id="@+id/composer_post_btn"
+        android:layout_width="48dp"
+        android:layout_height="48dp"
+        android:backgroundTint="@color/primary_purple"
+        android:text="@string/btn_post"
+        android:textSize="10sp"
+        android:textColor="@color/white"
+        app:cornerRadius="24dp"
+        app:icon="@null"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintTop_toTopOf="parent"
+        style="@style/Widget.MaterialComponents.Button.OutlinedButton" />
+
+    <!-- Media Action Icons Row -->
+    <LinearLayout
+        android:id="@+id/composer_actions"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="16dp"
+        android:orientation="horizontal"
+        android:gravity="center_vertical"
+        app:layout_constraintStart_toEndOf="@id/composer_avatar"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/composer_input">
+
+        <!-- Image Icon -->
+        <ImageButton
+            android:id="@+id/composer_image_btn"
+            android:layout_width="40dp"
+            android:layout_height="40dp"
+            android:src="@drawable/ic_composer_image"
+            android:contentDescription="@string/icon_image"
+            android:scaleType="centerInside"
+            android:background="?attr/selectableItemBackgroundBorderless"
+            android:tint="?attr/colorOnSurface" />
+
+        <!-- Video Icon -->
+        <ImageButton
+            android:id="@+id/composer_video_btn"
+            android:layout_width="40dp"
+            android:layout_height="40dp"
+            android:src="@drawable/ic_composer_video"
+            android:contentDescription="@string/icon_video"
+            android:scaleType="centerInside"
+            android:background="?attr/selectableItemBackgroundBorderless"
+            android:tint="?attr/colorOnSurface"
+            android:layout_marginStart="8dp" />
+
+        <!-- Location Icon -->
+        <ImageButton
+            android:id="@+id/composer_location_btn"
+            android:layout_width="40dp"
+            android:layout_height="40dp"
+            android:src="@drawable/ic_composer_location"
+            android:contentDescription="@string/icon_location"
+            android:scaleType="centerInside"
+            android:background="?attr/selectableItemBackgroundBorderless"
+            android:tint="?attr/colorOnSurface"
+            android:layout_marginStart="8dp" />
+
+        <!-- Emoji Icon -->
+        <ImageButton
+            android:id="@+id/composer_emoji_btn"
+            android:layout_width="40dp"
+            android:layout_height="40dp"
+            android:src="@drawable/ic_composer_emoji"
+            android:contentDescription="@string/icon_emoji"
+            android:scaleType="centerInside"
+            android:background="?attr/selectableItemBackgroundBorderless"
+            android:tint="?attr/colorOnSurface"
+            android:layout_marginStart="8dp" />
+
+    </LinearLayout>
+
+</androidx.constraintlayout.widget.ConstraintLayout>
+
+

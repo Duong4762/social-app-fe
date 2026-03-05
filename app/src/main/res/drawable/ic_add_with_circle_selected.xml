@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="utf-8"?>
+<layer-list xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <!-- Outer shadow/elevation effect -->
+    <item>
+        <shape android:shape="oval">
+            <solid android:color="#0D0620" />
+            <size android:width="56dp" android:height="56dp" />
+        </shape>
+    </item>
+
+    <!-- Background circle - darker purple on selection (#8B3FE0) -->
+    <item
+        android:top="2dp"
+        android:bottom="2dp"
+        android:left="2dp"
+        android:right="2dp">
+        <shape android:shape="oval">
+            <solid android:color="@color/accent_purple_dark" />
+            <size android:width="52dp" android:height="52dp" />
+        </shape>
+    </item>
+
+    <!-- Add icon centered in white -->
+    <item
+        android:width="32dp"
+        android:height="32dp"
+        android:gravity="center"
+        android:drawable="@drawable/ic_add" />
+
+</layer-list>
+
