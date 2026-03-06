@@ -33,9 +33,7 @@
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_marginStart="12dp"
-            android:textSize="16sp"
-            android:textStyle="bold"
-            android:textColor="?attr/colorOnSurface"
+            style="@style/TextAppearance.Feed.Username"
             app:layout_constraintStart_toEndOf="@id/post_user_avatar"
             app:layout_constraintEnd_toEndOf="parent"
             app:layout_constraintTop_toTopOf="@id/post_user_avatar" />
@@ -56,8 +54,7 @@
                 android:id="@+id/post_timestamp"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:textSize="12sp"
-                android:textColor="?android:attr/textColorSecondary"
+                style="@style/TextAppearance.Feed.Time"
                 android:text="2 HOURS AGO" />
 
             <TextView
@@ -65,8 +62,7 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_marginStart="8dp"
-                android:textSize="12sp"
-                android:textColor="?android:attr/textColorSecondary"
+                style="@style/TextAppearance.Feed.Time"
                 android:text="KYOTO, JAPAN" />
 
         </LinearLayout>
@@ -77,8 +73,7 @@
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_marginTop="12dp"
-            android:textSize="14sp"
-            android:textColor="?attr/colorOnSurface"
+            style="@style/TextAppearance.Feed.Content"
             android:lineSpacingExtra="4sp"
             app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintEnd_toEndOf="parent"
@@ -118,7 +113,6 @@
                 android:layout_weight="1"
                 android:orientation="horizontal"
                 android:gravity="center_vertical"
-                android:background="?attr/selectableItemBackground"
                 android:padding="8dp">
 
                 <ImageView
@@ -128,15 +122,15 @@
                     android:contentDescription="@string/action_like"
                     android:src="@drawable/ic_heart"
                     android:scaleType="centerInside"
-                    android:tint="?attr/colorOnSurface" />
+                    app:tint="?attr/colorOnSurface"
+                    android:background="?attr/selectableItemBackgroundBorderless" />
 
                 <TextView
                     android:id="@+id/post_like_count"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:layout_marginStart="8dp"
-                    android:textSize="13sp"
-                    android:textColor="?android:attr/textColorSecondary"
+                    style="@style/TextAppearance.Feed.ActionCount"
                     android:text="245" />
 
             </LinearLayout>
@@ -149,7 +143,6 @@
                 android:layout_weight="1"
                 android:orientation="horizontal"
                 android:gravity="center_vertical"
-                android:background="?attr/selectableItemBackground"
                 android:padding="8dp">
 
                 <ImageView
@@ -159,15 +152,15 @@
                     android:contentDescription="@string/action_comment"
                     android:src="@drawable/ic_comment"
                     android:scaleType="centerInside"
-                    android:tint="?attr/colorOnSurface" />
+                    app:tint="?attr/colorOnSurface"
+                    android:background="?attr/selectableItemBackgroundBorderless" />
 
                 <TextView
                     android:id="@+id/post_comment_count"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:layout_marginStart="8dp"
-                    android:textSize="13sp"
-                    android:textColor="?android:attr/textColorSecondary"
+                    style="@style/TextAppearance.Feed.ActionCount"
                     android:text="42" />
 
             </LinearLayout>
@@ -180,7 +173,6 @@
                 android:layout_weight="1"
                 android:orientation="horizontal"
                 android:gravity="center_vertical"
-                android:background="?attr/selectableItemBackground"
                 android:padding="8dp">
 
                 <ImageView
@@ -190,15 +182,15 @@
                     android:contentDescription="@string/action_share"
                     android:src="@drawable/ic_share"
                     android:scaleType="centerInside"
-                    android:tint="?attr/colorOnSurface" />
+                    app:tint="?attr/colorOnSurface"
+                    android:background="?attr/selectableItemBackgroundBorderless" />
 
                 <TextView
                     android:id="@+id/post_share_count"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:layout_marginStart="8dp"
-                    android:textSize="13sp"
-                    android:textColor="?android:attr/textColorSecondary"
+                    style="@style/TextAppearance.Feed.ActionCount"
                     android:text="18" />
 
             </LinearLayout>
@@ -211,9 +203,8 @@
                 android:contentDescription="@string/action_bookmark"
                 android:src="@drawable/ic_bookmark"
                 android:scaleType="centerInside"
-                android:tint="?attr/colorOnSurface"
-                android:background="?attr/selectableItemBackgroundBorderless"
-                android:padding="8dp" />
+                app:tint="?attr/colorOnSurface"
+                android:background="?attr/selectableItemBackgroundBorderless" />
 
         </LinearLayout>
 

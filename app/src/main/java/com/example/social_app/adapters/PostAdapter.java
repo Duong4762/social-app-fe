@@ -208,6 +208,40 @@ public class PostAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
                     actionListener.onBookmarkClicked(post);
                 }
             });
+
+            // Update bookmark icon dựa trên trạng thái post
+            updateBookmarkIcon(post);
+
+            // Set up click listeners
+            likeContainer.setOnClickListener(v -> {
+                if (actionListener != null) {
+                    actionListener.onLikeClicked(post, position);
+                }
+            });
+
+            commentContainer.setOnClickListener(v -> {
+                if (actionListener != null) {
+                    actionListener.onCommentClicked(post);
+                }
+            });
+
+            shareContainer.setOnClickListener(v -> {
+                if (actionListener != null) {
+                    actionListener.onShareClicked(post);
+                }
+            });
+
+            // Xử lý bookmark chuyển icon khi click
+            bookmarkIcon.setOnClickListener(v -> {
+                if (actionListener != null) {
+                    actionListener.onBookmarkClicked(post);
+                }
+                // Toggle trạng thái
+                post.setBookmarked(!post.isBookmarked());
+                updateBookmarkIcon(post);
+                // Cập nhật lại item này
+                notifyItemChanged(position + 1); // +1 vì có composer ở đầu danh sách
+            });
         }
 
         /**
@@ -221,6 +255,20 @@ public class PostAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
                 likeIcon.setImageResource(R.drawable.ic_heart);
                 // Reset to default color
                 likeIcon.clearColorFilter();
+            }
+        }
+
+        /**
+         * Updates the bookmark icon visual state.
+         */
+        private void updateBookmarkIcon(Post post) {
+            if (post.isBookmarked()) {
+                bookmarkIcon.setImageResource(R.drawable.ic_bookmark_filled);
+                // Có thể thêm setColorFilter nếu muốn màu đặc biệt
+                // bookmarkIcon.setColorFilter(context.getResources().getColor(R.color.accent_purple, null));
+            } else {
+                bookmarkIcon.setImageResource(R.drawable.ic_bookmark);
+                bookmarkIcon.clearColorFilter();
             }
         }
     }

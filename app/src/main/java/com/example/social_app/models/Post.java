@@ -15,6 +15,7 @@ public class Post {
     private int commentCount;
     private int shareCount;
     private boolean isLiked;
+    private boolean isBookmarked;
 
     public Post(String id, User user, String content, String imageUrl, String location,
                 long timestamp, int likeCount, int commentCount, int shareCount) {
@@ -111,6 +112,9 @@ public class Post {
     public void setLiked(boolean liked) {
         isLiked = liked;
     }
+
+    public boolean isBookmarked() { return isBookmarked; }
+    public void setBookmarked(boolean bookmarked) { this.isBookmarked = bookmarked; }
 
     /**
      * Toggles the like state of the post and updates like count accordingly.

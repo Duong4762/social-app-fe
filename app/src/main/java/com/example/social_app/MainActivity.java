@@ -3,6 +3,7 @@ package com.example.social_app;
 import android.os.Bundle;
 import android.view.View;
 import android.view.animation.TranslateAnimation;
+import android.widget.ImageButton;
 
 import androidx.activity.EdgeToEdge;
 import androidx.appcompat.app.AppCompatActivity;
@@ -14,17 +15,19 @@ import androidx.fragment.app.FragmentManager;
 import androidx.recyclerview.widget.RecyclerView;
 
 import com.example.social_app.fragments.HomeFragment;
-import com.google.android.material.bottomnavigation.BottomNavigationView;
 
 /**
  * MainActivity is the main entry point for the SocialNine application.
- * It manages fragment navigation and the bottom navigation menu with hide-on-scroll behavior.
+ * It manages fragment navigation and the custom bottom navigation menu with hide-on-scroll behavior.
  */
 public class MainActivity extends AppCompatActivity {
 
-    private BottomNavigationView bottomNavigationView;
+    private View customBottomNav;
+    private ImageButton navBtnHome, navBtnSearch, navBtnAdd, navBtnMessage, navBtnProfile;
+    private View messageBadge;
     private FragmentManager fragmentManager;
     private boolean isBottomNavVisible = true;
+    private int currentSelectedNav = R.id.nav_btn_home;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -38,64 +41,96 @@ public class MainActivity extends AppCompatActivity {
             return insets;
         });
 
-        // Initialize fragment manager and bottom navigation
+        // Initialize views
         fragmentManager = getSupportFragmentManager();
-        bottomNavigationView = findViewById(R.id.bottom_navigation);
+        customBottomNav = findViewById(R.id.custom_bottom_nav);
+        initializeNavigationButtons();
 
         // Load home fragment by default
         if (savedInstanceState == null) {
             HomeFragment homeFragment = new HomeFragment();
             homeFragment.setBottomNavigationCallback(this::setupScrollListener);
             loadFragment(homeFragment);
-            bottomNavigationView.setSelectedItemId(R.id.nav_home);
+            selectNavButton(navBtnHome);
         }
-
-        // Set up bottom navigation listener
-        bottomNavigationView.setOnItemSelectedListener(item -> {
-            int itemId = item.getItemId();
-            if (itemId == R.id.nav_home) {
-                HomeFragment homeFragment = new HomeFragment();
-                homeFragment.setBottomNavigationCallback(this::setupScrollListener);
-                loadFragment(homeFragment);
-                return true;
-            } else if (itemId == R.id.nav_search) {
-                showToast("Search not yet implemented");
-                return true;
-            } else if (itemId == R.id.nav_add) {
-                showToast("Post creation not yet implemented");
-                return true;
-            } else if (itemId == R.id.nav_message) {
-                showToast("Messages not yet implemented");
-                // Remove badge when message is opened
-                removeMessageBadge();
-                return true;
-            } else if (itemId == R.id.nav_profile) {
-                showToast("Profile not yet implemented");
-                return true;
-            }
-            return false;
-        });
 
         // Show notification badge on message icon (demo)
         showMessageBadge();
     }
 
     /**
-     * Shows a notification badge on the message navigation item.
+     * Initialize and set up click listeners for all navigation buttons.
      */
-    public void showMessageBadge() {
-        com.google.android.material.badge.BadgeDrawable badge =
-                com.google.android.material.badge.BadgeDrawable.create(this);
-        badge.setNumber(1);
-        badge.setBackgroundColor(getResources().getColor(R.color.accent_red, null));
-        bottomNavigationView.getOrCreateBadge(R.id.nav_message).setVisible(true);
+    private void initializeNavigationButtons() {
+        navBtnHome = customBottomNav.findViewById(R.id.nav_btn_home);
+        navBtnSearch = customBottomNav.findViewById(R.id.nav_btn_search);
+        navBtnAdd = customBottomNav.findViewById(R.id.nav_btn_add);
+        navBtnMessage = customBottomNav.findViewById(R.id.nav_btn_message);
+        navBtnProfile = customBottomNav.findViewById(R.id.nav_btn_profile);
+        messageBadge = customBottomNav.findViewById(R.id.message_badge);
+
+        // Set click listeners
+        navBtnHome.setOnClickListener(v -> {
+            selectNavButton(navBtnHome);
+            HomeFragment homeFragment = new HomeFragment();
+            homeFragment.setBottomNavigationCallback(this::setupScrollListener);
+            loadFragment(homeFragment);
+        });
+
+        navBtnSearch.setOnClickListener(v -> {
+            selectNavButton(navBtnSearch);
+            showToast("Search not yet implemented");
+        });
+
+        navBtnAdd.setOnClickListener(v -> {
+            selectNavButton(navBtnAdd);
+            showToast("Post creation not yet implemented");
+        });
+
+        navBtnMessage.setOnClickListener(v -> {
+            selectNavButton(navBtnMessage);
+            removeMessageBadge();
+            showToast("Messages not yet implemented");
+        });
+
+        navBtnProfile.setOnClickListener(v -> {
+            selectNavButton(navBtnProfile);
+            showToast("Profile not yet implemented");
+        });
     }
 
     /**
-     * Removes the notification badge from the message navigation item.
+     * Select and highlight the specified navigation button.
+     */
+    private void selectNavButton(ImageButton button) {
+        // Reset all buttons to normal state
+        navBtnHome.setSelected(false);
+        navBtnSearch.setSelected(false);
+        navBtnAdd.setSelected(false);
+        navBtnMessage.setSelected(false);
+        navBtnProfile.setSelected(false);
+
+        // Set the selected button
+        button.setSelected(true);
+        currentSelectedNav = button.getId();
+    }
+
+    /**
+     * Shows a notification badge on the message navigation button.
+     */
+    public void showMessageBadge() {
+        if (messageBadge != null) {
+            messageBadge.setVisibility(View.VISIBLE);
+        }
+    }
+
+    /**
+     * Removes the notification badge from the message navigation button.
      */
     public void removeMessageBadge() {
-        bottomNavigationView.removeBadge(R.id.nav_message);
+        if (messageBadge != null) {
+            messageBadge.setVisibility(View.GONE);
+        }
     }
 
     /**
@@ -104,14 +139,11 @@ public class MainActivity extends AppCompatActivity {
      * @param recyclerView The RecyclerView to attach the scroll listener to
      */
     public void setupScrollListener(RecyclerView recyclerView) {
-        if (recyclerView != null) {
+        if (recyclerView != null && customBottomNav != null) {
             recyclerView.addOnScrollListener(new RecyclerView.OnScrollListener() {
-                private int scrollDy = 0;
-
                 @Override
                 public void onScrolled(RecyclerView recyclerView, int dx, int dy) {
                     super.onScrolled(recyclerView, dx, dy);
-                    scrollDy += dy;
 
                     // If user scrolls down, hide the bottom navigation
                     if (dy > 0 && isBottomNavVisible) {
@@ -131,12 +163,12 @@ public class MainActivity extends AppCompatActivity {
      */
     private void hideBottomNavigation() {
         isBottomNavVisible = false;
-        int height = bottomNavigationView.getHeight();
+        int height = customBottomNav.getHeight();
         TranslateAnimation slideDown = new TranslateAnimation(0, 0, 0, height);
         slideDown.setDuration(300);
         slideDown.setFillAfter(true);
-        bottomNavigationView.startAnimation(slideDown);
-        bottomNavigationView.setVisibility(View.GONE);
+        customBottomNav.startAnimation(slideDown);
+        customBottomNav.setVisibility(View.GONE);
     }
 
     /**
@@ -144,12 +176,12 @@ public class MainActivity extends AppCompatActivity {
      */
     private void showBottomNavigation() {
         isBottomNavVisible = true;
-        bottomNavigationView.setVisibility(View.VISIBLE);
-        int height = bottomNavigationView.getHeight();
+        customBottomNav.setVisibility(View.VISIBLE);
+        int height = customBottomNav.getHeight();
         TranslateAnimation slideUp = new TranslateAnimation(0, 0, height, 0);
         slideUp.setDuration(300);
         slideUp.setFillAfter(true);
-        bottomNavigationView.startAnimation(slideUp);
+        customBottomNav.startAnimation(slideUp);
     }
 
     /**
