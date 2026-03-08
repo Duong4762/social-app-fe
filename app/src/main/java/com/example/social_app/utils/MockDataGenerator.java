@@ -1,5 +1,6 @@
 package com.example.social_app.utils;
 
+import com.example.social_app.models.Comment;
 import com.example.social_app.models.Post;
 import com.example.social_app.models.User;
 
@@ -46,6 +47,23 @@ public class MockDataGenerator {
             "Austin, TX", "Seattle, WA", "Boston, MA", "Denver, CO",
             "Miami, FL", "Portland, OR", "Kyoto, Japan", "Tokyo, Japan",
             "Paris, France", "London, UK", "Barcelona, Spain"
+    };
+
+    private static final String[] COMMENT_TEXTS = {
+            "Great shot! Love the composition and colors! 📸",
+            "This is exactly what I needed to see today. Thanks for sharing!",
+            "Amazing work! How long did this take you?",
+            "Couldn't agree more! This resonates with me.",
+            "The detail is incredible! Well done! 🎉",
+            "This made my day better. Thank you!",
+            "Absolutely beautiful! Where was this taken?",
+            "So inspiring! Keep up the amazing content!",
+            "This is gold! Sharing this with everyone I know.",
+            "Love the energy and vibes in this post!",
+            "100% agree with everything you said here.",
+            "This deserves way more likes and comments!",
+            "Thank you for the inspiration and great insights!",
+            "The way you captured this is just perfect!"
     };
 
     private static final int[] MOCK_IMAGE_RESOURCES = {
@@ -101,7 +119,7 @@ public class MockDataGenerator {
      * @param index Index to generate varied users
      * @return Generated User object
      */
-    private static User generateMockUser(int index) {
+    public static User generateMockUser(int index) {
         String firstName = FIRST_NAMES[index % FIRST_NAMES.length];
         String lastName = LAST_NAMES[index % LAST_NAMES.length];
         String name = firstName + " " + lastName;
@@ -114,6 +132,92 @@ public class MockDataGenerator {
                 "drawable/avatar_placeholder", // Placeholder avatar
                 bio
         );
+    }
+
+    /**
+     * Generates a mock user without index parameter.
+     *
+     * @return Generated User object
+     */
+    public static User generateMockUser() {
+        return generateMockUser((int) (Math.random() * FIRST_NAMES.length));
+    }
+
+    /**
+     * Generates a list of mock comments for demonstration.
+     *
+     * @return List of mock Comment objects
+     */
+    public static List<Comment> generateMockComments() {
+        List<Comment> comments = new ArrayList<>();
+        long currentTime = System.currentTimeMillis();
+
+        for (int i = 0; i < 8; i++) {
+            String commentId = "comment_" + System.currentTimeMillis() + "_" + i;
+            User user = generateMockUser(i);
+
+            // Add verification badge to some users
+            if (i % 3 == 0) {
+                user.setVerified(true);
+            }
+
+            String text = COMMENT_TEXTS[i % COMMENT_TEXTS.length];
+            long timestamp = currentTime - (i * Constants.HOUR_IN_MILLIS);
+            int likeCount = (i + 1) * 5 + (i % 4) * 3;
+            List<Comment> replies = i % 2 == 0 ? generateMockReplies() : null;
+            boolean hasMoreReplies = i % 4 == 0;
+
+            Comment comment = new Comment(
+                    commentId,
+                    user,
+                    text,
+                    timestamp,
+                    likeCount,
+                    replies,
+                    hasMoreReplies
+            );
+
+            // Add location to some comments
+            if (i % 2 == 0) {
+                comment.setLocation(LOCATIONS[i % LOCATIONS.length]);
+            }
+
+            comments.add(comment);
+        }
+
+        return comments;
+    }
+
+    /**
+     * Generates mock replies for a comment.
+     *
+     * @return List of mock Comment objects as replies
+     */
+    private static List<Comment> generateMockReplies() {
+        List<Comment> replies = new ArrayList<>();
+        long currentTime = System.currentTimeMillis();
+
+        for (int i = 0; i < 2; i++) {
+            String replyId = "reply_" + System.currentTimeMillis() + "_" + i;
+            User user = generateMockUser(i + 10);
+            String text = COMMENT_TEXTS[(i + 5) % COMMENT_TEXTS.length];
+            long timestamp = currentTime - (i * Constants.HOUR_IN_MILLIS);
+            int likeCount = (i + 1) * 2;
+
+            Comment reply = new Comment(
+                    replyId,
+                    user,
+                    text,
+                    timestamp,
+                    likeCount,
+                    null,
+                    false
+            );
+
+            replies.add(reply);
+        }
+
+        return replies;
     }
 
     /**

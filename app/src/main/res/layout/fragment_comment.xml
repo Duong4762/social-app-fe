@@ -1,0 +1,263 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="?attr/colorSurface">
+
+    <!-- Drag Handle for Bottom Sheet - Visual Indicator for Swipe-to-Dismiss -->
+    <View
+        android:id="@+id/drag_handle"
+        android:layout_width="32dp"
+        android:layout_height="4dp"
+        android:background="@drawable/drag_handle"
+        android:contentDescription="@string/drag_handle_desc"
+        android:layout_marginTop="8dp"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintTop_toTopOf="parent" />
+
+    <!-- Sorting Dropdown -->
+    <Spinner
+        android:id="@+id/comment_sort_spinner"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_margin="16dp"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/drag_handle" />
+
+    <!-- Swipe Refresh Layout -->
+    <androidx.swiperefreshlayout.widget.SwipeRefreshLayout
+        android:id="@+id/swipe_refresh_layout"
+        android:layout_width="0dp"
+        android:layout_height="0dp"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/comment_sort_spinner"
+        app:layout_constraintBottom_toTopOf="@id/comment_compose_container">
+
+        <!-- Comments RecyclerView -->
+        <androidx.recyclerview.widget.RecyclerView
+            android:id="@+id/comments_recycler_view"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:scrollbars="vertical" />
+
+    </androidx.swiperefreshlayout.widget.SwipeRefreshLayout>
+
+    <!-- Compose Comment Container - Redesigned for Better UX -->
+    <androidx.constraintlayout.widget.ConstraintLayout
+        android:id="@+id/comment_compose_container"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:background="?attr/colorSurface"
+        android:elevation="8dp"
+        android:paddingStart="12dp"
+        android:paddingEnd="12dp"
+        android:paddingTop="12dp"
+        android:paddingBottom="12dp"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintBottom_toBottomOf="parent">
+
+        <!-- User Avatar -->
+        <ImageView
+            android:id="@+id/compose_avatar"
+            android:layout_width="40dp"
+            android:layout_height="40dp"
+            android:contentDescription="@string/user_avatar"
+            android:scaleType="centerCrop"
+            android:src="@drawable/avatar_placeholder"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toTopOf="parent" />
+
+        <!-- Input Field Container - Vertical Layout -->
+        <androidx.constraintlayout.widget.ConstraintLayout
+            android:id="@+id/input_field_container"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="12dp"
+            android:layout_marginEnd="12dp"
+            android:background="@drawable/rounded_edittext"
+            android:padding="12dp"
+            app:layout_constraintStart_toEndOf="@id/compose_avatar"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintTop_toTopOf="parent">
+
+            <!-- Main Input EditText -->
+            <EditText
+                android:id="@+id/comment_input"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_marginEnd="8dp"
+                android:background="@android:color/transparent"
+                android:hint="@string/write_a_comment"
+                android:inputType="textMultiLine|textCapSentences"
+                android:maxLines="4"
+                android:minLines="1"
+                android:textColor="?attr/colorOnSurface"
+                android:textColorHint="?attr/colorOnSurfaceVariant"
+                android:textSize="14sp"
+                app:layout_constraintEnd_toStartOf="@id/char_count_text"
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintTop_toTopOf="parent"
+                app:layout_constraintBottom_toBottomOf="parent" />
+
+            <!-- Character Count Display -->
+            <TextView
+                android:id="@+id/char_count_text"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="0/280"
+                android:textColor="?attr/colorOnSurfaceVariant"
+                android:textSize="12sp"
+                app:layout_constraintEnd_toEndOf="parent"
+                app:layout_constraintTop_toTopOf="parent" />
+
+        </androidx.constraintlayout.widget.ConstraintLayout>
+
+        <!-- File Attachment Preview Section (initially hidden) -->
+        <LinearLayout
+            android:id="@+id/attachment_preview_container"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="52dp"
+            android:layout_marginTop="8dp"
+            android:layout_marginEnd="12dp"
+            android:orientation="horizontal"
+            android:visibility="gone"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintTop_toBottomOf="@id/input_field_container">
+
+            <!-- Attachment Preview Thumbnail -->
+            <ImageView
+                android:id="@+id/attachment_preview_image"
+                android:layout_width="60dp"
+                android:layout_height="60dp"
+                android:layout_marginEnd="8dp"
+                android:background="?attr/colorOnSurface"
+                android:contentDescription="@string/attachment_preview"
+                android:scaleType="centerCrop"
+                android:visibility="gone" />
+
+            <!-- Attachment File Name -->
+            <TextView
+                android:id="@+id/attachment_file_name"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:ellipsize="end"
+                android:maxLines="1"
+                android:text="image.jpg"
+                android:textColor="?attr/colorOnSurface"
+                android:textSize="12sp"
+                android:textStyle="bold" />
+
+            <!-- Attachment File Size -->
+            <TextView
+                android:id="@+id/attachment_file_size"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="2dp"
+                android:layout_weight="1"
+                android:text="2.5 MB"
+                android:textColor="?attr/colorOnSurfaceVariant"
+                android:textSize="11sp" />
+
+            <!-- Remove Attachment Button -->
+            <ImageButton
+                android:id="@+id/remove_attachment_btn"
+                android:layout_width="32dp"
+                android:layout_height="32dp"
+                android:background="?android:attr/selectableItemBackground"
+                android:contentDescription="@string/remove_attachment"
+                android:padding="4dp"
+                android:scaleType="centerInside"
+                android:src="@drawable/ic_close"
+                app:tint="?attr/colorOnSurfaceVariant" />
+
+        </LinearLayout>
+
+        <!-- Action Buttons Section -->
+        <LinearLayout
+            android:id="@+id/action_buttons_section"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="52dp"
+            android:layout_marginTop="8dp"
+            android:layout_marginEnd="12dp"
+            android:gravity="center_vertical"
+            android:orientation="horizontal"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintTop_toBottomOf="@id/attachment_preview_container">
+
+            <!-- Attachment/Media Button -->
+            <ImageButton
+                android:id="@+id/attach_media_button"
+                android:layout_width="36dp"
+                android:layout_height="36dp"
+                android:layout_marginEnd="4dp"
+                android:background="?android:attr/selectableItemBackground"
+                android:contentDescription="@string/attach_media"
+                android:padding="6dp"
+                android:scaleType="centerInside"
+                android:src="@drawable/ic_composer_image"
+                app:tint="?attr/colorOnSurfaceVariant" />
+
+            <!-- GIF Button -->
+            <ImageButton
+                android:id="@+id/gif_button"
+                android:layout_width="36dp"
+                android:layout_height="36dp"
+                android:layout_marginEnd="4dp"
+                android:background="?android:attr/selectableItemBackground"
+                android:contentDescription="@string/gif"
+                android:padding="6dp"
+                android:scaleType="centerInside"
+                android:src="@drawable/ic_composer_gif"
+                app:tint="?attr/colorOnSurfaceVariant" />
+
+            <!-- Emoji Button -->
+            <ImageButton
+                android:id="@+id/emoji_button"
+                android:layout_width="36dp"
+                android:layout_height="36dp"
+                android:layout_marginEnd="4dp"
+                android:background="?android:attr/selectableItemBackground"
+                android:contentDescription="@string/emoji"
+                android:padding="6dp"
+                android:scaleType="centerInside"
+                android:src="@drawable/ic_composer_emoji"
+                app:tint="?attr/colorOnSurfaceVariant" />
+
+
+
+            <!-- Spacer to push send button to right -->
+            <Space
+                android:layout_width="0dp"
+                android:layout_height="1dp"
+                android:layout_weight="1" />
+
+            <!-- Send Button - Primary Action -->
+            <com.google.android.material.floatingactionbutton.FloatingActionButton
+                android:id="@+id/send_button"
+                android:layout_width="40dp"
+                android:layout_height="40dp"
+                android:contentDescription="@string/send"
+                android:enabled="false"
+                android:scaleType="centerInside"
+                android:src="@drawable/ic_send"
+                android:tint="@android:color/white"
+                app:backgroundTint="@color/primary_purple"
+                app:fabSize="mini"
+                app:fabCustomSize="40dp" />
+
+        </LinearLayout>
+
+    </androidx.constraintlayout.widget.ConstraintLayout>
+
+</androidx.constraintlayout.widget.ConstraintLayout>
+
+

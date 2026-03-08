@@ -226,8 +226,9 @@ public class HomeFragment extends Fragment implements PostAdapter.OnPostActionLi
 
     @Override
     public void onCommentClicked(Post post) {
-        Toast.makeText(requireContext(), "Comment on post: " + post.getId(), Toast.LENGTH_SHORT).show();
-        // TODO: Navigate to comments screen
+        // Open comments in a bottom sheet with swipe-to-dismiss gesture
+        BottomSheetCommentFragment bottomSheetCommentFragment = BottomSheetCommentFragment.newInstance(post.getId());
+        bottomSheetCommentFragment.show(requireActivity().getSupportFragmentManager(), "comments_bottom_sheet");
     }
 
     @Override
@@ -246,6 +247,21 @@ public class HomeFragment extends Fragment implements PostAdapter.OnPostActionLi
     public void onComposerPostClicked(String content) {
         Toast.makeText(requireContext(), "Post created: " + content, Toast.LENGTH_SHORT).show();
         // TODO: Implement post creation
+    }
+
+    @Override
+    public void onComposerClicked() {
+        android.util.Log.d("HomeFragment", "Composer clicked - opening NewPostFragment");
+
+        // Open NewPostFragment
+        NewPostFragment newPostFragment = new NewPostFragment();
+        requireActivity().getSupportFragmentManager()
+                .beginTransaction()
+                .replace(R.id.nav_host_fragment, newPostFragment)
+                .addToBackStack(null)
+                .commit();
+
+        android.util.Log.d("HomeFragment", "NewPostFragment opened from composer");
     }
 }
 

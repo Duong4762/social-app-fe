@@ -52,6 +52,17 @@ dependencies {
     implementation(libs.fragment)
     implementation(libs.navigation.fragment)
     implementation(libs.navigation.ui)
+
+    // SwipeRefreshLayout for pull-to-refresh functionality
+    implementation("androidx.swiperefreshlayout:swiperefreshlayout:1.1.0")
+
+    // RecyclerView
+    implementation("androidx.recyclerview:recyclerview:1.2.1")
+
+    // Lifecycle (ViewModel & LiveData)
+    implementation("androidx.lifecycle:lifecycle-viewmodel:2.4.1")
+    implementation("androidx.lifecycle:lifecycle-livedata:2.4.1")
+
     testImplementation(libs.junit)
     androidTestImplementation(libs.ext.junit)
     androidTestImplementation(libs.espresso.core)

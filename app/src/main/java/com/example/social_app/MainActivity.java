@@ -84,7 +84,8 @@ public class MainActivity extends AppCompatActivity {
 
         navBtnAdd.setOnClickListener(v -> {
             selectNavButton(navBtnAdd);
-            showToast("Post creation not yet implemented");
+            android.util.Log.d("MainActivity", "Add button clicked - opening NewPostFragment");
+            openNewPostFragment();
         });
 
         navBtnMessage.setOnClickListener(v -> {
@@ -202,5 +203,23 @@ public class MainActivity extends AppCompatActivity {
      */
     private void showToast(String message) {
         android.widget.Toast.makeText(this, message, android.widget.Toast.LENGTH_SHORT).show();
+    }
+
+    /**
+     * Opens the NewPostFragment for creating a new post.
+     * This is called when the Add button in the bottom navigation is clicked.
+     */
+    private void openNewPostFragment() {
+        android.util.Log.d("MainActivity", "openNewPostFragment() called");
+
+        com.example.social_app.fragments.NewPostFragment newPostFragment =
+                new com.example.social_app.fragments.NewPostFragment();
+
+        fragmentManager.beginTransaction()
+                .replace(R.id.nav_host_fragment, newPostFragment)
+                .addToBackStack(null)
+                .commit();
+
+        android.util.Log.d("MainActivity", "NewPostFragment opened successfully");
     }
 }

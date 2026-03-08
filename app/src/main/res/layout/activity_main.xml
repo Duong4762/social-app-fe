@@ -19,7 +19,7 @@
     <!-- Custom Bottom Navigation Bar -->
     <include
         android:id="@+id/custom_bottom_nav"
-        layout="@layout/custom_bottom_navigation"
+        layout="@layout/bottom_navigation"
         android:layout_width="0dp"
         android:layout_height="72dp"
         app:layout_constraintBottom_toBottomOf="parent"

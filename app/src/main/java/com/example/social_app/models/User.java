@@ -9,12 +9,23 @@ public class User {
     private String name;
     private String avatarUrl;
     private String bio;
+    private boolean verified;
 
     public User(String id, String name, String avatarUrl, String bio) {
         this.id = id;
         this.name = name;
         this.avatarUrl = avatarUrl;
         this.bio = bio;
+        this.verified = false;
+    }
+
+    // ...existing code...
+    public boolean isVerified() {
+        return verified;
+    }
+
+    public void setVerified(boolean verified) {
+        this.verified = verified;
     }
 
     // Getters

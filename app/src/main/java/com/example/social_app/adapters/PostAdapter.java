@@ -38,6 +38,7 @@ public class PostAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
         void onShareClicked(Post post);
         void onBookmarkClicked(Post post);
         void onComposerPostClicked(String content);
+        void onComposerClicked();  // NEW: Handle composer clicks to open new post creation
     }
 
     public PostAdapter(Context context, OnPostActionListener actionListener) {
@@ -101,11 +102,35 @@ public class PostAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
      * ViewHolder for the post composer item at the top of the feed.
      */
     private class ComposerViewHolder extends RecyclerView.ViewHolder {
+        private com.google.android.material.button.MaterialButton composerInput;
+        private ImageButton composerImageBtn;
 
         ComposerViewHolder(@NonNull View itemView) {
             super(itemView);
-            // Composer layout is managed by the fragment
-            // This ViewHolder is kept for future composer functionality
+            // Initialize composer views
+            composerInput = itemView.findViewById(R.id.composer_input);
+            composerImageBtn = itemView.findViewById(R.id.composer_image_btn);
+
+            // Set up click listeners for composer
+            setupComposerListeners();
+        }
+
+        private void setupComposerListeners() {
+            // Click listener for "What's new?" input button
+            composerInput.setOnClickListener(v -> {
+                android.util.Log.d("PostAdapter", "Composer input clicked - switching to NewPostFragment");
+                if (actionListener != null) {
+                    actionListener.onComposerClicked();
+                }
+            });
+
+            // Click listener for image button (alternative way to create post)
+            composerImageBtn.setOnClickListener(v -> {
+                android.util.Log.d("PostAdapter", "Composer image button clicked - switching to NewPostFragment");
+                if (actionListener != null) {
+                    actionListener.onComposerClicked();
+                }
+            });
         }
 
         void bind() {
@@ -184,35 +209,10 @@ public class PostAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
             // Update like icon based on liked state
             updateLikeIcon(post);
 
-            // Set up click listeners
-            likeContainer.setOnClickListener(v -> {
-                if (actionListener != null) {
-                    actionListener.onLikeClicked(post, position);
-                }
-            });
-
-            commentContainer.setOnClickListener(v -> {
-                if (actionListener != null) {
-                    actionListener.onCommentClicked(post);
-                }
-            });
-
-            shareContainer.setOnClickListener(v -> {
-                if (actionListener != null) {
-                    actionListener.onShareClicked(post);
-                }
-            });
-
-            bookmarkIcon.setOnClickListener(v -> {
-                if (actionListener != null) {
-                    actionListener.onBookmarkClicked(post);
-                }
-            });
-
-            // Update bookmark icon dựa trên trạng thái post
+            // Update bookmark icon based on bookmark state
             updateBookmarkIcon(post);
 
-            // Set up click listeners
+            // Set up click listeners - ONLY ONCE
             likeContainer.setOnClickListener(v -> {
                 if (actionListener != null) {
                     actionListener.onLikeClicked(post, position);
@@ -220,6 +220,7 @@ public class PostAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
             });
 
             commentContainer.setOnClickListener(v -> {
+                android.util.Log.d("PostAdapter", "Comment clicked for post: " + post.getId());
                 if (actionListener != null) {
                     actionListener.onCommentClicked(post);
                 }
@@ -231,16 +232,15 @@ public class PostAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
                 }
             });
 
-            // Xử lý bookmark chuyển icon khi click
             bookmarkIcon.setOnClickListener(v -> {
                 if (actionListener != null) {
                     actionListener.onBookmarkClicked(post);
                 }
-                // Toggle trạng thái
+                // Toggle bookmark state
                 post.setBookmarked(!post.isBookmarked());
                 updateBookmarkIcon(post);
-                // Cập nhật lại item này
-                notifyItemChanged(position + 1); // +1 vì có composer ở đầu danh sách
+                // Update this item only
+                notifyItemChanged(position + 1); // +1 because composer is at position 0
             });
         }
 

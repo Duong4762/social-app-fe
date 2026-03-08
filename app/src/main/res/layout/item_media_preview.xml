@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="utf-8"?>
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent">
+
+    <!-- Media Image -->
+    <ImageView
+        android:id="@+id/media_preview_image"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:contentDescription="@string/post_image"
+        android:scaleType="centerCrop" />
+
+    <!-- Remove Button -->
+    <ImageButton
+        android:id="@+id/media_remove_button"
+        android:layout_width="32dp"
+        android:layout_height="32dp"
+        android:layout_gravity="top|end"
+        android:layout_margin="4dp"
+        android:background="@drawable/rounded_button_primary"
+        android:contentDescription="@string/remove"
+        android:scaleType="centerInside"
+        android:src="@drawable/ic_close" />
+
+</FrameLayout>

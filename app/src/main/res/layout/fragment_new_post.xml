@@ -1,0 +1,226 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="?attr/colorSurface">
+
+    <!-- AppBar -->
+    <LinearLayout
+        android:id="@+id/appbar"
+        android:layout_width="0dp"
+        android:layout_height="?attr/actionBarSize"
+        android:background="?attr/colorSurface"
+        android:elevation="4dp"
+        android:gravity="center_vertical"
+        android:orientation="horizontal"
+        android:padding="16dp"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent">
+
+        <!-- Cancel Button -->
+        <Button
+            android:id="@+id/cancel_button"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:background="?android:attr/selectableItemBackground"
+            android:text="@string/cancel"
+            android:textColor="?attr/colorOnSurface" />
+
+        <!-- Title -->
+        <TextView
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:gravity="center"
+            android:text="@string/new_post"
+            android:textColor="?attr/colorOnSurface"
+            android:textSize="18sp"
+            android:textStyle="bold" />
+
+        <!-- Post Button -->
+        <Button
+            android:id="@+id/post_button"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:background="@drawable/rounded_button_primary"
+            android:text="@string/post"
+            android:textColor="@android:color/white" />
+    </LinearLayout>
+
+    <!-- Scrollable Content -->
+    <ScrollView
+        android:layout_width="0dp"
+        android:layout_height="0dp"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/appbar">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:padding="16dp">
+
+            <!-- User Avatar and Input -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="16dp"
+                android:orientation="horizontal">
+
+                <!-- User Avatar -->
+                <ImageView
+                    android:id="@+id/user_avatar"
+                    android:layout_width="40dp"
+                    android:layout_height="40dp"
+                    android:layout_marginEnd="12dp"
+                    android:contentDescription="@string/user_avatar"
+                    android:scaleType="centerCrop"
+                    android:src="@drawable/avatar_placeholder" />
+
+                <!-- Post Input -->
+                <EditText
+                    android:id="@+id/post_input"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:background="@drawable/rounded_edittext"
+                    android:gravity="top"
+                    android:hint="@string/whats_new"
+                    android:inputType="textMultiLine"
+                    android:minLines="3"
+                    android:padding="12dp"
+                    android:textColor="?attr/colorOnSurface"
+                    android:textColorHint="?attr/colorOnSurfaceVariant" />
+            </LinearLayout>
+
+            <!-- Character Count -->
+            <TextView
+                android:id="@+id/character_count"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_gravity="end"
+                android:layout_marginBottom="16dp"
+                android:text="280/280"
+                android:textColor="?attr/colorOnSurfaceVariant"
+                android:textSize="12sp" />
+
+            <!-- Media Preview Grid -->
+            <GridView
+                android:id="@+id/media_preview_grid"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="16dp"
+                android:columnWidth="100dp"
+                android:gravity="center"
+                android:horizontalSpacing="8dp"
+                android:numColumns="3"
+                android:verticalSpacing="8dp" />
+
+            <!-- Upload Media Buttons -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="12dp"
+                android:orientation="horizontal"
+                android:spacing="8dp">
+
+                <!-- Upload Image Button -->
+                <Button
+                    android:id="@+id/upload_image_button"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:background="@drawable/rounded_button_secondary"
+                    android:drawableStart="@drawable/ic_composer_image"
+                    android:text="@string/add_image"
+                    android:textColor="?attr/colorOnSurface" />
+
+                <!-- Upload Video Button -->
+                <Button
+                    android:id="@+id/upload_video_button"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:background="@drawable/rounded_button_secondary"
+                    android:drawableStart="@drawable/ic_composer_video"
+                    android:text="@string/add_video"
+                    android:textColor="?attr/colorOnSurface" />
+            </LinearLayout>
+
+            <!-- Location and Tag Buttons -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="12dp"
+                android:orientation="horizontal"
+                android:spacing="8dp">
+
+                <!-- Add Location Button -->
+                <Button
+                    android:id="@+id/add_location_button"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:background="@drawable/rounded_button_secondary"
+                    android:drawableStart="@drawable/ic_composer_location"
+                    android:text="@string/add_location"
+                    android:textColor="?attr/colorOnSurface" />
+
+                <!-- Tag People Button -->
+                <Button
+                    android:id="@+id/tag_people_button"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:background="@drawable/rounded_button_secondary"
+                    android:drawableStart="@drawable/ic_heart"
+                    android:text="@string/tag_people"
+                    android:textColor="?attr/colorOnSurface" />
+            </LinearLayout>
+
+            <!-- Privacy Selector -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="16dp"
+                android:gravity="center_vertical"
+                android:orientation="horizontal">
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginEnd="12dp"
+                    android:text="@string/privacy"
+                    android:textColor="?attr/colorOnSurface"
+                    android:textStyle="bold" />
+
+                <Spinner
+                    android:id="@+id/privacy_spinner"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:background="@drawable/rounded_button_secondary" />
+            </LinearLayout>
+
+        </LinearLayout>
+    </ScrollView>
+
+    <!-- Floating Camera Button -->
+    <ImageButton
+        android:id="@+id/camera_button"
+        android:layout_width="56dp"
+        android:layout_height="56dp"
+        android:layout_margin="16dp"
+        android:background="@drawable/bg_fab_button"
+        android:contentDescription="@string/camera"
+        android:scaleType="centerInside"
+        android:src="@drawable/ic_composer_emoji"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toEndOf="parent" />
+
+</androidx.constraintlayout.widget.ConstraintLayout>
+
