@@ -17,6 +17,8 @@ import static androidx.test.espresso.assertion.ViewAssertions.matches;
 import static androidx.test.espresso.matcher.ViewMatchers.isDisplayed;
 import static androidx.test.espresso.matcher.ViewMatchers.withId;
 import static androidx.test.espresso.matcher.ViewMatchers.withText;
+import static androidx.test.espresso.matcher.ViewMatchers.isEnabled;
+import static androidx.test.espresso.matcher.ViewMatchers.isNotEnabled;
 
 /**
  * Instrumented tests for NewPostFragment.
@@ -80,7 +82,7 @@ public class NewPostFragmentTest {
     @Test
     public void testPostButtonDisabledWhenEmpty() {
         onView(withId(R.id.post_button))
-                .check(matches(ViewMatchers.isNotEnabled()));
+                .check(matches(isNotEnabled()));
     }
 
     /**
@@ -92,7 +94,7 @@ public class NewPostFragmentTest {
                 .perform(typeText("My new post"));
 
         onView(withId(R.id.post_button))
-                .check(matches(ViewMatchers.isEnabled()));
+                .check(matches(isEnabled()));
     }
 
     /**

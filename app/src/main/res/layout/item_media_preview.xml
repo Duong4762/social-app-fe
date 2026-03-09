@@ -1,26 +1,32 @@
 <?xml version="1.0" encoding="utf-8"?>
 <FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
-    android:layout_width="match_parent"
-    android:layout_height="match_parent">
-
-    <!-- Media Image -->
+    android:layout_width="120dp"
+    android:layout_height="110dp"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_marginEnd="12dp">
     <ImageView
         android:id="@+id/media_preview_image"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
-        android:contentDescription="@string/post_image"
-        android:scaleType="centerCrop" />
-
-    <!-- Remove Button -->
+        android:background="@drawable/bg_media_border"
+        android:scaleType="centerCrop"/>
+    <!-- Nút xoá -->
     <ImageButton
         android:id="@+id/media_remove_button"
+        android:layout_width="28dp"
+        android:layout_height="28dp"
+        android:layout_margin="6dp"
+        android:background="@drawable/bg_circle_semi"
+        android:src="@drawable/ic_close"
+        app:tint="@color/white"
+        android:layout_gravity="top|end"/>
+    <!-- Icon play nếu là video -->
+    <ImageView
+        android:id="@+id/ic_play"
         android:layout_width="32dp"
         android:layout_height="32dp"
-        android:layout_gravity="top|end"
-        android:layout_margin="4dp"
-        android:background="@drawable/rounded_button_primary"
-        android:contentDescription="@string/remove"
-        android:scaleType="centerInside"
-        android:src="@drawable/ic_close" />
-
+        android:layout_gravity="center"
+        android:src="@drawable/ic_play"
+        android:visibility="gone"
+        app:tint="@color/white" />
 </FrameLayout>

@@ -9,26 +9,26 @@
     <LinearLayout
         android:id="@+id/appbar"
         android:layout_width="0dp"
-        android:layout_height="?attr/actionBarSize"
-        android:background="?attr/colorSurface"
-        android:elevation="4dp"
+        android:layout_height="wrap_content"
         android:gravity="center_vertical"
         android:orientation="horizontal"
-        android:padding="16dp"
+        android:paddingStart="16dp"
+        android:paddingEnd="16dp"
+        android:paddingTop="18dp"
+        android:paddingBottom="14dp"
+        android:background="?attr/colorSurface"
+        app:layout_constraintTop_toTopOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toTopOf="parent">
-
-        <!-- Cancel Button -->
-        <Button
+        app:layout_constraintStart_toStartOf="parent">
+        <TextView
             android:id="@+id/cancel_button"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:background="?android:attr/selectableItemBackground"
             android:text="@string/cancel"
-            android:textColor="?attr/colorOnSurface" />
-
-        <!-- Title -->
+            android:textColor="?attr/colorOnSurfaceVariant"
+            android:textSize="16sp"
+            android:textStyle="bold"
+            android:paddingEnd="10dp"/>
         <TextView
             android:layout_width="0dp"
             android:layout_height="wrap_content"
@@ -36,191 +36,206 @@
             android:gravity="center"
             android:text="@string/new_post"
             android:textColor="?attr/colorOnSurface"
-            android:textSize="18sp"
-            android:textStyle="bold" />
-
-        <!-- Post Button -->
-        <Button
-            android:id="@+id/post_button"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:background="@drawable/rounded_button_primary"
-            android:text="@string/post"
-            android:textColor="@android:color/white" />
+            android:textStyle="bold"
+            android:textSize="18sp" />
     </LinearLayout>
+    <!-- Divider -->
+    <View
+        android:layout_width="0dp"
+        android:layout_height="1dp"
+        android:background="?attr/colorOutlineVariant"
+        app:layout_constraintTop_toBottomOf="@id/appbar"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"/>
 
-    <!-- Scrollable Content -->
+    <!-- Main Content -->
     <ScrollView
         android:layout_width="0dp"
         android:layout_height="0dp"
-        app:layout_constraintBottom_toBottomOf="parent"
-        app:layout_constraintEnd_toEndOf="parent"
+        android:overScrollMode="never"
+        app:layout_constraintTop_toBottomOf="@id/appbar"
+        app:layout_constraintBottom_toTopOf="@+id/bottom_actions"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@id/appbar">
+        app:layout_constraintEnd_toEndOf="parent">
 
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:orientation="vertical"
-            android:padding="16dp">
+            android:padding="20dp">
 
-            <!-- User Avatar and Input -->
+            <!-- Avatar + Input -->
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginBottom="16dp"
-                android:orientation="horizontal">
+                android:orientation="horizontal"
+                android:layout_marginBottom="12dp"
+                android:gravity="center_vertical">
 
-                <!-- User Avatar -->
                 <ImageView
                     android:id="@+id/user_avatar"
-                    android:layout_width="40dp"
-                    android:layout_height="40dp"
-                    android:layout_marginEnd="12dp"
-                    android:contentDescription="@string/user_avatar"
+                    android:layout_width="38dp"
+                    android:layout_height="38dp"
+                    android:src="@drawable/avatar_placeholder"
+                    android:background="@drawable/bg_circle"
                     android:scaleType="centerCrop"
-                    android:src="@drawable/avatar_placeholder" />
-
-                <!-- Post Input -->
+                    android:contentDescription="@string/user_avatar"/>
                 <EditText
                     android:id="@+id/post_input"
                     android:layout_width="0dp"
                     android:layout_height="wrap_content"
                     android:layout_weight="1"
-                    android:background="@drawable/rounded_edittext"
-                    android:gravity="top"
-                    android:hint="@string/whats_new"
-                    android:inputType="textMultiLine"
-                    android:minLines="3"
-                    android:padding="12dp"
+                    android:minHeight="40dp"
+                    android:background="@android:color/transparent"
+                    android:hint="@string/write_something"
                     android:textColor="?attr/colorOnSurface"
-                    android:textColorHint="?attr/colorOnSurfaceVariant" />
+                    android:textColorHint="?attr/colorOnSurfaceVariant"
+                    android:textSize="16sp"
+                    android:paddingStart="14dp"
+                    android:paddingEnd="5dp"
+                    android:inputType="textMultiLine"
+                    android:maxLines="3"/>
             </LinearLayout>
 
-            <!-- Character Count -->
-            <TextView
-                android:id="@+id/character_count"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_gravity="end"
-                android:layout_marginBottom="16dp"
-                android:text="280/280"
-                android:textColor="?attr/colorOnSurfaceVariant"
-                android:textSize="12sp" />
-
-            <!-- Media Preview Grid -->
-            <GridView
-                android:id="@+id/media_preview_grid"
+            <!-- Media Preview -->
+            <LinearLayout
+                android:id="@+id/media_preview_container"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginBottom="16dp"
-                android:columnWidth="100dp"
-                android:gravity="center"
-                android:horizontalSpacing="8dp"
-                android:numColumns="3"
-                android:verticalSpacing="8dp" />
+                android:orientation="horizontal"
+                android:layout_marginBottom="18dp">
+            </LinearLayout>
 
-            <!-- Upload Media Buttons -->
+            <!-- MEDIA UPLOAD -->
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="@string/media_upload"
+                android:textAllCaps="true"
+                android:textColor="?attr/colorPrimary"
+                android:textStyle="bold"
+                android:textSize="13sp"
+                android:layout_marginBottom="8dp"/>
+
+            <!-- Upload Buttons -->
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginBottom="12dp"
                 android:orientation="horizontal"
-                android:spacing="8dp">
-
-                <!-- Upload Image Button -->
+                android:layout_marginBottom="22dp"
+                android:gravity="center">
                 <Button
                     android:id="@+id/upload_image_button"
                     android:layout_width="0dp"
-                    android:layout_height="wrap_content"
+                    android:layout_height="45dp"
                     android:layout_weight="1"
-                    android:background="@drawable/rounded_button_secondary"
+                    android:backgroundTint="?attr/colorPrimary"
+                    android:text="@string/upload_image"
+                    android:textColor="?attr/colorOnPrimary"
                     android:drawableStart="@drawable/ic_composer_image"
-                    android:text="@string/add_image"
-                    android:textColor="?attr/colorOnSurface" />
-
-                <!-- Upload Video Button -->
+                    android:textAllCaps="false"
+                    android:drawablePadding="7dp"/>
+                <Space
+                    android:layout_width="12dp"
+                    android:layout_height="0dp"/>
                 <Button
                     android:id="@+id/upload_video_button"
                     android:layout_width="0dp"
-                    android:layout_height="wrap_content"
+                    android:layout_height="45dp"
                     android:layout_weight="1"
-                    android:background="@drawable/rounded_button_secondary"
+                    android:backgroundTint="?attr/colorPrimary"
+                    android:text="@string/upload_video"
+                    android:textColor="?attr/colorOnPrimary"
                     android:drawableStart="@drawable/ic_composer_video"
-                    android:text="@string/add_video"
-                    android:textColor="?attr/colorOnSurface" />
+                    android:textAllCaps="false"
+                    android:drawablePadding="7dp"/>
             </LinearLayout>
 
-            <!-- Location and Tag Buttons -->
+            <!-- Actions List -->
             <LinearLayout
+                android:id="@+id/quick_actions"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginBottom="12dp"
-                android:orientation="horizontal"
-                android:spacing="8dp">
+                android:orientation="vertical">
 
-                <!-- Add Location Button -->
-                <Button
-                    android:id="@+id/add_location_button"
-                    android:layout_width="0dp"
-                    android:layout_height="wrap_content"
-                    android:layout_weight="1"
-                    android:background="@drawable/rounded_button_secondary"
-                    android:drawableStart="@drawable/ic_composer_location"
-                    android:text="@string/add_location"
-                    android:textColor="?attr/colorOnSurface" />
+                <!-- Add Location -->
+                <include
+                    android:id="@+id/add_location_row"
+                    layout="@layout/item_row_action"/>
+                <View android:layout_height="1dp" android:layout_width="match_parent" android:background="?attr/colorOutlineVariant" />
 
-                <!-- Tag People Button -->
-                <Button
-                    android:id="@+id/tag_people_button"
-                    android:layout_width="0dp"
-                    android:layout_height="wrap_content"
-                    android:layout_weight="1"
-                    android:background="@drawable/rounded_button_secondary"
-                    android:drawableStart="@drawable/ic_heart"
-                    android:text="@string/tag_people"
-                    android:textColor="?attr/colorOnSurface" />
+                <!-- Tag People -->
+                <include
+                    android:id="@+id/tag_people_row"
+                    layout="@layout/item_row_tag"/>
+                <View android:layout_height="1dp" android:layout_width="match_parent" android:background="?attr/colorOutlineVariant" />
+
+                <!-- Audience -->
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="48dp"
+                    android:orientation="horizontal"
+                    android:gravity="center_vertical">
+
+                    <ImageView
+                        android:layout_width="24dp"
+                        android:layout_height="24dp"
+                        android:src="@drawable/ic_audience"
+                        app:tint="?attr/colorPrimary"/>
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:paddingStart="13dp"
+                        android:text="@string/audience"
+                        android:textColor="?attr/colorOnSurface"
+                        android:textSize="15sp" />
+                    <Spinner
+                        android:id="@+id/privacy_spinner"
+                        android:layout_width="0dp"
+                        android:layout_height="40dp"
+                        android:layout_weight="1"
+                        android:background="@drawable/bg_spinner_audience"
+                        android:entries="@array/privacy_options"
+                        android:paddingStart="7dp"
+                        android:paddingEnd="7dp"
+                        android:textAlignment="viewStart"
+                        android:popupBackground="?attr/colorSurface"/>
+                </LinearLayout>
             </LinearLayout>
-
-            <!-- Privacy Selector -->
-            <LinearLayout
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginBottom="16dp"
-                android:gravity="center_vertical"
-                android:orientation="horizontal">
-
-                <TextView
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:layout_marginEnd="12dp"
-                    android:text="@string/privacy"
-                    android:textColor="?attr/colorOnSurface"
-                    android:textStyle="bold" />
-
-                <Spinner
-                    android:id="@+id/privacy_spinner"
-                    android:layout_width="0dp"
-                    android:layout_height="wrap_content"
-                    android:layout_weight="1"
-                    android:background="@drawable/rounded_button_secondary" />
-            </LinearLayout>
-
         </LinearLayout>
     </ScrollView>
 
-    <!-- Floating Camera Button -->
-    <ImageButton
-        android:id="@+id/camera_button"
-        android:layout_width="56dp"
-        android:layout_height="56dp"
-        android:layout_margin="16dp"
-        android:background="@drawable/bg_fab_button"
-        android:contentDescription="@string/camera"
-        android:scaleType="centerInside"
-        android:src="@drawable/ic_composer_emoji"
+    <!-- Bottom bar -->
+    <LinearLayout
+        android:id="@+id/bottom_actions"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:padding="18dp"
+        android:gravity="center_vertical"
+        android:background="?attr/colorSurface"
         app:layout_constraintBottom_toBottomOf="parent"
-        app:layout_constraintEnd_toEndOf="parent" />
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent">
 
+        <ImageButton
+            android:id="@+id/camera_button"
+            android:layout_width="48dp"
+            android:layout_height="48dp"
+            android:background="@drawable/bg_fab_button"
+            android:src="@drawable/ic_composer_emoji"
+            android:contentDescription="@string/camera"/>
+        <View
+            android:layout_width="0dp"
+            android:layout_weight="1"
+            android:layout_height="0dp" />
+        <Button
+            android:id="@+id/post_button"
+            android:layout_width="90dp"
+            android:layout_height="48dp"
+            android:backgroundTint="?attr/colorPrimary"
+            android:text="@string/post"
+            android:textAllCaps="false"
+            android:textColor="?attr/colorOnPrimary"/>
+    </LinearLayout>
 </androidx.constraintlayout.widget.ConstraintLayout>
-

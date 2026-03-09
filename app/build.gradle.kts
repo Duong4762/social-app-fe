@@ -66,4 +66,10 @@ dependencies {
     testImplementation(libs.junit)
     androidTestImplementation(libs.ext.junit)
     androidTestImplementation(libs.espresso.core)
+
+    // Fragment Testing
+    androidTestImplementation("androidx.fragment:fragment-testing:1.5.5")
+
+    // AndroidX Test Core
+    androidTestImplementation("androidx.test:core:1.5.0")
 }

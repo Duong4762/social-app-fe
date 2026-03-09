@@ -87,7 +87,7 @@
             android:contentDescription="@string/location"
             android:scaleType="fitCenter"
             android:src="@drawable/ic_location"
-            android:tint="?attr/colorOnSurfaceVariant" />
+            app:tint="?attr/colorOnSurfaceVariant" />
 
         <!-- Location Text -->
         <TextView

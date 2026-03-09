@@ -5,17 +5,17 @@ import android.content.Intent;
 import android.net.Uri;
 import android.os.Bundle;
 import android.text.Editable;
+import android.text.InputFilter;
 import android.text.TextWatcher;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
-import android.widget.AdapterView;
 import android.widget.ArrayAdapter;
 import android.widget.Button;
 import android.widget.EditText;
-import android.widget.GridView;
 import android.widget.ImageButton;
 import android.widget.ImageView;
+import android.widget.LinearLayout;
 import android.widget.Spinner;
 import android.widget.TextView;
 import android.widget.Toast;
@@ -32,17 +32,6 @@ import com.example.social_app.viewmodels.NewPostViewModel;
 import java.util.ArrayList;
 import java.util.List;
 
-/**
- * Fragment for creating and composing new posts.
- * Features:
- * - Text input with character limit
- * - Media upload (image/video) with preview
- * - Location tagging
- * - User tagging
- * - Privacy/audience settings
- * - Post creation with loading state
- * - Unsaved changes warning on exit
- */
 public class NewPostFragment extends Fragment {
 
     private static final int PICK_IMAGE_REQUEST = 1;
@@ -50,13 +39,13 @@ public class NewPostFragment extends Fragment {
 
     private EditText postInput;
     private ImageButton cameraButton;
-    private Button uploadImageButton, uploadVideoButton;
-    private Button addLocationButton, tagPeopleButton;
-    private Spinner privacySpinner;
-    private GridView mediaPreviewGrid;
-    private Button postButton, cancelButton;
+    private Button uploadImageButton, uploadVideoButton, postButton;
+    private TextView cancelButton;
     private ImageView userAvatar;
-    private TextView characterCount;
+    private Spinner privacySpinner;
+
+    private LinearLayout mediaPreviewContainer;
+    private LinearLayout addLocationRow, tagPeopleRow;
 
     private NewPostViewModel newPostViewModel;
     private List<Uri> selectedMedias;
@@ -86,6 +75,8 @@ public class NewPostFragment extends Fragment {
         initializeViews(view);
         setupListeners();
         setupObservers();
+        updatePostButtonState();
+        renderMediaPreview();
         return view;
     }
 
@@ -94,104 +85,79 @@ public class NewPostFragment extends Fragment {
         cameraButton = view.findViewById(R.id.camera_button);
         uploadImageButton = view.findViewById(R.id.upload_image_button);
         uploadVideoButton = view.findViewById(R.id.upload_video_button);
-        addLocationButton = view.findViewById(R.id.add_location_button);
-        tagPeopleButton = view.findViewById(R.id.tag_people_button);
         privacySpinner = view.findViewById(R.id.privacy_spinner);
-        mediaPreviewGrid = view.findViewById(R.id.media_preview_grid);
+        userAvatar = view.findViewById(R.id.user_avatar);
         postButton = view.findViewById(R.id.post_button);
         cancelButton = view.findViewById(R.id.cancel_button);
-        userAvatar = view.findViewById(R.id.user_avatar);
-        characterCount = view.findViewById(R.id.character_count);
 
-        // Set initial button states
-        postButton.setEnabled(false);
+        mediaPreviewContainer = view.findViewById(R.id.media_preview_container);
+
+        // Các row hành động "Add Location", "Tag People" phải là LinearLayout có id riêng
+        addLocationRow = view.findViewById(R.id.add_location_row);
+        tagPeopleRow = view.findViewById(R.id.tag_people_row);
+
+        // Set placeholder avatar
+        userAvatar.setImageResource(R.drawable.avatar_placeholder);
+
+        // Set giới hạn ký tự
+        postInput.setFilters(new InputFilter[]{new InputFilter.LengthFilter(MAX_CHARACTERS)});
 
         // Setup privacy spinner
         ArrayAdapter<CharSequence> privacyAdapter = ArrayAdapter.createFromResource(
                 getContext(),
                 R.array.privacy_options,
-                android.R.layout.simple_spinner_item
+                R.layout.item_audience
         );
-        privacyAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
+        privacyAdapter.setDropDownViewResource(R.layout.item_dropdown_audience);
         privacySpinner.setAdapter(privacyAdapter);
 
-        // Set placeholder avatar
-        userAvatar.setImageResource(R.drawable.avatar_placeholder);
+        // Set initial post button state
+        postButton.setEnabled(false);
     }
 
     private void setupListeners() {
-        // Text input listener for character count and enable/disable post button
         postInput.addTextChangedListener(new TextWatcher() {
-            @Override
-            public void beforeTextChanged(CharSequence s, int start, int count, int after) {}
-
-            @Override
-            public void onTextChanged(CharSequence s, int start, int before, int count) {
-                int remaining = MAX_CHARACTERS - s.length();
-                characterCount.setText(remaining + "/" + MAX_CHARACTERS);
-                characterCount.setTextColor(remaining < 20 ? 0xFFE91E63 : 0xFF999999);
+            @Override public void beforeTextChanged(CharSequence s, int start, int count, int after) {}
+            @Override public void onTextChanged(CharSequence s, int start, int before, int count) {
                 updatePostButtonState();
             }
-
-            @Override
-            public void afterTextChanged(Editable s) {}
+            @Override public void afterTextChanged(Editable s) {}
         });
 
-        // Upload image button
         uploadImageButton.setOnClickListener(v -> pickImage());
-
-        // Upload video button
         uploadVideoButton.setOnClickListener(v -> pickVideo());
-
-        // Camera button
         cameraButton.setOnClickListener(v -> openCamera());
 
-        // Add location button
-        addLocationButton.setOnClickListener(v -> openLocationPicker());
+        // Hành động: Add Location, Tag People
+        addLocationRow.setOnClickListener(v -> openLocationPicker());
+        tagPeopleRow.setOnClickListener(v -> openPeopleTagger());
 
-        // Tag people button
-        tagPeopleButton.setOnClickListener(v -> openPeopleTagger());
-
-        // Privacy spinner
-        privacySpinner.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
-            @Override
-            public void onItemSelected(AdapterView<?> parent, View view, int position, long id) {
+        privacySpinner.setOnItemSelectedListener(new android.widget.AdapterView.OnItemSelectedListener() {
+            @Override public void onItemSelected(android.widget.AdapterView<?> parent, View view, int position, long id) {
                 privacyLevel = parent.getItemAtPosition(position).toString();
             }
-
-            @Override
-            public void onNothingSelected(AdapterView<?> parent) {}
+            @Override public void onNothingSelected(android.widget.AdapterView<?> parent) {}
         });
 
-        // Post button
         postButton.setOnClickListener(v -> createPost());
-
-        // Cancel button
         cancelButton.setOnClickListener(v -> handleCancel());
     }
 
     private void setupObservers() {
-        // Observe post creation state
         newPostViewModel.getIsPosting().observe(getViewLifecycleOwner(), isPosting -> {
             postButton.setEnabled(!isPosting);
-            if (isPosting) {
-                postButton.setText("Posting...");
-            } else {
-                postButton.setText("Post");
-            }
+            postButton.setText(isPosting ? getString(R.string.posting) : getString(R.string.post));
         });
 
-        // Observe post creation success
         newPostViewModel.getPostSuccess().observe(getViewLifecycleOwner(), success -> {
             if (success) {
-                Toast.makeText(getContext(), "Post created successfully!", Toast.LENGTH_SHORT).show();
+                Toast.makeText(getContext(), getString(R.string.post_created), Toast.LENGTH_SHORT).show();
                 if (getFragmentManager() != null) {
                     getFragmentManager().popBackStack();
                 }
             }
         });
 
-        // Observe errors
         newPostViewModel.getError().observe(getViewLifecycleOwner(), error -> {
             if (error != null) {
                 Toast.makeText(getContext(), error, Toast.LENGTH_SHORT).show();
@@ -203,93 +169,62 @@ public class NewPostFragment extends Fragment {
         Intent intent = new Intent(Intent.ACTION_GET_CONTENT);
         intent.setType("image/*");
         intent.putExtra(Intent.EXTRA_ALLOW_MULTIPLE, true);
-        startActivityForResult(Intent.createChooser(intent, "Select Images"), PICK_IMAGE_REQUEST);
+        startActivityForResult(Intent.createChooser(intent, getString(R.string.select_images)), PICK_IMAGE_REQUEST);
     }
 
     private void pickVideo() {
         Intent intent = new Intent(Intent.ACTION_GET_CONTENT);
         intent.setType("video/*");
-        startActivityForResult(Intent.createChooser(intent, "Select Video"), PICK_VIDEO_REQUEST);
+        startActivityForResult(Intent.createChooser(intent, getString(R.string.select_video)), PICK_VIDEO_REQUEST);
     }
 
     private void openCamera() {
-        // Placeholder for camera functionality
         Toast.makeText(getContext(), "Camera - Coming soon", Toast.LENGTH_SHORT).show();
     }
 
     private void openLocationPicker() {
-        // Simple location picker dialog
         AlertDialog.Builder builder = new AlertDialog.Builder(getContext());
-        builder.setTitle("Add Location")
-                .setItems(new String[]{"Current Location", "Search Location"}, (dialog, which) -> {
+        builder.setTitle(getString(R.string.add_location))
+                .setItems(new String[]{getString(R.string.current_location), getString(R.string.search_location)}, (dialog, which) -> {
                     if (which == 0) {
-                        selectedLocation = "Current Location";
-                        addLocationButton.setText("Location: Current");
+                        selectedLocation = getString(R.string.current_location);
                     } else {
-                        // Would open search UI
-                        selectedLocation = "Custom Location";
-                        addLocationButton.setText("Location: Added");
+                        selectedLocation = getString(R.string.custom_location);
                     }
                 })
                 .show();
     }
 
     private void openPeopleTagger() {
-        // Placeholder for people tagger
         Toast.makeText(getContext(), "Tag people - Coming soon", Toast.LENGTH_SHORT).show();
     }
 
     private void createPost() {
         String content = postInput.getText().toString().trim();
-        if (content.isEmpty()) {
+        if (content.isEmpty() && selectedMedias.isEmpty()) {
             Toast.makeText(getContext(), "Post content cannot be empty", Toast.LENGTH_SHORT).show();
             return;
         }
-
-        newPostViewModel.createPost(
-                content,
-                selectedMedias,
-                selectedLocation,
-                taggedPeople,
-                privacyLevel
-        );
+        newPostViewModel.createPost(content, selectedMedias, selectedLocation, taggedPeople, privacyLevel);
     }
 
     private void handleCancel() {
         if (hasUnsavedChanges()) {
             new AlertDialog.Builder(getContext())
-                    .setTitle("Discard Post?")
-                    .setMessage("Are you sure you want to discard this post?")
-                    .setPositiveButton("Discard", (dialog, which) -> {
-                        android.util.Log.d("NewPostFragment", "Discarding post - returning to HomeFragment");
-                        returnToHome();
-                    })
-                    .setNegativeButton("Cancel", null)
+                    .setTitle(R.string.discard_post_question)
+                    .setMessage(R.string.discard_post_confirm)
+                    .setPositiveButton(R.string.discard, (dialog, which) -> returnToHome())
+                    .setNegativeButton(R.string.cancel, null)
                     .show();
         } else {
-            android.util.Log.d("NewPostFragment", "No unsaved changes - returning to HomeFragment");
             returnToHome();
         }
     }
 
-    /**
-     * Returns to the previous fragment using popBackStack.
-     * This preserves the state of the previous fragment without reloading.
-     */
     private void returnToHome() {
-        android.util.Log.d("NewPostFragment", "returnToHome() called - using popBackStack");
-
         if (getFragmentManager() != null) {
-            // Simply pop the back stack to return to the previous fragment
-            // This preserves the previous fragment's state without reloading
             getFragmentManager().popBackStack();
-            android.util.Log.d("NewPostFragment", "Successfully popped back to previous fragment");
         }
-    }
-
-    private void setupScrollListener(androidx.recyclerview.widget.RecyclerView recyclerView) {
-        // This is a callback from HomeFragment for scroll listener setup
-        // Implementation handled by HomeFragment
     }
 
     private boolean hasUnsavedChanges() {
@@ -297,10 +232,11 @@ public class NewPostFragment extends Fragment {
     }
 
     private void updatePostButtonState() {
-        boolean hasContent = !postInput.getText().toString().trim().isEmpty();
+        boolean hasContent = !postInput.getText().toString().trim().isEmpty() || !selectedMedias.isEmpty();
         postButton.setEnabled(hasContent);
     }
 
+    // region Media Preview
     @Override
     public void onActivityResult(int requestCode, int resultCode, @Nullable Intent data) {
         super.onActivityResult(requestCode, resultCode, data);
@@ -310,28 +246,63 @@ public class NewPostFragment extends Fragment {
             } else if (requestCode == PICK_VIDEO_REQUEST) {
                 handleVideoPicked(data);
             }
+            renderMediaPreview();
+            updatePostButtonState();
         }
     }
 
     private void handleImagePicked(Intent data) {
         if (data.getClipData() != null) {
-            // Multiple images
             int count = data.getClipData().getItemCount();
             for (int i = 0; i < count; i++) {
                 Uri uri = data.getClipData().getItemAt(i).getUri();
                 selectedMedias.add(uri);
             }
         } else if (data.getData() != null) {
-            // Single image
             selectedMedias.add(data.getData());
         }
-        updatePostButtonState();
     }
 
     private void handleVideoPicked(Intent data) {
         if (data.getData() != null) {
             selectedMedias.add(data.getData());
         }
-        updatePostButtonState();
     }
+
+    /**
+     * Render media preview in horizontal LinearLayout
+     */
+    private void renderMediaPreview() {
+        mediaPreviewContainer.removeAllViews();
+        LayoutInflater inflater = LayoutInflater.from(getContext());
+        for (int i = 0; i < selectedMedias.size(); i++) {
+            Uri mediaUri = selectedMedias.get(i);
+            View mediaItem = inflater.inflate(R.layout.item_media_preview, mediaPreviewContainer, false);
+
+            ImageView imgMedia = mediaItem.findViewById(R.id.media_preview_image);
+            ImageButton btnRemove = mediaItem.findViewById(R.id.media_remove_button);
+            ImageView playIcon = mediaItem.findViewById(R.id.ic_play);
+
+            // TODO: Replace with Glide/Picasso if needed
+            imgMedia.setImageURI(mediaUri);
+
+            // Hiện icon play nếu là video
+            String uriString = mediaUri.toString();
+            if (uriString.contains("video") || uriString.endsWith(".mp4") || uriString.endsWith(".avi") || uriString.endsWith(".mov")) {
+                playIcon.setVisibility(View.VISIBLE);
+            } else {
+                playIcon.setVisibility(View.GONE);
+            }
+
+            int idx = i;
+            btnRemove.setOnClickListener(v -> {
+                selectedMedias.remove(idx);
+                renderMediaPreview();
+                updatePostButtonState();
+            });
+
+            mediaPreviewContainer.addView(mediaItem);
+        }
+    }
+    // endregion
 }
