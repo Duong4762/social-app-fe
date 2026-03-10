@@ -17,6 +17,8 @@ public class Comment {
     private List<Comment> replies;
     private boolean hasMoreReplies;
 
+    public Comment(){
+    }
     public Comment(String id, User user, String text, long timestamp, int likeCount, List<Comment> replies, boolean hasMoreReplies) {
         this.id = id;
         this.user = user;

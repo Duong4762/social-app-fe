@@ -11,6 +11,8 @@ public class User {
     private String bio;
     private boolean verified;
 
+    public User() {
+    }
     public User(String id, String name, String avatarUrl, String bio) {
         this.id = id;
         this.name = name;

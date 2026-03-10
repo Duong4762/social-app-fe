@@ -27,19 +27,6 @@ import com.example.social_app.viewmodels.CommentViewModel;
 import com.google.android.material.bottomsheet.BottomSheetDialogFragment;
 import com.google.android.material.bottomsheet.BottomSheetBehavior;
 
-import java.util.List;
-
-/**
- * BottomSheetCommentFragment displays comments for a specific post in a bottom sheet.
- * Features:
- * - Displays comments in a scrollable RecyclerView
- * - Supports infinite scrolling with pagination
- * - Allows composing and sending new comments
- * - Supports liking comments and viewing replies
- * - Implements swipe-to-refresh functionality
- * - Enables swipe-down gesture to dismiss the bottom sheet
- * - Material Design bottom sheet behavior
- */
 public class BottomSheetCommentFragment extends BottomSheetDialogFragment implements CommentAdapter.OnCommentActionListener {
 
     private static final String POST_ID_KEY = "post_id";
@@ -48,13 +35,12 @@ public class BottomSheetCommentFragment extends BottomSheetDialogFragment implem
 
     private RecyclerView commentsRecyclerView;
     private EditText commentInput;
-    private ImageButton sendButton, emojiButton, gifButton, attachMediaButton, removeAttachmentBtn;
-    private ImageView composeAvatar, attachmentPreviewImage;
+    private ImageButton sendButton, emojiButton, gifButton, attachMediaButton;
+    private ImageView composeAvatar;
     private Spinner sortSpinner;
     private SwipeRefreshLayout swipeRefresh;
-    private TextView charCountText, attachmentFileName, attachmentFileSize;
-    private LinearLayout attachmentPreviewContainer, actionButtonsSection;
-    private View inputFieldContainer, dragHandle;
+    private TextView charCountText;
+    private LinearLayout actionButtonsSection;
 
     private CommentAdapter commentAdapter;
     private CommentViewModel commentViewModel;
@@ -62,14 +48,8 @@ public class BottomSheetCommentFragment extends BottomSheetDialogFragment implem
     private String replyingToUserId = null;
     private boolean isLoadingMore = false;
     private LinearLayoutManager layoutManager;
-    private String attachedFilePath = null;
     private BottomSheetBehavior<?> bottomSheetBehavior;
 
-    /**
-     * Factory method to create a new BottomSheetCommentFragment instance.
-     * @param postId The ID of the post whose comments to display
-     * @return A new BottomSheetCommentFragment instance
-     */
     public static BottomSheetCommentFragment newInstance(String postId) {
         BottomSheetCommentFragment fragment = new BottomSheetCommentFragment();
         Bundle args = new Bundle();
@@ -100,118 +80,41 @@ public class BottomSheetCommentFragment extends BottomSheetDialogFragment implem
         return view;
     }
 
-    @Override
-    public void onViewCreated(@NonNull View view, @Nullable Bundle savedInstanceState) {
-        super.onViewCreated(view, savedInstanceState);
-
-        // Setup BottomSheetBehavior for swipe-to-dismiss
-        setupBottomSheetBehavior(view);
-    }
-
-    /**
-     * Setup BottomSheetBehavior with drag and dismiss options.
-     * Enables swipe-down gesture to dismiss the bottom sheet.
-     */
-    private void setupBottomSheetBehavior(View view) {
-        // Get the root view of the bottom sheet dialog
-        // The view hierarchy is: BottomSheetDialog -> CoordinatorLayout -> content
-        ViewGroup parent = (ViewGroup) view.getParent();
-
-        // Find the CoordinatorLayout that contains our content
-        View bottomSheetContainer = null;
-        if (parent != null) {
-            for (int i = 0; i < parent.getChildCount(); i++) {
-                View child = parent.getChildAt(i);
-                // The BottomSheetDialog's content is typically in a FrameLayout
-                if (child.getId() == android.R.id.custom) {
-                    bottomSheetContainer = child;
-                    break;
-                }
-            }
-
-            // If we found the container, set up the behavior
-            if (bottomSheetContainer != null) {
-                try {
-                    bottomSheetBehavior = BottomSheetBehavior.from(bottomSheetContainer);
-
-                    // Enable drag and dismiss
-                    bottomSheetBehavior.setDraggable(true);
-                    bottomSheetBehavior.setFitToContents(false);
-                    bottomSheetBehavior.setHideable(true);
-
-                    // Set initial state to expanded
-                    bottomSheetBehavior.setState(BottomSheetBehavior.STATE_EXPANDED);
-
-                    // Set save flags to preserve state
-                    bottomSheetBehavior.setSaveFlags(BottomSheetBehavior.SAVE_ALL);
-
-                    // Add behavior callback to handle dismissal
-                    bottomSheetBehavior.addBottomSheetCallback(new BottomSheetBehavior.BottomSheetCallback() {
-                        @Override
-                        public void onStateChanged(@NonNull View bottomSheet, int newState) {
-                            // When bottom sheet is hidden, dismiss the dialog
-                            if (newState == BottomSheetBehavior.STATE_HIDDEN) {
-                                dismiss();
-                            }
-                        }
-
-                        @Override
-                        public void onSlide(@NonNull View bottomSheet, float slideOffset) {
-                            // Provides visual feedback as user drags
-                            // slideOffset ranges from 0 (collapsed) to 1 (expanded)
-                        }
-                    });
-                } catch (Exception e) {
-                    e.printStackTrace();
-                }
-            }
-        }
-    }
-
-    /**
-     * Initialize all UI views from the layout.
-     */
     private void initializeViews(View view) {
-        // Core compose views
-        commentInput = view.findViewById(R.id.comment_input);
-        sendButton = view.findViewById(R.id.send_button);
-        emojiButton = view.findViewById(R.id.emoji_button);
-        gifButton = view.findViewById(R.id.gif_button);
-        composeAvatar = view.findViewById(R.id.compose_avatar);
+        // Comment list
+        commentsRecyclerView = view.findViewById(R.id.comments_recycler_view);
         sortSpinner = view.findViewById(R.id.comment_sort_spinner);
         swipeRefresh = view.findViewById(R.id.swipe_refresh_layout);
 
-        // New compose UI elements
-        charCountText = view.findViewById(R.id.char_count_text);
-        inputFieldContainer = view.findViewById(R.id.input_field_container);
-        attachMediaButton = view.findViewById(R.id.attach_media_button);
-        attachmentPreviewContainer = view.findViewById(R.id.attachment_preview_container);
-        attachmentPreviewImage = view.findViewById(R.id.attachment_preview_image);
-        attachmentFileName = view.findViewById(R.id.attachment_file_name);
-        attachmentFileSize = view.findViewById(R.id.attachment_file_size);
-        removeAttachmentBtn = view.findViewById(R.id.remove_attachment_btn);
-        actionButtonsSection = view.findViewById(R.id.action_buttons_section);
+        // Compose
+        composeAvatar = view.findViewById(R.id.compose_avatar);
+        commentInput = view.findViewById(R.id.compose_comment_input);
+        charCountText = view.findViewById(R.id.compose_char_count_text);
 
-        // Comment feed views
-        commentsRecyclerView = view.findViewById(R.id.comments_recycler_view);
+        // Action buttons
+        actionButtonsSection = view.findViewById(R.id.compose_action_buttons_section);
+        attachMediaButton = view.findViewById(R.id.compose_attach_media_button);
+        gifButton = view.findViewById(R.id.compose_gif_button);
+        emojiButton = view.findViewById(R.id.compose_emoji_button);
+        sendButton = view.findViewById(R.id.compose_send_button);
 
-        // Setup RecyclerView with LinearLayoutManager
-        layoutManager = new LinearLayoutManager(getContext());
-        commentsRecyclerView.setLayoutManager(layoutManager);
-
-        // Set placeholder avatar
-        composeAvatar.setImageResource(R.drawable.avatar_placeholder);
-
-        // Initialize character count display
-        updateCharacterCount(0);
-
-        // Setup sort spinner
-        setupSortSpinner();
+        if (composeAvatar != null) {
+            composeAvatar.setImageResource(R.drawable.avatar_placeholder);
+        }
+        if (charCountText != null) {
+            updateCharacterCount(0);
+        }
+        if (sortSpinner != null) {
+            setupSortSpinner();
+        }
+        // RecyclerView - maximize vertical space
+        if (commentsRecyclerView != null && layoutManager == null) {
+            layoutManager = new LinearLayoutManager(getContext(), LinearLayoutManager.VERTICAL, false);
+            commentsRecyclerView.setLayoutManager(layoutManager);
+            commentsRecyclerView.setClipToPadding(false);  // Allow content to scroll without padding
+        }
     }
 
-    /**
-     * Setup the sort spinner with available sorting options.
-     */
     private void setupSortSpinner() {
         ArrayAdapter<CharSequence> adapter = ArrayAdapter.createFromResource(
                 getContext(),
@@ -222,20 +125,13 @@ public class BottomSheetCommentFragment extends BottomSheetDialogFragment implem
         sortSpinner.setAdapter(adapter);
     }
 
-    /**
-     * Setup the RecyclerView adapter with the CommentAdapter.
-     */
     private void setupAdapters() {
-        android.util.Log.d("CommentSheet", "setupAdapters() called - creating CommentAdapter");
         commentAdapter = new CommentAdapter(getContext(), this);
         commentsRecyclerView.setAdapter(commentAdapter);
-        android.util.Log.d("CommentSheet", "Adapter set to RecyclerView successfully");
     }
 
-    /**
-     * Setup scroll listener for infinite scrolling / pagination.
-     */
-    public void setupScrollListener(RecyclerView recyclerView) {
+    private void setupScrollListener(RecyclerView recyclerView) {
+        if (recyclerView == null) return;
         recyclerView.addOnScrollListener(new RecyclerView.OnScrollListener() {
             @Override
             public void onScrolled(@NonNull RecyclerView recyclerView, int dx, int dy) {
@@ -253,152 +149,125 @@ public class BottomSheetCommentFragment extends BottomSheetDialogFragment implem
         });
     }
 
-    /**
-     * Setup all button and input listeners.
-     */
     private void setupListeners() {
-        sendButton.setOnClickListener(v -> sendComment());
-        sendButton.setEnabled(false);
+        if (sendButton != null) {
+            sendButton.setOnClickListener(v -> sendComment());
+            sendButton.setEnabled(false);
+        }
+        if (emojiButton != null) emojiButton.setOnClickListener(v -> openEmojiPicker());
+        if (gifButton != null) gifButton.setOnClickListener(v -> openGifPicker());
+        if (attachMediaButton != null) attachMediaButton.setOnClickListener(v -> openFileChooser());
 
-        emojiButton.setOnClickListener(v -> openEmojiPicker());
-        gifButton.setOnClickListener(v -> openGifPicker());
-        attachMediaButton.setOnClickListener(v -> openFileChooser());
-        removeAttachmentBtn.setOnClickListener(v -> removeAttachment());
+        if (commentInput != null) {
+            // Auto-scroll when focus to keep compose section visible above keyboard
+            commentInput.setOnFocusChangeListener((v, hasFocus) -> {
+                if (hasFocus) {
+                    // Scroll to bottom when keyboard appears
+                    if (commentsRecyclerView != null && commentAdapter != null && commentAdapter.getItemCount() > 0) {
+                        commentsRecyclerView.smoothScrollToPosition(commentAdapter.getItemCount() - 1);
+                    }
 
-        // Event handling: When clicking "what's new?" input field, switch to new post layout
-        commentInput.setOnClickListener(v -> {
-            android.util.Log.d("CommentSheet", "commentInput clicked - switching to NewPostFragment");
-            switchToNewPostFragment();
-        });
-
-        commentInput.addTextChangedListener(new android.text.TextWatcher() {
-            @Override
-            public void beforeTextChanged(CharSequence s, int start, int count, int after) {}
-
-            @Override
-            public void onTextChanged(CharSequence s, int start, int before, int count) {
-                int currentLength = s.length();
-                updateCharacterCount(currentLength);
-
-                boolean hasContent = s.toString().trim().length() > 0;
-                boolean withinLimit = currentLength <= CHARACTER_LIMIT;
-                sendButton.setEnabled(hasContent && withinLimit);
-
-                if (currentLength >= CHARACTER_LIMIT * 0.9) {
-                    charCountText.setTextColor(getResources().getColor(android.R.color.holo_orange_light));
-                } else if (currentLength >= CHARACTER_LIMIT) {
-                    charCountText.setTextColor(getResources().getColor(android.R.color.holo_red_light));
-                } else {
-                    charCountText.setTextColor(getResources().getColor(android.R.color.darker_gray));
+                    // Set reply mention if replying
+                    if (replyingToUserId != null) {
+                        commentInput.setText("@" + replyingToUserId + " ");
+                        commentInput.setSelection(commentInput.getText().length());
+                    }
                 }
-            }
+            });
 
-            @Override
-            public void afterTextChanged(android.text.Editable s) {}
-        });
+            commentInput.addTextChangedListener(new android.text.TextWatcher() {
+                @Override
+                public void beforeTextChanged(CharSequence s, int start, int count, int after) {}
+                @Override
+                public void onTextChanged(CharSequence s, int start, int before, int count) {
+                    int currentLength = s.length();
+                    updateCharacterCount(currentLength);
 
-        commentInput.setFilters(new android.text.InputFilter[]{
-                new android.text.InputFilter.LengthFilter(CHARACTER_LIMIT)
-        });
+                    boolean hasContent = s.toString().trim().length() > 0;
+                    boolean withinLimit = currentLength <= CHARACTER_LIMIT;
+                    if (sendButton != null) {
+                        sendButton.setEnabled(hasContent && withinLimit);
+                    }
 
-        swipeRefresh.setOnRefreshListener(this::loadComments);
+                    if (charCountText != null) {
+                        if (currentLength >= CHARACTER_LIMIT * 0.9) {
+                            charCountText.setTextColor(getResources().getColor(android.R.color.holo_orange_light));
+                        } else if (currentLength >= CHARACTER_LIMIT) {
+                            charCountText.setTextColor(getResources().getColor(android.R.color.holo_red_light));
+                        } else {
+                            charCountText.setTextColor(getResources().getColor(android.R.color.darker_gray));
+                        }
+                    }
+                }
+                @Override
+                public void afterTextChanged(android.text.Editable s) {}
+            });
 
-        commentInput.setOnFocusChangeListener((v, hasFocus) -> {
-            if (hasFocus && replyingToUserId != null) {
-                commentInput.setText("@" + replyingToUserId + " ");
-                commentInput.setSelection(commentInput.getText().length());
-            }
-        });
-    }
+            commentInput.setFilters(new android.text.InputFilter[]{
+                    new android.text.InputFilter.LengthFilter(CHARACTER_LIMIT)
+            });
+        }
 
-    /**
-     * Switch from comment sheet to new post fragment layout.
-     * Closes the bottom sheet and opens the new post creation interface.
-     */
-    private void switchToNewPostFragment() {
-        android.util.Log.d("CommentSheet", "switchToNewPostFragment() called");
-
-        // Dismiss the current bottom sheet
-        dismiss();
-
-        // Open the new post fragment
-        NewPostFragment newPostFragment = new NewPostFragment();
-        requireActivity().getSupportFragmentManager()
-                .beginTransaction()
-                .replace(R.id.nav_host_fragment, newPostFragment)
-                .addToBackStack(null)
-                .commit();
-
-        android.util.Log.d("CommentSheet", "NewPostFragment opened");
-    }
-
-    /**
-     * Setup observers for ViewModel live data.
-     */
-    private void setupObservers() {
-        android.util.Log.d("CommentSheet", "setupObservers() called");
-
-        commentViewModel.getComments().observe(getViewLifecycleOwner(), comments -> {
-            android.util.Log.d("CommentSheet", "Comments observer triggered. Count: " + (comments != null ? comments.size() : "null"));
-            if (comments != null && !comments.isEmpty()) {
-                android.util.Log.d("CommentSheet", "Setting " + comments.size() + " comments to adapter");
-                commentAdapter.setComments(comments);
-                swipeRefresh.setRefreshing(false);
-            } else {
-                android.util.Log.d("CommentSheet", "No comments received or empty list");
-            }
-        });
-
-        commentViewModel.getError().observe(getViewLifecycleOwner(), error -> {
-            if (error != null) {
-                android.util.Log.e("CommentSheet", "Error loading comments: " + error);
-                Toast.makeText(getContext(), error, Toast.LENGTH_SHORT).show();
-                swipeRefresh.setRefreshing(false);
-            }
-        });
-
-        commentViewModel.getIsLoading().observe(getViewLifecycleOwner(), isLoading -> {
-            android.util.Log.d("CommentSheet", "Loading state changed: " + isLoading);
-            if (isLoading) {
-                swipeRefresh.setRefreshing(true);
-            } else {
-                swipeRefresh.setRefreshing(false);
-            }
-        });
-    }
-
-    /**
-     * Load initial comments for the post.
-     */
-    private void loadComments() {
-        android.util.Log.d("CommentSheet", "loadComments() called with postId: " + postId);
-        if (postId != null && !postId.isEmpty()) {
-            commentViewModel.loadComments(postId);
-            android.util.Log.d("CommentSheet", "ViewModel.loadComments() triggered");
-        } else {
-            android.util.Log.e("CommentSheet", "ERROR: postId is null or empty!");
+        if (swipeRefresh != null) {
+            swipeRefresh.setOnRefreshListener(this::loadComments);
         }
     }
 
-    /**
-     * Load more comments (pagination for infinite scroll).
-     */
+    private void setupObservers() {
+        commentViewModel.getComments().observe(getViewLifecycleOwner(), comments -> {
+            if (comments != null && !comments.isEmpty()) {
+                commentAdapter.setComments(comments);
+            } else {
+                if (commentAdapter != null) {
+                    commentAdapter.setComments(new java.util.ArrayList<>());
+                }
+            }
+            if (swipeRefresh != null) swipeRefresh.setRefreshing(false);
+        });
+
+        commentViewModel.getError().observe(getViewLifecycleOwner(), error -> {
+            if (error != null && !error.isEmpty()) {
+                Toast.makeText(getContext(), error, Toast.LENGTH_SHORT).show();
+            }
+            if (swipeRefresh != null) swipeRefresh.setRefreshing(false);
+        });
+
+        commentViewModel.getIsLoading().observe(getViewLifecycleOwner(), isLoading -> {
+            if (!isLoading) {
+                if (swipeRefresh != null) swipeRefresh.setRefreshing(false);
+                isLoadingMore = false;
+            }
+        });
+    }
+
+    private void loadComments() {
+        if (postId != null && !postId.isEmpty()) {
+            if (swipeRefresh != null) swipeRefresh.setRefreshing(true);
+            commentViewModel.loadComments(postId);
+        } else {
+            Toast.makeText(getContext(), "Error: Post ID not found", Toast.LENGTH_SHORT).show();
+        }
+    }
+
     private void loadMoreComments() {
-        android.util.Log.d("CommentSheet", "loadMoreComments() called");
         commentViewModel.loadMoreComments(postId);
     }
 
-    /**
-     * Send a new comment on the post.
-     */
     private void sendComment() {
+        if (commentInput == null) {
+            Toast.makeText(getContext(), "Error: Comment input not available", Toast.LENGTH_SHORT).show();
+            return;
+        }
+
         String text = commentInput.getText().toString().trim();
         if (text.isEmpty()) {
             Toast.makeText(getContext(), R.string.comment_empty_error, Toast.LENGTH_SHORT).show();
             return;
         }
 
-        String commentText = text.replace("@" + replyingToUserId + " ", "").trim();
+        String commentText = replyingToUserId != null
+                ? text.replace("@" + replyingToUserId + " ", "").trim()
+                : text;
         if (commentText.isEmpty()) {
             Toast.makeText(getContext(), R.string.comment_empty_error, Toast.LENGTH_SHORT).show();
             return;
@@ -409,88 +278,122 @@ public class BottomSheetCommentFragment extends BottomSheetDialogFragment implem
         replyingToUserId = null;
     }
 
-    /**
-     * Open emoji picker dialog (placeholder for future implementation).
-     */
-    private void openEmojiPicker() {
-        Toast.makeText(getContext(), "Emoji picker - Coming soon", Toast.LENGTH_SHORT).show();
-    }
-
-    /**
-     * Open GIF picker dialog (placeholder for future implementation).
-     */
-    private void openGifPicker() {
-        Toast.makeText(getContext(), "GIF picker - Coming soon", Toast.LENGTH_SHORT).show();
-    }
-
-    /**
-     * Open file chooser to select attachment.
-     */
-    private void openFileChooser() {
-        Toast.makeText(getContext(), "File picker - Coming soon", Toast.LENGTH_SHORT).show();
-    }
-
-    /**
-     * Remove the currently attached file.
-     */
-    private void removeAttachment() {
-        attachedFilePath = null;
-        updateAttachmentUI(false);
-        Toast.makeText(getContext(), "Attachment removed", Toast.LENGTH_SHORT).show();
-    }
-
-    /**
-     * Update character count display.
-     */
     private void updateCharacterCount(int currentLength) {
         if (charCountText != null) {
             charCountText.setText(String.format(java.util.Locale.getDefault(), "%d/%d", currentLength, CHARACTER_LIMIT));
         }
     }
 
-    /**
-     * Update attachment UI visibility.
-     */
-    private void updateAttachmentUI(boolean hasAttachment) {
-        if (hasAttachment) {
-            attachmentPreviewContainer.setVisibility(View.VISIBLE);
-        } else {
-            attachmentPreviewContainer.setVisibility(View.GONE);
-            attachedFilePath = null;
-        }
+    // Placeholders for future features
+    private void openEmojiPicker() {
+        Toast.makeText(getContext(), "Emoji picker - Coming soon", Toast.LENGTH_SHORT).show();
+    }
+    private void openGifPicker() {
+        Toast.makeText(getContext(), "GIF picker - Coming soon", Toast.LENGTH_SHORT).show();
+    }
+    private void openFileChooser() {
+        Toast.makeText(getContext(), "File picker - Coming soon", Toast.LENGTH_SHORT).show();
     }
 
-    /**
-     * Handle like button click on a comment.
-     */
     @Override
     public void onLikeClicked(Comment comment, int position) {
         commentViewModel.toggleLike(comment);
     }
 
-    /**
-     * Handle reply button click on a comment.
-     */
     @Override
     public void onReplyClicked(Comment comment) {
+        if (comment == null || comment.getUser() == null) {
+            Toast.makeText(getContext(), "Error: Cannot reply to this comment", Toast.LENGTH_SHORT).show();
+            return;
+        }
         replyingToUserId = comment.getUser().getName();
-        commentInput.requestFocus();
+        if (commentInput != null) commentInput.requestFocus();
     }
 
-    /**
-     * Handle "view more replies" click.
-     */
     @Override
     public void onViewMoreRepliesClicked(Comment comment) {
         commentViewModel.loadMoreReplies(comment.getId());
     }
+
+    @Override
+    public void onCommentLongPressed(Comment comment, int position) {
+        showCommentOptionsMenu(comment, position);
+    }
+
+    private void showCommentOptionsMenu(Comment comment, int position) {
+        android.app.AlertDialog.Builder builder = new android.app.AlertDialog.Builder(requireContext());
+        builder.setTitle("Comment options");
+
+        boolean isOwnComment = isOwnedByCurrentUser(comment);
+        java.util.List<String> options = new java.util.ArrayList<>();
+        if (isOwnComment) {
+            options.add("Edit");
+            options.add("Delete");
+        }
+        options.add("Report");
+        options.add("Share");
+        options.add("Copy");
+        options.add("Cancel");
+
+        builder.setItems(options.toArray(new String[0]), (dialog, which) -> {
+            if (which == 0 && isOwnComment) {
+                editComment(comment);
+            } else if (which == 1 && isOwnComment) {
+                deleteComment(comment, position);
+            } else if (!isOwnComment && which == 0) {
+                reportComment(comment);
+            } else if (!isOwnComment && which == 1) {
+                shareComment(comment);
+            } else if (!isOwnComment && which == 2) {
+                copyCommentText(comment);
+            }
+        });
+        builder.show();
+    }
+
+    private boolean isOwnedByCurrentUser(Comment comment) {
+        // TODO: Implement check against current user ID
+        return false;
+    }
+    private void editComment(Comment comment) {
+        Toast.makeText(getContext(), "Edit comment - Coming soon", Toast.LENGTH_SHORT).show();
+    }
+    private void deleteComment(Comment comment, int position) {
+        new android.app.AlertDialog.Builder(requireContext())
+                .setTitle("Delete comment?")
+                .setMessage("This action cannot be undone.")
+                .setPositiveButton("Delete", (dialog, which) -> {
+                    commentViewModel.deleteComment(comment.getId());
+                    commentAdapter.removeComment(position);
+                    Toast.makeText(getContext(), "Comment deleted", Toast.LENGTH_SHORT).show();
+                })
+                .setNegativeButton("Cancel", null)
+                .show();
+    }
+    private void reportComment(Comment comment) {
+        Toast.makeText(getContext(), "Comment reported", Toast.LENGTH_SHORT).show();
+    }
+    private void shareComment(Comment comment) {
+        android.content.Intent sendIntent = new android.content.Intent();
+        sendIntent.setAction(android.content.Intent.ACTION_SEND);
+        sendIntent.putExtra(android.content.Intent.EXTRA_TEXT, comment.getText());
+        sendIntent.setType("text/plain");
+        startActivity(sendIntent);
+    }
+    private void copyCommentText(Comment comment) {
+        android.content.ClipboardManager clipboard =
+                (android.content.ClipboardManager) requireContext().getSystemService(android.content.Context.CLIPBOARD_SERVICE);
+        android.content.ClipData clip = android.content.ClipData.newPlainText("comment", comment.getText());
+        clipboard.setPrimaryClip(clip);
+        Toast.makeText(getContext(), "Comment copied to clipboard", Toast.LENGTH_SHORT).show();
+    }
+    @Override
+    public void onStart() {
+        super.onStart();
+        if (getDialog() != null && getDialog().getWindow() != null) {
+            getDialog().getWindow().setSoftInputMode(
+                    android.view.WindowManager.LayoutParams.SOFT_INPUT_ADJUST_RESIZE
+            );
+        }
+    }
 }
-
-
-
-
-
-
-
-
-

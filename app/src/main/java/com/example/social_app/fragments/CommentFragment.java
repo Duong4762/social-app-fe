@@ -1,8 +1,13 @@
 package com.example.social_app.fragments;
 
+import android.content.ClipData;
+import android.content.ClipboardManager;
+import android.content.Context;
+import android.content.Intent;
 import android.os.Bundle;
 import android.text.Editable;
 import android.text.TextWatcher;
+import android.util.Log;
 import android.view.GestureDetector;
 import android.view.LayoutInflater;
 import android.view.MotionEvent;
@@ -29,39 +34,26 @@ import androidx.swiperefreshlayout.widget.SwipeRefreshLayout;
 import com.example.social_app.R;
 import com.example.social_app.adapters.CommentAdapter;
 import com.example.social_app.models.Comment;
+import com.example.social_app.models.User;
 import com.example.social_app.viewmodels.CommentViewModel;
 
 import java.util.ArrayList;
 import java.util.List;
 
-/**
- * CommentFragment displays comments for a specific post with scrolling support.
- * Features:
- * - Displays comments in a scrollable RecyclerView
- * - Supports infinite scrolling with pagination
- * - Allows composing and sending new comments
- * - Supports liking comments and viewing replies
- * - Implements swipe-to-refresh functionality
- */
 public class CommentFragment extends Fragment implements CommentAdapter.OnCommentActionListener {
 
     private static final String POST_ID_KEY = "post_id";
-    private static final int SCROLL_THRESHOLD = 5; // Load more when 5 items from bottom
-    private static final int CHARACTER_LIMIT = 280; // Maximum characters allowed
-
-    // Swipe detection constants
-    private static final int SWIPE_MIN_DISTANCE = 100; // Minimum distance to trigger swipe
-    private static final int SWIPE_MIN_VELOCITY = 100; // Minimum velocity for swipe
+    private static final int SCROLL_THRESHOLD = 5;
+    private static final int CHARACTER_LIMIT = 280;
 
     private RecyclerView commentsRecyclerView;
     private EditText commentInput;
-    private ImageButton sendButton, emojiButton, gifButton, attachMediaButton, removeAttachmentBtn;
-    private ImageView composeAvatar, attachmentPreviewImage;
+    private ImageButton sendButton, emojiButton, gifButton, attachMediaButton;
+    private ImageView composeAvatar;
+    private TextView charCountText;
     private Spinner sortSpinner;
     private SwipeRefreshLayout swipeRefresh;
-    private TextView charCountText, attachmentFileName, attachmentFileSize;
-    private LinearLayout attachmentPreviewContainer, actionButtonsSection;
-    private View inputFieldContainer;
+    private LinearLayout actionButtonsSection;
 
     private CommentAdapter commentAdapter;
     private CommentViewModel commentViewModel;
@@ -69,14 +61,10 @@ public class CommentFragment extends Fragment implements CommentAdapter.OnCommen
     private String replyingToUserId = null;
     private boolean isLoadingMore = false;
     private LinearLayoutManager layoutManager;
-    private String attachedFilePath = null; // Track attached file
-    private GestureDetectorCompat gestureDetector; // For swipe-to-dismiss
 
-    /**
-     * Factory method to create a new CommentFragment instance.
-     * @param postId The ID of the post whose comments to display
-     * @return A new CommentFragment instance
-     */
+    // Swipe to dismiss gesture (optional)
+    private GestureDetectorCompat gestureDetector;
+
     public static CommentFragment newInstance(String postId) {
         CommentFragment fragment = new CommentFragment();
         Bundle args = new Bundle();
@@ -102,57 +90,56 @@ public class CommentFragment extends Fragment implements CommentAdapter.OnCommen
         initializeViews(view);
         setupAdapters();
         setupScrollListener(commentsRecyclerView);
+
+        // ===== Chú ý: Block code test dữ liệu cứng, xoá bỏ nếu dùng API thực =====
+        List<Comment> fakeComments = new ArrayList<>();
+        for (int i = 1; i <= 10; i++) {
+            Comment comment = new Comment();
+            comment.setId(String.valueOf(i));
+            comment.setText("Comment test số " + i);
+            User user = new User();
+            user.setName("User " + i);
+            comment.setUser(user);
+            comment.setLikeCount(i * 10);
+            comment.setReplies(new ArrayList<>());
+            fakeComments.add(comment);
+        }
+        commentAdapter.setComments(fakeComments);
+        // ========== hết test =========
+
         setupListeners();
-        setupGestureDetector(view); // Setup swipe-to-dismiss gesture detection
-        setupObservers();
-        loadComments();
+        setupGestureDetector(view);
+//        setupObservers(); // Bỏ comment nếu chỉ test giao diện
+//        loadComments();
         return view;
     }
 
-    /**
-     * Initialize all UI views from the layout.
-     */
     private void initializeViews(View view) {
-        // Core compose views
-        commentInput = view.findViewById(R.id.comment_input);
-        sendButton = view.findViewById(R.id.send_button);
-        emojiButton = view.findViewById(R.id.emoji_button);
-        gifButton = view.findViewById(R.id.gif_button);
-        composeAvatar = view.findViewById(R.id.compose_avatar);
+        commentsRecyclerView = view.findViewById(R.id.comments_recycler_view);
         sortSpinner = view.findViewById(R.id.comment_sort_spinner);
         swipeRefresh = view.findViewById(R.id.swipe_refresh_layout);
 
-        // New compose UI elements
-        charCountText = view.findViewById(R.id.char_count_text);
-        inputFieldContainer = view.findViewById(R.id.input_field_container);
-        attachMediaButton = view.findViewById(R.id.attach_media_button);
-        attachmentPreviewContainer = view.findViewById(R.id.attachment_preview_container);
-        attachmentPreviewImage = view.findViewById(R.id.attachment_preview_image);
-        attachmentFileName = view.findViewById(R.id.attachment_file_name);
-        attachmentFileSize = view.findViewById(R.id.attachment_file_size);
-        removeAttachmentBtn = view.findViewById(R.id.remove_attachment_btn);
-        actionButtonsSection = view.findViewById(R.id.action_buttons_section);
+        composeAvatar = view.findViewById(R.id.compose_avatar);
+        commentInput = view.findViewById(R.id.compose_comment_input);
+        charCountText = view.findViewById(R.id.compose_char_count_text);
 
-        // Comment feed views
-        commentsRecyclerView = view.findViewById(R.id.comments_recycler_view);
+        actionButtonsSection = view.findViewById(R.id.compose_action_buttons_section);
+        attachMediaButton = view.findViewById(R.id.compose_attach_media_button);
+        gifButton = view.findViewById(R.id.compose_gif_button);
+        emojiButton = view.findViewById(R.id.compose_emoji_button);
+        sendButton = view.findViewById(R.id.compose_send_button);
 
-        // Setup RecyclerView with LinearLayoutManager for vertical scrolling
-        layoutManager = new LinearLayoutManager(getContext());
-        commentsRecyclerView.setLayoutManager(layoutManager);
-
-        // Set placeholder avatar
-        composeAvatar.setImageResource(R.drawable.avatar_placeholder);
-
-        // Initialize character count display
+        if (composeAvatar != null) {
+            composeAvatar.setImageResource(R.drawable.avatar_placeholder);
+        }
         updateCharacterCount(0);
 
-        // Setup sort spinner with comment sorting options
         setupSortSpinner();
+
+        layoutManager = new LinearLayoutManager(getContext());
+        commentsRecyclerView.setLayoutManager(layoutManager);
     }
 
-    /**
-     * Setup the sort spinner with available sorting options.
-     */
     private void setupSortSpinner() {
         ArrayAdapter<CharSequence> adapter = ArrayAdapter.createFromResource(
                 getContext(),
@@ -163,49 +150,27 @@ public class CommentFragment extends Fragment implements CommentAdapter.OnCommen
         sortSpinner.setAdapter(adapter);
     }
 
-    /**
-     * Setup the RecyclerView adapter with the CommentAdapter.
-     */
     private void setupAdapters() {
         commentAdapter = new CommentAdapter(getContext(), this);
         commentsRecyclerView.setAdapter(commentAdapter);
     }
 
-    /**
-     * Setup gesture detector for swipe-to-dismiss functionality.
-     * Detects swipe-down gestures to close the comment fragment.
-     *
-     * @param view The root view to attach gesture detection to
-     */
     private void setupGestureDetector(View view) {
         gestureDetector = new GestureDetectorCompat(getContext(), new SwipeGestureListener());
-
-        // Attach touch listener to root view to intercept swipe gestures
         view.setOnTouchListener((v, event) -> {
             gestureDetector.onTouchEvent(event);
             return false;
         });
     }
 
-    /**
-     * Inner class to handle swipe gesture detection.
-     * Specifically detects downward swipes to dismiss the fragment.
-     */
     private class SwipeGestureListener extends GestureDetector.SimpleOnGestureListener {
         @Override
         public boolean onFling(MotionEvent e1, MotionEvent e2, float velocityX, float velocityY) {
             try {
-                // Calculate the swipe distance
                 float diffY = e2.getRawY() - e1.getRawY();
                 float diffX = e2.getRawX() - e1.getRawX();
-
-                // Check if swipe is primarily downward (more vertical than horizontal)
-                // and meets the minimum distance and velocity thresholds
                 if (Math.abs(diffY) > Math.abs(diffX) &&
-                    diffY > SWIPE_MIN_DISTANCE &&
-                    Math.abs(velocityY) > SWIPE_MIN_VELOCITY) {
-
-                    // Swipe down detected - dismiss the fragment
+                        diffY > 100 && Math.abs(velocityY) > 100) {
                     dismissFragment();
                     return true;
                 }
@@ -216,28 +181,22 @@ public class CommentFragment extends Fragment implements CommentAdapter.OnCommen
         }
     }
 
-    /**
-     * Dismiss the comment fragment by popping from back stack.
-     * Provides smooth transition back to the home feed.
-     */
     private void dismissFragment() {
         if (getFragmentManager() != null) {
             getFragmentManager().popBackStack();
         }
     }
+
     public void setupScrollListener(RecyclerView recyclerView) {
         recyclerView.addOnScrollListener(new RecyclerView.OnScrollListener() {
             @Override
             public void onScrolled(@NonNull RecyclerView recyclerView, int dx, int dy) {
                 super.onScrolled(recyclerView, dx, dy);
-
-                // Check if we need to load more comments
                 int visibleItemCount = layoutManager.getChildCount();
                 int totalItemCount = layoutManager.getItemCount();
                 int firstVisibleItemPosition = layoutManager.findFirstVisibleItemPosition();
-
-                // Load more when user scrolls to within SCROLL_THRESHOLD items from bottom
-                if (!isLoadingMore && (visibleItemCount + firstVisibleItemPosition) >= (totalItemCount - SCROLL_THRESHOLD) && firstVisibleItemPosition >= 0) {
+                if (!isLoadingMore && (visibleItemCount + firstVisibleItemPosition) >= (totalItemCount - SCROLL_THRESHOLD)
+                        && firstVisibleItemPosition >= 0) {
                     isLoadingMore = true;
                     loadMoreComments();
                 }
@@ -245,274 +204,201 @@ public class CommentFragment extends Fragment implements CommentAdapter.OnCommen
         });
     }
 
-    /**
-     * Setup all button and input listeners.
-     */
     private void setupListeners() {
-        // Send button click listener
-        sendButton.setOnClickListener(v -> sendComment());
-        sendButton.setEnabled(false); // Disabled until input has text
-
-        // Emoji button click listener
-        emojiButton.setOnClickListener(v -> openEmojiPicker());
-
-        // GIF button click listener
-        gifButton.setOnClickListener(v -> openGifPicker());
-
-        // Attach media button click listener
-        attachMediaButton.setOnClickListener(v -> openFileChooser());
-
-        // Remove attachment button click listener
-        removeAttachmentBtn.setOnClickListener(v -> removeAttachment());
-
-        // Text watcher for character count and send button enable/disable
-        commentInput.addTextChangedListener(new TextWatcher() {
-            @Override
-            public void beforeTextChanged(CharSequence s, int start, int count, int after) {}
-
-            @Override
-            public void onTextChanged(CharSequence s, int start, int before, int count) {
-                // Update character count display
-                int currentLength = s.length();
-                updateCharacterCount(currentLength);
-
-                // Enable/disable send button based on input and character limit
-                boolean hasContent = s.toString().trim().length() > 0;
-                boolean withinLimit = currentLength <= CHARACTER_LIMIT;
-                sendButton.setEnabled(hasContent && withinLimit);
-
-                // Visual feedback for character limit
-                if (currentLength >= CHARACTER_LIMIT * 0.9) { // 90% threshold
-                    charCountText.setTextColor(getResources().getColor(android.R.color.holo_orange_light));
-                } else if (currentLength >= CHARACTER_LIMIT) {
-                    charCountText.setTextColor(getResources().getColor(android.R.color.holo_red_light));
-                } else {
-                    charCountText.setTextColor(getResources().getColor(android.R.color.darker_gray));
+        if (sendButton != null) {
+            sendButton.setOnClickListener(v -> sendComment());
+            sendButton.setEnabled(false);
+        }
+        if (emojiButton != null) emojiButton.setOnClickListener(v -> openEmojiPicker());
+        if (gifButton != null) gifButton.setOnClickListener(v -> openGifPicker());
+        if (attachMediaButton != null) attachMediaButton.setOnClickListener(v -> openFileChooser());
+        if (commentInput != null) {
+            commentInput.addTextChangedListener(new TextWatcher() {
+                @Override
+                public void beforeTextChanged(CharSequence s, int start, int count, int after) {}
+                @Override
+                public void onTextChanged(CharSequence s, int start, int before, int count) {
+                    int currentLength = s.length();
+                    updateCharacterCount(currentLength);
+                    boolean hasContent = s.toString().trim().length() > 0;
+                    boolean withinLimit = currentLength <= CHARACTER_LIMIT;
+                    if (sendButton != null) {
+                        sendButton.setEnabled(hasContent && withinLimit);
+                    }
+                    if (charCountText != null) {
+                        if (currentLength >= CHARACTER_LIMIT * 0.9) {
+                            charCountText.setTextColor(getResources().getColor(android.R.color.holo_orange_light));
+                        } else if (currentLength >= CHARACTER_LIMIT) {
+                            charCountText.setTextColor(getResources().getColor(android.R.color.holo_red_light));
+                        } else {
+                            charCountText.setTextColor(getResources().getColor(android.R.color.darker_gray));
+                        }
+                    }
                 }
-            }
+                @Override
+                public void afterTextChanged(Editable s) {}
+            });
 
-            @Override
-            public void afterTextChanged(Editable s) {}
-        });
+            commentInput.setFilters(new android.text.InputFilter[]{
+                    new android.text.InputFilter.LengthFilter(CHARACTER_LIMIT)
+            });
 
-        // Prevent input when character limit reached
-        commentInput.setFilters(new android.text.InputFilter[]{
-                new android.text.InputFilter.LengthFilter(CHARACTER_LIMIT)
-        });
-
-        // Swipe to refresh listener
-        swipeRefresh.setOnRefreshListener(this::loadComments);
-
-        // Comment input focus listener to auto-tag when replying
-        commentInput.setOnFocusChangeListener((v, hasFocus) -> {
-            if (hasFocus && replyingToUserId != null) {
-                // Auto-tag the user being replied to
-                commentInput.setText("@" + replyingToUserId + " ");
-                commentInput.setSelection(commentInput.getText().length());
-            }
-        });
+            commentInput.setOnFocusChangeListener((v, hasFocus) -> {
+                if (hasFocus && replyingToUserId != null) {
+                    commentInput.setText("@" + replyingToUserId + " ");
+                    commentInput.setSelection(commentInput.getText().length());
+                }
+            });
+        }
+        if (swipeRefresh != null) {
+            swipeRefresh.setOnRefreshListener(this::loadComments);
+        }
     }
 
-    /**
-     * Setup LiveData observers for comment data and state changes.
-     */
-    private void setupObservers() {
-        // Observe comments list changes
-        commentViewModel.getComments().observe(getViewLifecycleOwner(), comments -> {
-            commentAdapter.setComments(comments);
-            swipeRefresh.setRefreshing(false);
-        });
-
-        // Observe error messages
-        commentViewModel.getError().observe(getViewLifecycleOwner(), error -> {
-            if (error != null && !error.isEmpty()) {
-                Toast.makeText(getContext(), error, Toast.LENGTH_SHORT).show();
-                swipeRefresh.setRefreshing(false);
-            }
-        });
-
-        // Observe loading state
-        commentViewModel.getIsLoading().observe(getViewLifecycleOwner(), isLoading -> {
-            if (!isLoading) {
-                swipeRefresh.setRefreshing(false);
-                isLoadingMore = false;
-            }
-        });
+    private void updateCharacterCount(int currentLength) {
+        if (charCountText != null) {
+            charCountText.setText(String.format("%d/%d", currentLength, CHARACTER_LIMIT));
+        }
     }
 
-    /**
-     * Load initial comments for the post.
-     */
+    private void openEmojiPicker() {
+        Toast.makeText(getContext(), "Emoji picker - Coming soon", Toast.LENGTH_SHORT).show();
+    }
+
+    private void openGifPicker() {
+        Toast.makeText(getContext(), "GIF picker - Coming soon", Toast.LENGTH_SHORT).show();
+    }
+
+    private void openFileChooser() {
+        Toast.makeText(getContext(), "File picker - Coming soon", Toast.LENGTH_SHORT).show();
+    }
+
     private void loadComments() {
         swipeRefresh.setRefreshing(true);
         commentViewModel.loadComments(postId);
     }
 
-    /**
-     * Load more comments (pagination for infinite scroll).
-     */
     private void loadMoreComments() {
         commentViewModel.loadMoreComments(postId);
     }
 
-    /**
-     * Send a new comment on the post.
-     * Validates input, clears the field, and resets reply state.
-     */
     private void sendComment() {
+        if (commentInput == null) return;
         String text = commentInput.getText().toString().trim();
         if (text.isEmpty()) {
             Toast.makeText(getContext(), R.string.comment_empty_error, Toast.LENGTH_SHORT).show();
             return;
         }
-
-        // Remove the @username tag if present for sending
-        String commentText = text.replace("@" + replyingToUserId + " ", "").trim();
+        String commentText = replyingToUserId != null
+                ? text.replace("@" + replyingToUserId + " ", "").trim()
+                : text;
         if (commentText.isEmpty()) {
             Toast.makeText(getContext(), R.string.comment_empty_error, Toast.LENGTH_SHORT).show();
             return;
         }
-
         commentViewModel.sendComment(postId, commentText);
         commentInput.setText("");
         replyingToUserId = null;
     }
 
-    /**
-     * Open emoji picker dialog (placeholder for future implementation).
-     */
-    private void openEmojiPicker() {
-        Toast.makeText(getContext(), "Emoji picker - Coming soon", Toast.LENGTH_SHORT).show();
-    }
-
-    /**
-     * Open GIF picker dialog (placeholder for future implementation).
-     */
-    private void openGifPicker() {
-        Toast.makeText(getContext(), "GIF picker - Coming soon", Toast.LENGTH_SHORT).show();
-    }
-
-    /**
-     * Update character count display and provide visual feedback.
-     * Shows current character count vs. limit (0/280).
-     *
-     * @param currentLength Current length of comment text
-     */
-    private void updateCharacterCount(int currentLength) {
-        if (charCountText != null) {
-            charCountText.setText(String.format(java.util.Locale.getDefault(), "%d/%d", currentLength, CHARACTER_LIMIT));
-        }
-    }
-
-    /**
-     * Open file chooser to select attachment (image, video, document).
-     * Placeholder for actual file picker implementation.
-     */
-    private void openFileChooser() {
-        // Placeholder: In production, this would open a file picker
-        // For now, show a toast about file selection
-        Toast.makeText(getContext(), "File picker - Coming soon", Toast.LENGTH_SHORT).show();
-
-        // TODO: Implement actual file picker
-        // Intent intent = new Intent(Intent.ACTION_PICK);
-        // intent.setType("image/*|video/*");
-        // startActivityForResult(intent, FILE_PICKER_REQUEST_CODE);
-    }
-
-    /**
-     * Remove the currently attached file and hide preview.
-     */
-    private void removeAttachment() {
-        attachedFilePath = null;
-        updateAttachmentUI(false);
-        Toast.makeText(getContext(), "Attachment removed", Toast.LENGTH_SHORT).show();
-    }
-
-    /**
-     * Display preview of attached file (image, video, document).
-     * Shows file name, size, and thumbnail if applicable.
-     *
-     * @param filePath Path to the attached file
-     * @param fileName Name of the file
-     * @param fileSize Size of the file in bytes
-     */
-    private void displayAttachmentPreview(String filePath, String fileName, long fileSize) {
-        attachedFilePath = filePath;
-
-        // Update file info display
-        attachmentFileName.setText(fileName);
-        attachmentFileSize.setText(formatFileSize(fileSize));
-
-        // Show preview container
-        updateAttachmentUI(true);
-
-        Toast.makeText(getContext(), "File attached: " + fileName, Toast.LENGTH_SHORT).show();
-    }
-
-    /**
-     * Update attachment UI visibility and state.
-     * Shows or hides attachment preview section based on attachment status.
-     *
-     * @param hasAttachment True if file is attached, false otherwise
-     */
-    private void updateAttachmentUI(boolean hasAttachment) {
-        if (hasAttachment) {
-            attachmentPreviewContainer.setVisibility(View.VISIBLE);
-            // Adjust layout to show attachment section
-            if (actionButtonsSection != null) {
-                actionButtonsSection.setVisibility(View.VISIBLE);
-            }
-        } else {
-            attachmentPreviewContainer.setVisibility(View.GONE);
-            attachedFilePath = null;
-        }
-    }
-
-    /**
-     * Format file size from bytes to human-readable format.
-     * Examples: "2.5 MB", "1.2 KB", "512 B"
-     *
-     * @param bytes File size in bytes
-     * @return Formatted file size string
-     */
-    private String formatFileSize(long bytes) {
-        if (bytes <= 0) return "0 B";
-
-        final String[] units = new String[]{"B", "KB", "MB", "GB"};
-        int digitGroups = (int) (Math.log10(bytes) / Math.log10(1024));
-
-        return String.format(java.util.Locale.getDefault(), "%.1f %s",
-                bytes / Math.pow(1024, digitGroups), units[digitGroups]);
-    }
-
     // ==================== CommentAdapter.OnCommentActionListener Callbacks ====================
-
-    /**
-     * Handle like button click on a comment.
-     * Toggles the like status and updates the like count.
-     */
     @Override
     public void onLikeClicked(Comment comment, int position) {
         commentViewModel.toggleLike(comment);
     }
 
-    /**
-     * Handle reply button click on a comment.
-     * Sets up auto-tagging and focuses the input field.
-     */
     @Override
     public void onReplyClicked(Comment comment) {
+        if (comment == null || comment.getUser() == null) return;
         replyingToUserId = comment.getUser().getName();
-        commentInput.requestFocus();
+        if (commentInput != null) commentInput.requestFocus();
     }
 
-    /**
-     * Handle "view more replies" click to expand nested replies.
-     * Loads additional replies for the parent comment.
-     */
     @Override
     public void onViewMoreRepliesClicked(Comment comment) {
         commentViewModel.loadMoreReplies(comment.getId());
     }
-}
 
+    @Override
+    public void onCommentLongPressed(Comment comment, int position) {
+        showCommentOptionsMenu(comment, position);
+    }
+
+    private void showCommentOptionsMenu(Comment comment, int position) {
+        androidx.appcompat.app.AlertDialog.Builder builder = new androidx.appcompat.app.AlertDialog.Builder(requireContext());
+        builder.setTitle("Comment options");
+        boolean isOwnComment = isOwnedByCurrentUser(comment);
+        List<String> options = new ArrayList<>();
+        if (isOwnComment) {
+            options.add("Edit");
+            options.add("Delete");
+        }
+        options.add("Report");
+        options.add("Share");
+        options.add("Copy");
+        options.add("Cancel");
+        builder.setItems(options.toArray(new String[0]), (dialog, which) -> {
+            if (which == 0 && isOwnComment) {
+                editComment(comment);
+            } else if (which == 1 && isOwnComment) {
+                deleteComment(comment, position);
+            } else if (!isOwnComment && which == 0) {
+                reportComment(comment);
+            } else if (!isOwnComment && which == 1) {
+                shareComment(comment);
+            } else if (!isOwnComment && which == 2) {
+                copyCommentText(comment);
+            }
+        });
+        builder.show();
+    }
+
+    private boolean isOwnedByCurrentUser(Comment comment) {
+        // TODO: Check with current user id, demo always return false
+        return false;
+    }
+
+    private void editComment(Comment comment) {
+        Toast.makeText(getContext(), "Edit comment - Coming soon", Toast.LENGTH_SHORT).show();
+    }
+
+    private void deleteComment(Comment comment, int position) {
+        new androidx.appcompat.app.AlertDialog.Builder(requireContext())
+                .setTitle("Delete comment?")
+                .setMessage("This action cannot be undone.")
+                .setPositiveButton("Delete", (dialog, which) -> {
+                    commentViewModel.deleteComment(comment.getId());
+                    commentAdapter.removeComment(position);
+                    Toast.makeText(getContext(), "Comment deleted", Toast.LENGTH_SHORT).show();
+                })
+                .setNegativeButton("Cancel", null)
+                .show();
+    }
+
+    private void reportComment(Comment comment) {
+        Toast.makeText(getContext(), "Comment reported", Toast.LENGTH_SHORT).show();
+    }
+
+    private void shareComment(Comment comment) {
+        Intent sendIntent = new Intent();
+        sendIntent.setAction(Intent.ACTION_SEND);
+        sendIntent.putExtra(Intent.EXTRA_TEXT, comment.getText());
+        sendIntent.setType("text/plain");
+        startActivity(sendIntent);
+    }
+
+    private void copyCommentText(Comment comment) {
+        ClipboardManager clipboard =
+                (ClipboardManager) requireContext().getSystemService(Context.CLIPBOARD_SERVICE);
+        ClipData clip = ClipData.newPlainText("comment", comment.getText());
+        clipboard.setPrimaryClip(clip);
+        Toast.makeText(getContext(), "Comment copied to clipboard", Toast.LENGTH_SHORT).show();
+    }
+
+    @Override
+    public void onViewCreated(@NonNull View view, @Nullable Bundle savedInstanceState) {
+        super.onViewCreated(view, savedInstanceState);
+        // Đo chiều cao các view nếu cần debug
+    }
+
+}

@@ -48,11 +48,12 @@
     <string name="location">Location</string>
     <string name="verified">Verified</string>
     <string name="view_more_replies">View more replies...</string>
+    <string name="compose_hint_comment">Write a comment...</string>
     <string name="comment_empty_error">Comment cannot be empty</string>
+    <string name="drag_handle_desc">Drag to move</string>
     <string name="attachment_preview">Attachment preview</string>
     <string name="remove_attachment">Remove attachment</string>
     <string name="attach_media">Attach media or file</string>
-    <string name="drag_handle_desc">Drag handle - swipe down to dismiss</string>
     <string name="remove">Remove</string>
 
     <!-- New Post Fragment -->

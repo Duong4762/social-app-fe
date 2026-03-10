@@ -1,6 +1,7 @@
 package com.example.social_app.adapters;
 
 import android.content.Context;
+import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -21,12 +22,14 @@ import java.util.List;
  * RecyclerView Adapter for displaying comments.
  * Supports nested replies with indentation.
  * Handles like, reply, and view more replies interactions.
+ * Facebook-like comment display with proper UI.
  */
 public class CommentAdapter extends RecyclerView.Adapter<CommentAdapter.CommentViewHolder> {
 
     private List<Comment> comments;
     private Context context;
     private OnCommentActionListener actionListener;
+    private static final String TAG = "CommentAdapter";
 
     /**
      * Interface for handling comment interactions.
@@ -35,6 +38,7 @@ public class CommentAdapter extends RecyclerView.Adapter<CommentAdapter.CommentV
         void onLikeClicked(Comment comment, int position);
         void onReplyClicked(Comment comment);
         void onViewMoreRepliesClicked(Comment comment);
+        void onCommentLongPressed(Comment comment, int position);
     }
 
     /**
@@ -57,12 +61,13 @@ public class CommentAdapter extends RecyclerView.Adapter<CommentAdapter.CommentV
         if (comments != null) {
             this.comments = new ArrayList<>(comments);
             android.util.Log.d("CommentAdapter", "setComments() called with " + this.comments.size() + " comments");
+            android.util.Log.d("CommentAdapter", "  First comment: " + (comments.size() > 0 ? comments.get(0).getText().substring(0, 30) + "..." : "none"));
         } else {
             this.comments = new ArrayList<>();
             android.util.Log.w("CommentAdapter", "setComments() called with null, creating empty list");
         }
         notifyDataSetChanged();
-        android.util.Log.d("CommentAdapter", "notifyDataSetChanged() called. RecyclerView will refresh");
+        android.util.Log.d("CommentAdapter", "✅ notifyDataSetChanged() called. RecyclerView will refresh with " + this.comments.size() + " items");
     }
 
     /**
@@ -100,17 +105,29 @@ public class CommentAdapter extends RecyclerView.Adapter<CommentAdapter.CommentV
     @NonNull
     @Override
     public CommentViewHolder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
-        android.util.Log.d("CommentAdapter", "onCreateViewHolder() called");
+        android.util.Log.d("CommentAdapter", "═══ onCreateViewHolder() CALLED ═══");
+        android.util.Log.d("CommentAdapter", "Parent: " + parent.getClass().getSimpleName());
+        android.util.Log.d("CommentAdapter", "Parent width: " + parent.getWidth() + "px");
+
         View view = LayoutInflater.from(context).inflate(R.layout.item_comment, parent, false);
+
+        android.util.Log.d("CommentAdapter", "View inflated: " + view.getClass().getSimpleName());
+        android.util.Log.d("CommentAdapter", "View width: " + view.getWidth() + "px");
+        android.util.Log.d("CommentAdapter", "View height: " + view.getHeight() + "px");
+        android.util.Log.d("CommentAdapter", "═══ ViewHolder created ═══");
+
         return new CommentViewHolder(view);
     }
 
     @Override
     public void onBindViewHolder(@NonNull CommentViewHolder holder, int position) {
-        if (position < comments.size()) {
+        android.util.Log.d("CommentAdapter", "onBindViewHolder() at position " + position);
+        if (position >= 0 && position < comments.size()) {
             Comment comment = comments.get(position);
-            android.util.Log.d("CommentAdapter", "onBindViewHolder() at position " + position + ": " + comment.getText().substring(0, Math.min(30, comment.getText().length())) + "...");
             holder.bind(comment, position);
+            android.util.Log.d("CommentAdapter", "✅ Binding complete for position " + position);
+        } else {
+            android.util.Log.w("CommentAdapter", "❌ Invalid position: " + position);
         }
     }
 
@@ -132,8 +149,6 @@ public class CommentAdapter extends RecyclerView.Adapter<CommentAdapter.CommentV
         private TextView replyCount;
         private ImageButton likeButton;
         private ImageButton replyButton;
-        private ImageButton shareButton;
-        private ImageButton bookmarkButton;
         private TextView viewMoreReplies;
 
         public CommentViewHolder(@NonNull View itemView) {
@@ -153,74 +168,138 @@ public class CommentAdapter extends RecyclerView.Adapter<CommentAdapter.CommentV
             replyCount = itemView.findViewById(R.id.comment_reply_count);
             likeButton = itemView.findViewById(R.id.comment_like_button);
             replyButton = itemView.findViewById(R.id.comment_reply_button);
-            shareButton = itemView.findViewById(R.id.comment_share_button);
-            bookmarkButton = itemView.findViewById(R.id.comment_bookmark_button);
 
             // View more replies
             viewMoreReplies = itemView.findViewById(R.id.view_more_replies);
+            android.util.Log.d("CommentAdapter", "✅ onCreateViewHolder() - item view created");
         }
 
-        /**
-         * Binds comment data to ViewHolder views.
-         * @param comment Comment to bind
-         * @param position Position in adapter
-         */
         public void bind(Comment comment, int position) {
+            if (comment == null || comment.getUser() == null) {
+                Log.e(TAG, "Comment or User is null at position " + position);
+                return;
+            }
+
             String userName = comment.getUser().getName();
+            android.util.Log.d("CommentAdapter", "┌─── bind() START position=" + position + " ───┐");
+            android.util.Log.d("CommentAdapter", "│ User: " + userName);
+            android.util.Log.d("CommentAdapter", "│ Text: " + (comment.getText().length() > 30 ? comment.getText().substring(0, 30) + "..." : comment.getText()));
 
             // === BASIC COMMENT INFO ===
-            username.setText(userName);
-            commentText.setText(comment.getText());
-            timestamp.setText(formatTimestamp(comment.getTimestamp()));
+            bindUserInfo(userName, comment.getTimestamp());
+            android.util.Log.d("CommentAdapter", "│ ✅ bindUserInfo done");
 
-            // Set avatar
-            avatar.setImageResource(R.drawable.avatar_placeholder);
-            avatar.setContentDescription(
-                    context.getString(R.string.user_avatar) + " - " + userName
-            );
+            bindCommentText(comment.getText());
+            android.util.Log.d("CommentAdapter", "│ ✅ bindCommentText done");
+
+            bindUserAvatar(userName);
+            android.util.Log.d("CommentAdapter", "│ ✅ bindUserAvatar done");
 
             // === OPTIONAL: VERIFIED BADGE ===
-            if (comment.getUser().isVerified()) {
-                verifiedBadge.setVisibility(View.VISIBLE);
-                verifiedBadge.setContentDescription(userName + " is verified");
-            } else {
-                verifiedBadge.setVisibility(View.GONE);
-            }
+            bindVerifiedBadge(comment.getUser().isVerified());
+            android.util.Log.d("CommentAdapter", "│ ✅ bindVerifiedBadge done");
 
             // === OPTIONAL: LOCATION ===
-            if (comment.getLocation() != null && !comment.getLocation().isEmpty()) {
-                location.setText(comment.getLocation());
-                // Cast parent to View to access setVisibility()
-                View locationSection = (View) location.getParent();
-                if (locationSection != null) {
-                    locationSection.setVisibility(View.VISIBLE);
-                }
-            } else {
-                // Cast parent to View to access setVisibility()
-                View locationSection = (View) location.getParent();
-                if (locationSection != null) {
-                    locationSection.setVisibility(View.GONE);
+            bindLocation(comment.getLocation());
+            android.util.Log.d("CommentAdapter", "│ ✅ bindLocation done");
+
+            // === INTERACTIONS ===
+            bindLikeInteraction(comment, position);
+            android.util.Log.d("CommentAdapter", "│ ✅ bindLikeInteraction done");
+
+            bindReplyInteraction(comment, position);
+            android.util.Log.d("CommentAdapter", "│ ✅ bindReplyInteraction done");
+
+            bindMoreReplies(comment);
+            android.util.Log.d("CommentAdapter", "│ ✅ bindMoreReplies done");
+
+            // === LONG PRESS FOR OPTIONS ===
+            bindLongPressListener(comment, position);
+            android.util.Log.d("CommentAdapter", "│ ✅ bindLongPressListener done");
+            android.util.Log.d("CommentAdapter", "└─── bind() END ───┘");
+        }
+
+        private void bindUserInfo(String userName, Long timestamp) {
+            if (username != null) {
+                username.setText(userName);
+                username.setVisibility(View.VISIBLE);
+            }
+            if (timestamp != null && this.timestamp != null) {
+                String timeStr = formatTimestamp(timestamp);
+                this.timestamp.setText(timeStr);
+                this.timestamp.setVisibility(View.VISIBLE);
+            }
+        }
+
+        private void bindCommentText(String text) {
+            if (commentText != null) {
+                commentText.setText(text);
+                commentText.setVisibility(View.VISIBLE);
+            }
+        }
+
+        private void bindUserAvatar(String userName) {
+            if (avatar != null) {
+                avatar.setImageResource(R.drawable.avatar_placeholder);
+                avatar.setContentDescription(
+                        context.getString(R.string.user_avatar) + " - " + userName
+                );
+            }
+        }
+
+        private void bindVerifiedBadge(boolean isVerified) {
+            if (verifiedBadge != null) {
+                verifiedBadge.setVisibility(isVerified ? View.VISIBLE : View.GONE);
+            }
+        }
+
+        private void bindLocation(String locationText) {
+            if (location != null) {
+                if (locationText != null && !locationText.isEmpty()) {
+                    location.setText(locationText);
+                    location.setVisibility(View.VISIBLE);
+                } else {
+                    location.setVisibility(View.GONE);
                 }
             }
+        }
 
-            // === LIKE INTERACTION ===
-            likeCount.setText(String.valueOf(comment.getLikeCount()));
-            boolean isLiked = comment.isLiked();
-            likeButton.setSelected(isLiked);
-            likeButton.setImageResource(
-                    isLiked ? R.drawable.ic_heart_filled : R.drawable.ic_heart
-            );
-            likeButton.setContentDescription(
-                    (isLiked ? "Unlike" : "Like") + " comment by " + userName
-            );
-            likeButton.setOnClickListener(v -> {
-                if (actionListener != null) {
-                    actionListener.onLikeClicked(comment, position);
-                }
-            });
+        private void bindLikeInteraction(Comment comment, int position) {
+            // Like count
+            if (likeCount != null) {
+                int count = comment.getLikeCount();
+                likeCount.setText(count > 0 ? String.valueOf(count) : "");
+                likeCount.setVisibility(count > 0 ? View.VISIBLE : View.GONE);
+            }
 
-            // === REPLY INTERACTION ===
-            if (comment.getReplies() != null) {
+            // Like button
+            if (likeButton != null) {
+                boolean isLiked = comment.isLiked();
+                likeButton.setSelected(isLiked);
+                likeButton.setImageResource(
+                        isLiked ? R.drawable.ic_heart_filled : R.drawable.ic_heart
+                );
+                likeButton.setOnClickListener(v -> {
+                    if (actionListener != null) {
+                        actionListener.onLikeClicked(comment, position);
+                        updateLikeState(!isLiked);
+                    }
+                });
+                likeButton.setContentDescription(isLiked ? "Unlike" : "Like");
+            }
+        }
+
+        private void bindReplyInteraction(Comment comment, int position) {
+            if (replyButton != null) {
+                replyButton.setOnClickListener(v -> {
+                    if (actionListener != null) {
+                        actionListener.onReplyClicked(comment);
+                    }
+                });
+                replyButton.setContentDescription("Reply to comment");
+            }
+
+            if (replyCount != null && comment.getReplies() != null) {
                 int replyCountValue = comment.getReplies().size();
                 if (replyCountValue > 0) {
                     replyCount.setText(String.valueOf(replyCountValue));
@@ -228,60 +307,56 @@ public class CommentAdapter extends RecyclerView.Adapter<CommentAdapter.CommentV
                 } else {
                     replyCount.setVisibility(View.GONE);
                 }
-            } else {
-                replyCount.setVisibility(View.GONE);
-            }
-
-            replyButton.setContentDescription("Reply to " + userName);
-            replyButton.setOnClickListener(v -> {
-                if (actionListener != null) {
-                    actionListener.onReplyClicked(comment);
-                }
-            });
-
-            // === SHARE BUTTON ===
-            shareButton.setContentDescription("Share comment by " + userName);
-            shareButton.setOnClickListener(v -> {
-                // TODO: Implement share functionality
-            });
-
-            // === BOOKMARK BUTTON ===
-            bookmarkButton.setContentDescription("Bookmark comment");
-            bookmarkButton.setOnClickListener(v -> {
-                boolean isBookmarked = v.isSelected();
-                v.setSelected(!isBookmarked);
-                bookmarkButton.setImageResource(
-                        !isBookmarked ? R.drawable.ic_bookmark_filled : R.drawable.ic_bookmark
-                );
-            });
-
-            // === VIEW MORE REPLIES ===
-            if (comment.getReplies() != null && !comment.getReplies().isEmpty()) {
-                viewMoreReplies.setVisibility(View.VISIBLE);
-                int replyCountValue = comment.getReplies().size();
-                viewMoreReplies.setText(replyCountValue + " repl" + (replyCountValue > 1 ? "ies" : "y"));
-                viewMoreReplies.setContentDescription(
-                        replyCountValue + " repl" + (replyCountValue > 1 ? "ies" : "y") + " to this comment"
-                );
-            } else if (comment.isHasMoreReplies()) {
-                viewMoreReplies.setVisibility(View.VISIBLE);
-                viewMoreReplies.setText(R.string.view_more_replies);
-                viewMoreReplies.setContentDescription(context.getString(R.string.view_more_replies));
-                viewMoreReplies.setOnClickListener(v -> {
-                    if (actionListener != null) {
-                        actionListener.onViewMoreRepliesClicked(comment);
-                    }
-                });
-            } else {
-                viewMoreReplies.setVisibility(View.GONE);
             }
         }
 
-        /**
-         * Formats timestamp into human-readable format.
-         * @param timestamp Timestamp in milliseconds
-         * @return Formatted time string (e.g., "2 HOURS AGO")
-         */
+        private void bindMoreReplies(Comment comment) {
+            if (viewMoreReplies != null) {
+                List<Comment> replies = comment.getReplies();
+                boolean hasMoreReplies = comment.isHasMoreReplies();
+
+                if (replies != null && !replies.isEmpty()) {
+                    viewMoreReplies.setVisibility(View.VISIBLE);
+                    int replyCountValue = replies.size();
+                    String text = replyCountValue + " repl" + (replyCountValue > 1 ? "ies" : "y");
+                    viewMoreReplies.setText(text);
+                    viewMoreReplies.setOnClickListener(v -> {
+                        if (actionListener != null) {
+                            actionListener.onViewMoreRepliesClicked(comment);
+                        }
+                    });
+                } else if (hasMoreReplies) {
+                    viewMoreReplies.setVisibility(View.VISIBLE);
+                    viewMoreReplies.setText(R.string.view_more_replies);
+                    viewMoreReplies.setOnClickListener(v -> {
+                        if (actionListener != null) {
+                            actionListener.onViewMoreRepliesClicked(comment);
+                        }
+                    });
+                } else {
+                    viewMoreReplies.setVisibility(View.GONE);
+                }
+            }
+        }
+
+        private void bindLongPressListener(Comment comment, int position) {
+            itemView.setOnLongClickListener(v -> {
+                if (actionListener != null) {
+                    actionListener.onCommentLongPressed(comment, position);
+                }
+                return true;
+            });
+        }
+
+        private void updateLikeState(boolean isNowLiked) {
+            if (likeButton != null) {
+                likeButton.setSelected(isNowLiked);
+                likeButton.setImageResource(
+                        isNowLiked ? R.drawable.ic_heart_filled : R.drawable.ic_heart
+                );
+            }
+        }
+
         private String formatTimestamp(long timestamp) {
             long currentTime = System.currentTimeMillis();
             long difference = currentTime - timestamp;

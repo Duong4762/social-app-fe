@@ -1,12 +1,15 @@
 <?xml version="1.0" encoding="utf-8"?>
-<androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<androidx.constraintlayout.widget.ConstraintLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
     android:background="?attr/colorSurface"
-    android:layout_margin="8dp"
-    android:padding="12dp">
+    android:paddingStart="12dp"
+    android:paddingEnd="12dp"
+    android:paddingTop="8dp"
+    android:paddingBottom="8dp">
 
     <!-- User Avatar -->
     <ImageView
@@ -19,7 +22,7 @@
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="parent" />
 
-    <!-- User Info Section: Username + Timestamp -->
+    <!-- User Info Section -->
     <LinearLayout
         android:id="@+id/user_info_section"
         android:layout_width="0dp"
@@ -27,10 +30,9 @@
         android:layout_marginStart="12dp"
         android:orientation="horizontal"
         app:layout_constraintStart_toEndOf="@id/comment_avatar"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintTop_toTopOf="@id/comment_avatar">
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintEnd_toEndOf="parent">
 
-        <!-- Username (Bold) -->
         <TextView
             android:id="@+id/comment_username"
             android:layout_width="wrap_content"
@@ -38,9 +40,9 @@
             android:textColor="?attr/colorOnSurface"
             android:textSize="14sp"
             android:textStyle="bold"
+            android:fontFamily="@font/inter_bold"
             tools:text="John Doe" />
 
-        <!-- Verification Badge (if applicable) -->
         <ImageView
             android:id="@+id/verified_badge"
             android:layout_width="16dp"
@@ -51,23 +53,21 @@
             android:src="@drawable/ic_verified"
             android:visibility="gone" />
 
-        <!-- Spacer -->
         <Space
             android:layout_width="8dp"
             android:layout_height="1dp" />
 
-        <!-- Timestamp (Smaller text) -->
         <TextView
             android:id="@+id/comment_timestamp"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:textColor="?attr/colorOnSurfaceVariant"
             android:textSize="12sp"
+            android:fontFamily="@font/inter_regular"
             tools:text="2 HOURS AGO" />
-
     </LinearLayout>
 
-    <!-- Location Info (Optional) -->
+    <!-- Location Section -->
     <LinearLayout
         android:id="@+id/location_section"
         android:layout_width="0dp"
@@ -77,10 +77,9 @@
         android:orientation="horizontal"
         android:visibility="gone"
         app:layout_constraintStart_toEndOf="@id/comment_avatar"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintTop_toBottomOf="@id/user_info_section">
+        app:layout_constraintTop_toBottomOf="@id/user_info_section"
+        app:layout_constraintEnd_toEndOf="parent">
 
-        <!-- Location Icon -->
         <ImageView
             android:layout_width="12dp"
             android:layout_height="12dp"
@@ -89,7 +88,6 @@
             android:src="@drawable/ic_location"
             app:tint="?attr/colorOnSurfaceVariant" />
 
-        <!-- Location Text -->
         <TextView
             android:id="@+id/comment_location"
             android:layout_width="wrap_content"
@@ -97,150 +95,100 @@
             android:layout_marginStart="4dp"
             android:textColor="?attr/colorOnSurfaceVariant"
             android:textSize="11sp"
+            android:fontFamily="@font/inter_regular"
             tools:text="KYOTO, JAPAN" />
-
     </LinearLayout>
 
-    <!-- Comment Text with Rounded Background -->
+    <!-- Comment Text -->
     <TextView
         android:id="@+id/comment_text"
         android:layout_width="0dp"
         android:layout_height="wrap_content"
         android:layout_marginStart="12dp"
         android:layout_marginTop="8dp"
-        android:background="@drawable/comment_text_background"
-        android:padding="10dp"
         android:textColor="?attr/colorOnSurface"
         android:textSize="14sp"
-        android:textIsSelectable="true"
+        android:fontFamily="@font/inter_regular"
         app:layout_constraintStart_toEndOf="@id/comment_avatar"
-        app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintTop_toBottomOf="@id/location_section"
-        tools:text="This is a great post! Love the content and the way it's presented." />
+        app:layout_constraintEnd_toEndOf="parent"
+        tools:text="This is a great post! I really enjoyed reading it." />
 
-    <!-- Action Buttons Row -->
+    <!-- Action Buttons Section -->
     <LinearLayout
-        android:id="@+id/action_buttons_section"
+        android:id="@+id/action_buttons"
         android:layout_width="0dp"
         android:layout_height="wrap_content"
         android:layout_marginStart="12dp"
-        android:layout_marginTop="8dp"
-        android:gravity="center_vertical"
+        android:layout_marginTop="12dp"
         android:orientation="horizontal"
+        android:gravity="center_vertical"
         app:layout_constraintStart_toEndOf="@id/comment_avatar"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintTop_toBottomOf="@id/comment_text">
+        app:layout_constraintTop_toBottomOf="@id/comment_text"
+        app:layout_constraintEnd_toEndOf="parent">
 
-        <!-- Like Count + Icon -->
-        <LinearLayout
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:gravity="center_vertical"
-            android:orientation="horizontal">
-
-            <!-- Like Icon -->
-            <ImageButton
-                android:id="@+id/comment_like_button"
-                android:layout_width="28dp"
-                android:layout_height="28dp"
-                android:background="?android:attr/selectableItemBackgroundBorderless"
-                android:contentDescription="@string/like"
-                android:padding="4dp"
-                android:scaleType="centerInside"
-                android:src="@drawable/ic_heart"
-                app:tint="?attr/colorOnSurfaceVariant" />
-
-            <!-- Like Count Text -->
-            <TextView
-                android:id="@+id/comment_like_count"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_marginStart="4dp"
-                android:textColor="?attr/colorOnSurfaceVariant"
-                android:textSize="12sp"
-                tools:text="124" />
-
-        </LinearLayout>
-
-        <!-- Comment/Reply Count + Icon -->
-        <LinearLayout
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_marginStart="12dp"
-            android:gravity="center_vertical"
-            android:orientation="horizontal">
-
-            <!-- Reply Icon -->
-            <ImageButton
-                android:id="@+id/comment_reply_button"
-                android:layout_width="28dp"
-                android:layout_height="28dp"
-                android:background="?android:attr/selectableItemBackgroundBorderless"
-                android:contentDescription="@string/reply"
-                android:padding="4dp"
-                android:scaleType="centerInside"
-                android:src="@drawable/ic_comment"
-                app:tint="?attr/colorOnSurfaceVariant" />
-
-            <!-- Reply Count Text -->
-            <TextView
-                android:id="@+id/comment_reply_count"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_marginStart="4dp"
-                android:textColor="?attr/colorOnSurfaceVariant"
-                android:textSize="12sp"
-                tools:text="12" />
-
-        </LinearLayout>
-
-        <!-- Share Button (Optional) -->
+        <!-- Like Button -->
         <ImageButton
-            android:id="@+id/comment_share_button"
-            android:layout_width="28dp"
-            android:layout_height="28dp"
-            android:layout_marginStart="12dp"
-            android:background="?android:attr/selectableItemBackgroundBorderless"
-            android:contentDescription="@string/share"
-            android:padding="4dp"
+            android:id="@+id/comment_like_button"
+            android:layout_width="24dp"
+            android:layout_height="24dp"
+            android:layout_marginEnd="8dp"
+            android:background="?attr/selectableItemBackgroundBorderless"
+            android:contentDescription="@string/like"
             android:scaleType="centerInside"
-            android:src="@drawable/ic_share"
+            android:src="@drawable/ic_heart"
+            app:tint="?attr/colorOnSurfaceVariant" />
+
+        <!-- Like Count -->
+        <TextView
+            android:id="@+id/comment_like_count"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginEnd="16dp"
+            android:textColor="?attr/colorOnSurfaceVariant"
+            android:textSize="12sp"
+            android:fontFamily="@font/inter_regular"
+            tools:text="42" />
+
+        <!-- Reply Button -->
+        <ImageButton
+            android:id="@+id/comment_reply_button"
+            android:layout_width="24dp"
+            android:layout_height="24dp"
+            android:layout_marginEnd="8dp"
+            android:background="?attr/selectableItemBackgroundBorderless"
+            android:contentDescription="@string/reply"
+            android:scaleType="centerInside"
+            android:src="@drawable/ic_comment"
+            app:tint="?attr/colorOnSurfaceVariant" />
+
+        <!-- Reply Count -->
+        <TextView
+            android:id="@+id/comment_reply_count"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginEnd="16dp"
+            android:textColor="?attr/colorOnSurfaceVariant"
+            android:textSize="12sp"
+            android:fontFamily="@font/inter_regular"
             android:visibility="gone"
-            app:tint="?attr/colorOnSurfaceVariant" />
-
-        <!-- Spacer to push bookmark to right -->
-        <Space
-            android:layout_width="0dp"
-            android:layout_height="1dp"
-            android:layout_weight="1" />
-
-        <!-- Bookmark/Save Button -->
-        <ImageButton
-            android:id="@+id/comment_bookmark_button"
-            android:layout_width="28dp"
-            android:layout_height="28dp"
-            android:background="?android:attr/selectableItemBackgroundBorderless"
-            android:contentDescription="@string/bookmark"
-            android:padding="4dp"
-            android:scaleType="centerInside"
-            android:src="@drawable/ic_bookmark"
-            app:tint="?attr/colorOnSurfaceVariant" />
-
+            tools:text="5" />
     </LinearLayout>
 
-    <!-- View More Replies Link (Optional) -->
+    <!-- View More Replies Link -->
     <TextView
         android:id="@+id/view_more_replies"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_marginStart="12dp"
         android:layout_marginTop="8dp"
-        android:text="@string/view_more_replies"
-        android:textColor="@color/primary_purple"
+        android:textColor="?attr/colorPrimary"
         android:textSize="12sp"
+        android:fontFamily="@font/inter_medium"
         android:visibility="gone"
         app:layout_constraintStart_toEndOf="@id/comment_avatar"
-        app:layout_constraintTop_toBottomOf="@id/action_buttons_section" />
+        app:layout_constraintTop_toBottomOf="@id/action_buttons"
+        tools:text="View 5 replies" />
 
 </androidx.constraintlayout.widget.ConstraintLayout>
 

@@ -1,5 +1,7 @@
 package com.example.social_app.viewmodels;
 
+import static com.example.social_app.utils.MockDataGenerator.generateMockComments;
+
 import androidx.lifecycle.LiveData;
 import androidx.lifecycle.MutableLiveData;
 import androidx.lifecycle.ViewModel;
@@ -45,7 +47,7 @@ public class CommentViewModel extends ViewModel {
                 Thread.sleep(500);
 
                 // Generate mock comments
-                List<Comment> mockComments = MockDataGenerator.generateMockComments();
+                List<Comment> mockComments = generateMockComments();
                 android.util.Log.d("CommentViewModel", "Generated " + mockComments.size() + " mock comments");
 
                 // Update LiveData on main thread
@@ -115,7 +117,7 @@ public class CommentViewModel extends ViewModel {
             Thread.sleep(500);
 
             // Generate mock comments
-            List<Comment> newComments = MockDataGenerator.generateMockComments();
+            List<Comment> newComments = generateMockComments();
 
             // Append to existing comments
             List<Comment> currentComments = comments.getValue();
@@ -141,7 +143,7 @@ public class CommentViewModel extends ViewModel {
             Thread.sleep(500);
 
             // Generate mock replies
-            List<Comment> mockReplies = MockDataGenerator.generateMockComments();
+            List<Comment> mockReplies = generateMockComments();
 
             // Find the comment and add replies
             List<Comment> currentComments = comments.getValue();
@@ -160,6 +162,24 @@ public class CommentViewModel extends ViewModel {
             error.setValue("Failed to load replies: " + e.getMessage());
         } finally {
             isLoading.setValue(false);
+        }
+    }
+
+    /**
+     * Delete a comment by ID.
+     */
+    public void deleteComment(String commentId) {
+        try {
+            List<Comment> currentComments = comments.getValue();
+            if (currentComments != null) {
+                currentComments.removeIf(comment -> comment.getId().equals(commentId));
+                comments.setValue(currentComments);
+                android.util.Log.d("CommentViewModel", "Comment deleted: " + commentId);
+            }
+            error.setValue(null);
+        } catch (Exception e) {
+            error.setValue("Failed to delete comment: " + e.getMessage());
+            android.util.Log.e("CommentViewModel", "Error deleting comment", e);
         }
     }
 }

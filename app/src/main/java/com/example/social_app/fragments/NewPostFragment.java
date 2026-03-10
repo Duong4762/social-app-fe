@@ -40,7 +40,7 @@ public class NewPostFragment extends Fragment {
     private EditText postInput;
     private ImageButton cameraButton;
     private Button uploadImageButton, uploadVideoButton, postButton;
-    private TextView cancelButton;
+    private ImageButton cancelButton;
     private ImageView userAvatar;
     private Spinner privacySpinner;
 
@@ -140,7 +140,9 @@ public class NewPostFragment extends Fragment {
         });
 
         postButton.setOnClickListener(v -> createPost());
-        cancelButton.setOnClickListener(v -> handleCancel());
+        cancelButton.setOnClickListener(v -> {
+            requireActivity().getSupportFragmentManager().popBackStack();
+        });
     }
 
     private void setupObservers() {

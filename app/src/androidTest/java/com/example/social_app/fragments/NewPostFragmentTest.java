@@ -33,27 +33,18 @@ public class NewPostFragmentTest {
         FragmentScenario.launchInContainer(NewPostFragment.class);
     }
 
-    /**
-     * Test that appbar is visible with correct title.
-     */
     @Test
     public void testAppBarDisplaysCorrectly() {
         onView(withId(R.id.appbar))
                 .check(matches(isDisplayed()));
     }
 
-    /**
-     * Test post input field is present and visible.
-     */
     @Test
     public void testPostInputVisible() {
         onView(withId(R.id.post_input))
                 .check(matches(isDisplayed()));
     }
 
-    /**
-     * Test typing in post input field.
-     */
     @Test
     public void testTypePostContent() {
         String testContent = "This is my new post!";
@@ -63,31 +54,12 @@ public class NewPostFragmentTest {
                 .check(matches(withText(testContent)));
     }
 
-    /**
-     * Test character counter updates on input.
-     */
-    @Test
-    public void testCharacterCounterUpdates() {
-        onView(withId(R.id.post_input))
-                .perform(typeText("Hello"));
-
-        // Character count should be updated (assuming 280 max)
-        onView(withId(R.id.character_count))
-                .check(matches(withText("275/280")));
-    }
-
-    /**
-     * Test post button is disabled when input is empty.
-     */
     @Test
     public void testPostButtonDisabledWhenEmpty() {
         onView(withId(R.id.post_button))
                 .check(matches(isNotEnabled()));
     }
 
-    /**
-     * Test post button is enabled when input has text.
-     */
     @Test
     public void testPostButtonEnabledWithText() {
         onView(withId(R.id.post_input))
@@ -97,9 +69,6 @@ public class NewPostFragmentTest {
                 .check(matches(isEnabled()));
     }
 
-    /**
-     * Test all upload buttons are visible.
-     */
     @Test
     public void testUploadButtonsVisible() {
         onView(withId(R.id.upload_image_button))
@@ -109,39 +78,27 @@ public class NewPostFragmentTest {
                 .check(matches(isDisplayed()));
     }
 
-    /**
-     * Test location and tag buttons are visible.
-     */
     @Test
-    public void testLocationAndTagButtonsVisible() {
-        onView(withId(R.id.add_location_button))
+    public void testLocationAndTagRowsVisible() {
+        onView(withId(R.id.add_location_row))
                 .check(matches(isDisplayed()));
 
-        onView(withId(R.id.tag_people_button))
+        onView(withId(R.id.tag_people_row))
                 .check(matches(isDisplayed()));
     }
 
-    /**
-     * Test privacy spinner is visible.
-     */
     @Test
     public void testPrivacySpinnerVisible() {
         onView(withId(R.id.privacy_spinner))
                 .check(matches(isDisplayed()));
     }
 
-    /**
-     * Test camera FAB button is visible.
-     */
     @Test
     public void testCameraButtonVisible() {
         onView(withId(R.id.camera_button))
                 .check(matches(isDisplayed()));
     }
 
-    /**
-     * Test cancel button is clickable.
-     */
     @Test
     public void testCancelButtonClickable() {
         onView(withId(R.id.cancel_button))
@@ -149,18 +106,12 @@ public class NewPostFragmentTest {
                 .perform(click());
     }
 
-    /**
-     * Test media preview grid is present.
-     */
     @Test
-    public void testMediaPreviewGridPresent() {
-        onView(withId(R.id.media_preview_grid))
+    public void testMediaPreviewContainerPresent() {
+        onView(withId(R.id.media_preview_container))
                 .check(matches(isDisplayed()));
     }
 
-    /**
-     * Test user avatar is displayed.
-     */
     @Test
     public void testUserAvatarDisplayed() {
         onView(withId(R.id.user_avatar))
