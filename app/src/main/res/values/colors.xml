@@ -1,7 +1,44 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+    <!-- Black and White -->
     <color name="black">#FF000000</color>
     <color name="white">#FFFFFFFF</color>
+
+    <!-- Primary Colors -->
+    <color name="primary_purple">#7C3AED</color>
+    <color name="primary_purple_dark">#6D28D9</color>
+    <color name="primary_purple_light">#A78BFA</color>
+
+    <!-- Dark Mode Colors -->
+    <color name="dark_bg_primary">#0F172A</color>
+    <color name="dark_bg_secondary">#1E293B</color>
+    <color name="dark_bg_tertiary">#334155</color>
+    <color name="dark_text_primary">#F1F5F9</color>
+    <color name="dark_text_secondary">#CBD5E1</color>
+    <color name="dark_surface">#1E293B</color>
+    <color name="dark_surface_variant">#334155</color>
+
+    <!-- Light Mode Colors -->
+    <color name="light_bg_primary">#FFFFFF</color>
+    <color name="light_bg_secondary">#F8FAFC</color>
+    <color name="light_text_primary">#0F172A</color>
+    <color name="light_text_secondary">#64748B</color>
+    <color name="light_surface">#FFFFFF</color>
+
+    <!-- Accent Colors -->
+    <color name="accent_red">#EF4444</color>
+    <color name="accent_blue">#3B82F6</color>
+    <color name="accent_purple">#A259FF</color>
+    <color name="accent_purple_dark">#8B3FE0</color>
+    <color name="accent_purple_faint">#2A1A4E</color>
+    <color name="accent_green">#10B981</color>
+    <color name="accent_gray">#6B7280</color>
+    <color name="accent_circle_semi">#41009988</color>
+
+    <!-- Shadows and Borders -->
+    <color name="shadow_color">#1A000000</color>
+    <color name="border_color">#334155</color>
+    <color name="drag_handle_color">#64748B</color>
     <color name="gray">#64748B</color>
     <color name="purple">#C813EC</color>
 </resources>
