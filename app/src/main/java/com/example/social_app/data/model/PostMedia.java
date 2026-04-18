@@ -4,16 +4,6 @@ import com.google.firebase.firestore.ServerTimestamp;
 
 import java.util.Date;
 
-/**
- * Entity: PostMedia (Phương tiện của bài đăng)
- * Firestore collection: post_media
- *
- * Lưu trữ hình ảnh hoặc video đính kèm trong một bài đăng.
- * - postId: ID của bài đăng chứa media này
- * - mediaType: "IMAGE" | "VIDEO"
- * - order: thứ tự hiển thị trong bài đăng (bắt đầu từ 0)
- * - mediaUrl: URL download từ Firebase Storage
- */
 public class PostMedia {
 
     private String id;

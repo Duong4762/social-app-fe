@@ -3,10 +3,13 @@ package com.example.social_app;
 import android.content.Intent;
 import android.os.Bundle;
 import android.text.TextUtils;
+import android.text.method.HideReturnsTransformationMethod;
+import android.text.method.PasswordTransformationMethod;
 import android.util.Log;
 import android.view.View;
 import android.widget.Button;
 import android.widget.EditText;
+import android.widget.ImageView;
 import android.widget.ProgressBar;
 import android.widget.TextView;
 import android.widget.Toast;
@@ -26,11 +29,13 @@ public class LoginActivity extends AppCompatActivity {
     private static final String TAG = "LoginActivity";
 
     private EditText edtIdentifier, edtPassword;
+    private ImageView ivTogglePassword;
     private Button btnLogin;
     private TextView btnGoToRegister;
     private ProgressBar progressBar;
 
     private final FirebaseManager firebaseManager = FirebaseManager.getInstance();
+    private boolean isPasswordVisible = false;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -55,9 +60,13 @@ public class LoginActivity extends AppCompatActivity {
     private void initViews() {
         edtIdentifier = findViewById(R.id.edtUsername);
         edtPassword = findViewById(R.id.edtPassword);
+        ivTogglePassword = findViewById(R.id.ivTogglePassword);
         btnLogin = findViewById(R.id.btnLogin);
         btnGoToRegister = findViewById(R.id.btnGoToRegister);
         progressBar = findViewById(R.id.progressBar);
+
+        // Password is hidden by default.
+        edtPassword.setTransformationMethod(PasswordTransformationMethod.getInstance());
     }
 
     private void setupListeners() {
@@ -66,6 +75,20 @@ public class LoginActivity extends AppCompatActivity {
         btnGoToRegister.setOnClickListener(v -> {
             startActivity(new Intent(this, RegisterActivity.class));
         });
+
+        ivTogglePassword.setOnClickListener(v -> togglePasswordVisibility());
+    }
+
+    private void togglePasswordVisibility() {
+        isPasswordVisible = !isPasswordVisible;
+        if (isPasswordVisible) {
+            edtPassword.setTransformationMethod(HideReturnsTransformationMethod.getInstance());
+            ivTogglePassword.setImageResource(R.drawable.ic_eye_off);
+        } else {
+            edtPassword.setTransformationMethod(PasswordTransformationMethod.getInstance());
+            ivTogglePassword.setImageResource(R.drawable.ic_eye);
+        }
+        edtPassword.setSelection(edtPassword.getText().length());
     }
 
     private void attemptLogin() {

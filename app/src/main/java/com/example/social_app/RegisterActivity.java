@@ -4,11 +4,16 @@ import android.app.DatePickerDialog;
 import android.content.Intent;
 import android.os.Bundle;
 import android.text.TextUtils;
+import android.text.method.HideReturnsTransformationMethod;
+import android.text.method.PasswordTransformationMethod;
 import android.util.Log;
 import android.view.View;
+import android.widget.ArrayAdapter;
 import android.widget.Button;
 import android.widget.EditText;
+import android.widget.ImageView;
 import android.widget.ProgressBar;
+import android.widget.Spinner;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -31,13 +36,17 @@ public class RegisterActivity extends AppCompatActivity {
 
     private static final String TAG = "RegisterActivity";
 
-    private EditText edtFullName, edtUsername, edtEmail, edtPassword;
+    private EditText edtFullName, edtUsername, edtEmail, edtPassword, edtConfirmPassword;
+    private ImageView ivTogglePassword, ivToggleConfirmPassword;
     private Button btnRegister;
     private TextView btnGoToLogin;
-    private TextView txtDay, txtMonth, txtYear, txtGender;
+    private TextView txtDay, txtMonth, txtYear;
+    private Spinner spGender;
     private ProgressBar progressBar;
     private String selectedDateOfBirth = "";
     private String selectedGender = "";
+    private boolean isPasswordVisible = false;
+    private boolean isConfirmPasswordVisible = false;
 
     private final FirebaseManager firebaseManager = FirebaseManager.getInstance();
 
@@ -61,13 +70,20 @@ public class RegisterActivity extends AppCompatActivity {
         edtUsername = findViewById(R.id.edtUsername);
         edtEmail = findViewById(R.id.edtEmail);
         edtPassword = findViewById(R.id.edtPassword);
+        edtConfirmPassword = findViewById(R.id.edtConfirmPassword);
+        ivTogglePassword = findViewById(R.id.ivTogglePassword);
+        ivToggleConfirmPassword = findViewById(R.id.ivToggleConfirmPassword);
         txtDay = findViewById(R.id.txtDay);
         txtMonth = findViewById(R.id.txtMonth);
         txtYear = findViewById(R.id.txtYear);
-        txtGender = findViewById(R.id.txtGender);
+        spGender = findViewById(R.id.spGender);
         btnRegister = findViewById(R.id.btnRegister);
         btnGoToLogin = findViewById(R.id.btnGoToLogin);
         progressBar = findViewById(R.id.progressBar);
+
+        edtPassword.setTransformationMethod(PasswordTransformationMethod.getInstance());
+        edtConfirmPassword.setTransformationMethod(PasswordTransformationMethod.getInstance());
+        setupGenderDropdown();
     }
 
     private void setupListeners() {
@@ -76,7 +92,8 @@ public class RegisterActivity extends AppCompatActivity {
         txtDay.setOnClickListener(v -> showDatePicker());
         txtMonth.setOnClickListener(v -> showDatePicker());
         txtYear.setOnClickListener(v -> showDatePicker());
-        txtGender.setOnClickListener(v -> showGenderPicker());
+        ivTogglePassword.setOnClickListener(v -> togglePasswordVisibility());
+        ivToggleConfirmPassword.setOnClickListener(v -> toggleConfirmPasswordVisibility());
     }
 
     private void attemptRegister() {
@@ -84,6 +101,11 @@ public class RegisterActivity extends AppCompatActivity {
         String username = edtUsername.getText().toString().trim();
         String email = edtEmail.getText().toString().trim();
         String password = edtPassword.getText().toString().trim();
+        String confirmPassword = edtConfirmPassword.getText().toString().trim();
+        String genderValue = spGender.getSelectedItem() != null
+                ? spGender.getSelectedItem().toString()
+                : "";
+        selectedGender = genderValue;
 
         if (TextUtils.isEmpty(fullName)) {
             edtFullName.setError("Vui lòng nhập họ tên");
@@ -101,15 +123,14 @@ public class RegisterActivity extends AppCompatActivity {
             edtPassword.setError("Mật khẩu phải có ít nhất 6 ký tự");
             return;
         }
+        if (!password.equals(confirmPassword)) {
+            edtConfirmPassword.setError("Mật khẩu xác nhận không khớp");
+            return;
+        }
         if (TextUtils.isEmpty(selectedDateOfBirth)) {
             Toast.makeText(this, "Vui lòng chọn ngày sinh", Toast.LENGTH_SHORT).show();
             return;
         }
-        if (TextUtils.isEmpty(selectedGender)) {
-            Toast.makeText(this, "Vui lòng chọn giới tính", Toast.LENGTH_SHORT).show();
-            return;
-        }
-
         setLoading(true);
 
         // Bước 1: Tạo tài khoản Firebase Auth
@@ -193,15 +214,17 @@ public class RegisterActivity extends AppCompatActivity {
     }
 
     private void showGenderPicker() {
-        String[] genderOptions = {"Nam", "Nữ", "Khác"};
-        androidx.appcompat.app.AlertDialog.Builder builder =
-                new androidx.appcompat.app.AlertDialog.Builder(this);
-        builder.setTitle("Chọn giới tính")
-                .setItems(genderOptions, (dialog, which) -> {
-                    selectedGender = genderOptions[which];
-                    txtGender.setText(selectedGender);
-                })
-                .show();
+        // Deprecated: replaced by inline Spinner dropdown.
+    }
+
+    private void setupGenderDropdown() {
+        ArrayAdapter<CharSequence> adapter = ArrayAdapter.createFromResource(
+                this,
+                R.array.gender_options,
+                android.R.layout.simple_spinner_item
+        );
+        adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
+        spGender.setAdapter(adapter);
     }
 
     private void navigateToLogin() {
@@ -214,5 +237,29 @@ public class RegisterActivity extends AppCompatActivity {
     private void setLoading(boolean loading) {
         progressBar.setVisibility(loading ? View.VISIBLE : View.GONE);
         btnRegister.setEnabled(!loading);
+    }
+
+    private void togglePasswordVisibility() {
+        isPasswordVisible = !isPasswordVisible;
+        if (isPasswordVisible) {
+            edtPassword.setTransformationMethod(HideReturnsTransformationMethod.getInstance());
+            ivTogglePassword.setImageResource(R.drawable.ic_eye_off);
+        } else {
+            edtPassword.setTransformationMethod(PasswordTransformationMethod.getInstance());
+            ivTogglePassword.setImageResource(R.drawable.ic_eye);
+        }
+        edtPassword.setSelection(edtPassword.getText().length());
+    }
+
+    private void toggleConfirmPasswordVisibility() {
+        isConfirmPasswordVisible = !isConfirmPasswordVisible;
+        if (isConfirmPasswordVisible) {
+            edtConfirmPassword.setTransformationMethod(HideReturnsTransformationMethod.getInstance());
+            ivToggleConfirmPassword.setImageResource(R.drawable.ic_eye_off);
+        } else {
+            edtConfirmPassword.setTransformationMethod(PasswordTransformationMethod.getInstance());
+            ivToggleConfirmPassword.setImageResource(R.drawable.ic_eye);
+        }
+        edtConfirmPassword.setSelection(edtConfirmPassword.getText().length());
     }
 }
