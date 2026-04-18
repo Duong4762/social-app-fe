@@ -1,17 +1,20 @@
 package com.example.social_app.utils;
 
-import com.example.social_app.models.Comment;
-import com.example.social_app.models.Post;
-import com.example.social_app.models.User;
+import com.example.social_app.data.model.Comment;
+import com.example.social_app.data.model.Post;
+import com.example.social_app.data.model.User;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 /**
  * Utility class for generating mock data for the social feed.
  * This is used for demonstration and testing purposes.
  */
 public class MockDataGenerator {
+    private static final Map<String, User> MOCK_USERS = new HashMap<>();
 
     private static final String[] FIRST_NAMES = {
             "Alex", "Jordan", "Casey", "Morgan", "Riley", "Taylor",
@@ -79,33 +82,16 @@ public class MockDataGenerator {
      */
     public static List<Post> generateMockPosts(int count) {
         List<Post> posts = new ArrayList<>();
-        long currentTime = System.currentTimeMillis();
 
         for (int i = 0; i < count; i++) {
             String postId = "post_" + i;
             User user = generateMockUser(i);
 
             String content = POST_CONTENTS[i % POST_CONTENTS.length];
-            String location = i % 3 == 0 ? LOCATIONS[i % LOCATIONS.length] : null;
-
-            // Create timestamps distributed over the past week
-            long timestamp = currentTime - (i * Constants.HOUR_IN_MILLIS * 3);
 
             int likeCount = (i + 1) * 15 + (i % 10) * 3;
             int commentCount = (i + 1) * 5 + (i % 7) * 2;
-            int shareCount = (i + 1) * 2 + (i % 5);
-
-            Post post = new Post(
-                    postId,
-                    user,
-                    content,
-                    "drawable/post_image_" + (i % MOCK_IMAGE_RESOURCES.length + 1), // Mock image reference
-                    location,
-                    timestamp,
-                    likeCount,
-                    commentCount,
-                    shareCount
-            );
+            Post post = new Post(postId, user.getId(), content, "PUBLIC", likeCount, commentCount);
 
             posts.add(post);
         }
@@ -125,13 +111,25 @@ public class MockDataGenerator {
         String name = firstName + " " + lastName;
         String userId = "user_" + index;
         String bio = "Digital creator | " + (index % 2 == 0 ? "Tech Enthusiast" : "Nature Lover");
+        User existing = MOCK_USERS.get(userId);
+        if (existing != null) {
+            return existing;
+        }
 
-        return new User(
+        User user = new User(
                 userId,
+                "user" + index,
+                "user" + index + "@mock.dev",
                 name,
-                "drawable/avatar_placeholder", // Placeholder avatar
-                bio
+                "drawable/avatar_placeholder",
+                bio,
+                "OTHER",
+                "2000-01-01",
+                "USER",
+                true
         );
+        MOCK_USERS.put(userId, user);
+        return user;
     }
 
     /**
@@ -150,37 +148,13 @@ public class MockDataGenerator {
      */
     public static List<Comment> generateMockComments() {
         List<Comment> comments = new ArrayList<>();
-        long currentTime = System.currentTimeMillis();
 
         for (int i = 0; i < 8; i++) {
             String commentId = "comment_" + System.currentTimeMillis() + "_" + i;
             User user = generateMockUser(i);
-
-            // Add verification badge to some users
-            if (i % 3 == 0) {
-                user.setVerified(true);
-            }
-
             String text = COMMENT_TEXTS[i % COMMENT_TEXTS.length];
-            long timestamp = currentTime - (i * Constants.HOUR_IN_MILLIS);
             int likeCount = (i + 1) * 5 + (i % 4) * 3;
-            List<Comment> replies = i % 2 == 0 ? generateMockReplies() : null;
-            boolean hasMoreReplies = i % 4 == 0;
-
-            Comment comment = new Comment(
-                    commentId,
-                    user,
-                    text,
-                    timestamp,
-                    likeCount,
-                    replies,
-                    hasMoreReplies
-            );
-
-            // Add location to some comments
-            if (i % 2 == 0) {
-                comment.setLocation(LOCATIONS[i % LOCATIONS.length]);
-            }
+            Comment comment = new Comment(commentId, "post_0", user.getId(), null, text, likeCount);
 
             comments.add(comment);
         }
@@ -193,33 +167,6 @@ public class MockDataGenerator {
      *
      * @return List of mock Comment objects as replies
      */
-    private static List<Comment> generateMockReplies() {
-        List<Comment> replies = new ArrayList<>();
-        long currentTime = System.currentTimeMillis();
-
-        for (int i = 0; i < 2; i++) {
-            String replyId = "reply_" + System.currentTimeMillis() + "_" + i;
-            User user = generateMockUser(i + 10);
-            String text = COMMENT_TEXTS[(i + 5) % COMMENT_TEXTS.length];
-            long timestamp = currentTime - (i * Constants.HOUR_IN_MILLIS);
-            int likeCount = (i + 1) * 2;
-
-            Comment reply = new Comment(
-                    replyId,
-                    user,
-                    text,
-                    timestamp,
-                    likeCount,
-                    null,
-                    false
-            );
-
-            replies.add(reply);
-        }
-
-        return replies;
-    }
-
     /**
      * Gets the time difference string for display.
      *
@@ -243,6 +190,21 @@ public class MockDataGenerator {
             long weeks = difference / Constants.WEEK_IN_MILLIS;
             return weeks + " WEEK" + (weeks > 1 ? "S" : "") + " AGO";
         }
+    }
+
+    public static User getUserById(String userId) {
+        if (userId == null) {
+            return null;
+        }
+        return MOCK_USERS.get(userId);
+    }
+
+    public static String getUserDisplayName(String userId) {
+        User user = getUserById(userId);
+        if (user == null || user.getFullName() == null || user.getFullName().isEmpty()) {
+            return "Unknown user";
+        }
+        return user.getFullName();
     }
 
     private MockDataGenerator() {

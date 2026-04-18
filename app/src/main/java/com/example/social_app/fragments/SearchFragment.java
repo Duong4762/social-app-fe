@@ -1,6 +1,5 @@
-package com.example.social_app.ui.search;
+package com.example.social_app.fragments;
 
-import android.content.Intent;
 import android.os.Bundle;
 import android.view.KeyEvent;
 import android.view.View;
@@ -36,8 +35,11 @@ public class SearchFragment extends Fragment {
     }
 
     private void openResult(String q) {
-        Intent i = new Intent(requireContext(), SearchResultActivity.class);
-        i.putExtra("query", q == null ? "" : q.trim());
-        startActivity(i);
+        String query = q == null ? "" : q.trim();
+        getParentFragmentManager()
+                .beginTransaction()
+                .replace(R.id.nav_host_fragment, SearchResultFragment.newInstance(query))
+                .addToBackStack(null)
+                .commit();
     }
 }

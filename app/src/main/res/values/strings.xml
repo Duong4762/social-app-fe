@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="app_name">social-app</string>
+    <string name="app_name">SocialNine</string>
 
     <string name="results_with_query">Results: %1$s</string>
     <string name="tab_users">Users</string>
@@ -15,8 +15,6 @@
     <string name="sample_user_name">Jessica Martinez</string>
     <string name="sample_user_username">\@jess_design</string>
     <string name="follow">Follow</string>
-</resources>
-    <string name="app_name">SocialNine</string>
 
     <!-- AppBar -->
     <string name="app_title">SocialNine</string>
@@ -42,6 +40,7 @@
     <string name="nav_add">Add</string>
     <string name="nav_message">Message</string>
     <string name="nav_profile">Profile</string>
+    <string name="nav_settings">Settings</string>
 
     <!-- Loading States -->
     <string name="loading">Loading posts...</string>

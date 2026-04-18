@@ -22,7 +22,8 @@ import androidx.swiperefreshlayout.widget.SwipeRefreshLayout;
 
 import com.example.social_app.R;
 import com.example.social_app.adapters.CommentAdapter;
-import com.example.social_app.models.Comment;
+import com.example.social_app.data.model.Comment;
+import com.example.social_app.utils.MockDataGenerator;
 import com.example.social_app.viewmodels.CommentViewModel;
 import com.google.android.material.bottomsheet.BottomSheetDialogFragment;
 import com.google.android.material.bottomsheet.BottomSheetBehavior;
@@ -302,11 +303,11 @@ public class BottomSheetCommentFragment extends BottomSheetDialogFragment implem
 
     @Override
     public void onReplyClicked(Comment comment) {
-        if (comment == null || comment.getUser() == null) {
+        if (comment == null) {
             Toast.makeText(getContext(), "Error: Cannot reply to this comment", Toast.LENGTH_SHORT).show();
             return;
         }
-        replyingToUserId = comment.getUser().getName();
+        replyingToUserId = MockDataGenerator.getUserDisplayName(comment.getUserId());
         if (commentInput != null) commentInput.requestFocus();
     }
 
@@ -376,14 +377,14 @@ public class BottomSheetCommentFragment extends BottomSheetDialogFragment implem
     private void shareComment(Comment comment) {
         android.content.Intent sendIntent = new android.content.Intent();
         sendIntent.setAction(android.content.Intent.ACTION_SEND);
-        sendIntent.putExtra(android.content.Intent.EXTRA_TEXT, comment.getText());
+        sendIntent.putExtra(android.content.Intent.EXTRA_TEXT, comment.getContent());
         sendIntent.setType("text/plain");
         startActivity(sendIntent);
     }
     private void copyCommentText(Comment comment) {
         android.content.ClipboardManager clipboard =
                 (android.content.ClipboardManager) requireContext().getSystemService(android.content.Context.CLIPBOARD_SERVICE);
-        android.content.ClipData clip = android.content.ClipData.newPlainText("comment", comment.getText());
+        android.content.ClipData clip = android.content.ClipData.newPlainText("comment", comment.getContent());
         clipboard.setPrimaryClip(clip);
         Toast.makeText(getContext(), "Comment copied to clipboard", Toast.LENGTH_SHORT).show();
     }

@@ -11,13 +11,10 @@ import androidx.core.graphics.Insets;
 import androidx.core.view.ViewCompat;
 import androidx.core.view.WindowInsetsCompat;
 import androidx.fragment.app.Fragment;
-
-import com.example.social_app.ui.noti.NotificationsFragment;
-import com.example.social_app.ui.search.SearchFragment;
-import com.google.android.material.bottomnavigation.BottomNavigationView;
 import androidx.fragment.app.FragmentManager;
 import androidx.recyclerview.widget.RecyclerView;
 
+import com.example.social_app.fragments.SearchFragment;
 import com.example.social_app.fragments.HomeFragment;
 
 /**
@@ -27,8 +24,8 @@ import com.example.social_app.fragments.HomeFragment;
 public class MainActivity extends AppCompatActivity {
 
     private View customBottomNav;
-    private ImageButton navBtnHome, navBtnSearch, navBtnAdd, navBtnMessage, navBtnProfile;
-    private View messageBadge;
+    private ImageButton navBtnHome, navBtnSearch, navBtnMessage, navBtnNotifications, navBtnProfile, navBtnSettings;
+    private View notificationBadge;
     private FragmentManager fragmentManager;
     private boolean isBottomNavVisible = true;
     private int currentSelectedNav = R.id.nav_btn_home;
@@ -58,8 +55,8 @@ public class MainActivity extends AppCompatActivity {
             selectNavButton(navBtnHome);
         }
 
-        // Show notification badge on message icon (demo)
-        showMessageBadge();
+        // Show notification badge on notifications icon (demo)
+        showNotificationBadge();
     }
 
     /**
@@ -68,10 +65,11 @@ public class MainActivity extends AppCompatActivity {
     private void initializeNavigationButtons() {
         navBtnHome = customBottomNav.findViewById(R.id.nav_btn_home);
         navBtnSearch = customBottomNav.findViewById(R.id.nav_btn_search);
-        navBtnAdd = customBottomNav.findViewById(R.id.nav_btn_add);
         navBtnMessage = customBottomNav.findViewById(R.id.nav_btn_message);
+        navBtnNotifications = customBottomNav.findViewById(R.id.nav_btn_notifications);
         navBtnProfile = customBottomNav.findViewById(R.id.nav_btn_profile);
-        messageBadge = customBottomNav.findViewById(R.id.message_badge);
+        navBtnSettings = customBottomNav.findViewById(R.id.nav_btn_settings);
+        notificationBadge = customBottomNav.findViewById(R.id.notification_badge);
 
         // Set click listeners
         navBtnHome.setOnClickListener(v -> {
@@ -83,24 +81,28 @@ public class MainActivity extends AppCompatActivity {
 
         navBtnSearch.setOnClickListener(v -> {
             selectNavButton(navBtnSearch);
-            showToast("Search not yet implemented");
-        });
-
-        navBtnAdd.setOnClickListener(v -> {
-            selectNavButton(navBtnAdd);
-            android.util.Log.d("MainActivity", "Add button clicked - opening NewPostFragment");
-            openNewPostFragment();
+            loadFragment(new SearchFragment());
         });
 
         navBtnMessage.setOnClickListener(v -> {
             selectNavButton(navBtnMessage);
-            removeMessageBadge();
             showToast("Messages not yet implemented");
+        });
+
+        navBtnNotifications.setOnClickListener(v -> {
+            selectNavButton(navBtnNotifications);
+            removeNotificationBadge();
+            showToast("Notifications not yet implemented");
         });
 
         navBtnProfile.setOnClickListener(v -> {
             selectNavButton(navBtnProfile);
             showToast("Profile not yet implemented");
+        });
+
+        navBtnSettings.setOnClickListener(v -> {
+            selectNavButton(navBtnSettings);
+            showToast("Settings not yet implemented");
         });
     }
 
@@ -111,9 +113,10 @@ public class MainActivity extends AppCompatActivity {
         // Reset all buttons to normal state
         navBtnHome.setSelected(false);
         navBtnSearch.setSelected(false);
-        navBtnAdd.setSelected(false);
         navBtnMessage.setSelected(false);
+        navBtnNotifications.setSelected(false);
         navBtnProfile.setSelected(false);
+        navBtnSettings.setSelected(false);
 
         // Set the selected button
         button.setSelected(true);
@@ -123,18 +126,18 @@ public class MainActivity extends AppCompatActivity {
     /**
      * Shows a notification badge on the message navigation button.
      */
-    public void showMessageBadge() {
-        if (messageBadge != null) {
-            messageBadge.setVisibility(View.VISIBLE);
+    public void showNotificationBadge() {
+        if (notificationBadge != null) {
+            notificationBadge.setVisibility(View.VISIBLE);
         }
     }
 
     /**
      * Removes the notification badge from the message navigation button.
      */
-    public void removeMessageBadge() {
-        if (messageBadge != null) {
-            messageBadge.setVisibility(View.GONE);
+    public void removeNotificationBadge() {
+        if (notificationBadge != null) {
+            notificationBadge.setVisibility(View.GONE);
         }
     }
 
@@ -209,50 +212,4 @@ public class MainActivity extends AppCompatActivity {
         android.widget.Toast.makeText(this, message, android.widget.Toast.LENGTH_SHORT).show();
     }
 
-    /**
-     * Opens the NewPostFragment for creating a new post.
-     * This is called when the Add button in the bottom navigation is clicked.
-     */
-    private void openNewPostFragment() {
-        android.util.Log.d("MainActivity", "openNewPostFragment() called");
-
-        com.example.social_app.fragments.NewPostFragment newPostFragment =
-                new com.example.social_app.fragments.NewPostFragment();
-
-        fragmentManager.beginTransaction()
-                .replace(R.id.nav_host_fragment, newPostFragment)
-                .addToBackStack(null)
-                .commit();
-
-        android.util.Log.d("MainActivity", "NewPostFragment opened successfully");
-
-        BottomNavigationView bottom = findViewById(R.id.bottom_navigation);
-
-        if (savedInstanceState == null) {
-            replace(new SearchFragment());
-            bottom.setSelectedItemId(R.id.nav_search);
-        }
-
-        bottom.setOnItemSelectedListener(item -> {
-            int id = item.getItemId();
-            if (id == R.id.nav_search) {
-                replace(new SearchFragment());
-                return true;
-            } else if (id == R.id.nav_notifications) {
-                replace(new NotificationsFragment());
-                return true;
-            } else {
-
-                replace(PlaceholderFragment.newInstance(item.getTitle().toString()));
-                return true;
-            }
-        });
-    }
-
-    private void replace(Fragment f) {
-        getSupportFragmentManager()
-                .beginTransaction()
-                .replace(R.id.nav_host_fragment, f)
-                .commit();
-    }
 }

@@ -13,11 +13,14 @@ import androidx.annotation.NonNull;
 import androidx.recyclerview.widget.RecyclerView;
 
 import com.example.social_app.R;
-import com.example.social_app.models.Post;
+import com.example.social_app.data.model.User;
+import com.example.social_app.data.model.Post;
 import com.example.social_app.utils.MockDataGenerator;
 
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
 /**
  * RecyclerView Adapter for displaying posts in the social feed.
@@ -31,6 +34,8 @@ public class PostAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
     private List<Post> posts;
     private Context context;
     private OnPostActionListener actionListener;
+    private final Set<String> likedPostIds = new HashSet<>();
+    private final Set<String> bookmarkedPostIds = new HashSet<>();
 
     public interface OnPostActionListener {
         void onLikeClicked(Post post, int position);
@@ -62,6 +67,18 @@ public class PostAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
         int previousSize = posts.size();
         posts.addAll(newPosts);
         notifyItemRangeInserted(previousSize, newPosts.size());
+    }
+
+    public boolean toggleLiked(String postId) {
+        if (postId == null) {
+            return false;
+        }
+        if (likedPostIds.contains(postId)) {
+            likedPostIds.remove(postId);
+            return false;
+        }
+        likedPostIds.add(postId);
+        return true;
     }
 
     @Override
@@ -181,21 +198,20 @@ public class PostAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
 
         void bind(Post post, int position) {
             // Set user info
-            username.setText(post.getUser().getName());
+            User postUser = MockDataGenerator.getUserById(post.getUserId());
+            username.setText(postUser != null ? postUser.getFullName() : "Unknown user");
 
             // Set timestamp
-            timestamp.setText(MockDataGenerator.getTimeDifferenceString(post.getTimestamp()));
+            long createdAt = post.getCreatedAt() != null
+                    ? post.getCreatedAt().getTime()
+                    : System.currentTimeMillis();
+            timestamp.setText(MockDataGenerator.getTimeDifferenceString(createdAt));
 
             // Set location
-            if (post.getLocation() != null && !post.getLocation().isEmpty()) {
-                location.setText(post.getLocation());
-                location.setVisibility(View.VISIBLE);
-            } else {
-                location.setVisibility(View.GONE);
-            }
+            location.setVisibility(View.GONE);
 
             // Set post content
-            postContent.setText(post.getContent());
+            postContent.setText(post.getCaption());
 
             // Set post image (in a real app, use Glide/Picasso for image loading)
             // For now, use a placeholder
@@ -204,7 +220,7 @@ public class PostAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
             // Set engagement counts
             likeCount.setText(String.valueOf(post.getLikeCount()));
             commentCount.setText(String.valueOf(post.getCommentCount()));
-            shareCount.setText(String.valueOf(post.getShareCount()));
+            shareCount.setText("0");
 
             // Update like icon based on liked state
             updateLikeIcon(post);
@@ -237,7 +253,14 @@ public class PostAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
                     actionListener.onBookmarkClicked(post);
                 }
                 // Toggle bookmark state
-                post.setBookmarked(!post.isBookmarked());
+                String postId = post.getId();
+                if (postId != null) {
+                    if (bookmarkedPostIds.contains(postId)) {
+                        bookmarkedPostIds.remove(postId);
+                    } else {
+                        bookmarkedPostIds.add(postId);
+                    }
+                }
                 updateBookmarkIcon(post);
                 // Update this item only
                 notifyItemChanged(position + 1); // +1 because composer is at position 0
@@ -248,7 +271,7 @@ public class PostAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
          * Updates the like icon visual state.
          */
         private void updateLikeIcon(Post post) {
-            if (post.isLiked()) {
+            if (likedPostIds.contains(post.getId())) {
                 likeIcon.setImageResource(R.drawable.ic_heart_filled);
                 likeIcon.setColorFilter(context.getResources().getColor(R.color.accent_red, null));
             } else {
@@ -262,7 +285,7 @@ public class PostAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
          * Updates the bookmark icon visual state.
          */
         private void updateBookmarkIcon(Post post) {
-            if (post.isBookmarked()) {
+            if (bookmarkedPostIds.contains(post.getId())) {
                 bookmarkIcon.setImageResource(R.drawable.ic_bookmark_filled);
                 // Có thể thêm setColorFilter nếu muốn màu đặc biệt
                 // bookmarkIcon.setColorFilter(context.getResources().getColor(R.color.accent_purple, null));

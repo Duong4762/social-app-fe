@@ -13,10 +13,13 @@ import androidx.annotation.NonNull;
 import androidx.recyclerview.widget.RecyclerView;
 
 import com.example.social_app.R;
-import com.example.social_app.models.Comment;
+import com.example.social_app.data.model.Comment;
+import com.example.social_app.utils.MockDataGenerator;
 
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
 /**
  * RecyclerView Adapter for displaying comments.
@@ -29,6 +32,7 @@ public class CommentAdapter extends RecyclerView.Adapter<CommentAdapter.CommentV
     private List<Comment> comments;
     private Context context;
     private OnCommentActionListener actionListener;
+    private final Set<String> likedCommentIds = new HashSet<>();
     private static final String TAG = "CommentAdapter";
 
     /**
@@ -61,7 +65,11 @@ public class CommentAdapter extends RecyclerView.Adapter<CommentAdapter.CommentV
         if (comments != null) {
             this.comments = new ArrayList<>(comments);
             android.util.Log.d("CommentAdapter", "setComments() called with " + this.comments.size() + " comments");
-            android.util.Log.d("CommentAdapter", "  First comment: " + (comments.size() > 0 ? comments.get(0).getText().substring(0, 30) + "..." : "none"));
+            String preview = comments.size() > 0 ? comments.get(0).getContent() : "none";
+            if (preview != null && preview.length() > 30) {
+                preview = preview.substring(0, 30) + "...";
+            }
+            android.util.Log.d("CommentAdapter", "  First comment: " + preview);
         } else {
             this.comments = new ArrayList<>();
             android.util.Log.w("CommentAdapter", "setComments() called with null, creating empty list");
@@ -175,32 +183,33 @@ public class CommentAdapter extends RecyclerView.Adapter<CommentAdapter.CommentV
         }
 
         public void bind(Comment comment, int position) {
-            if (comment == null || comment.getUser() == null) {
-                Log.e(TAG, "Comment or User is null at position " + position);
+            if (comment == null) {
+                Log.e(TAG, "Comment is null at position " + position);
                 return;
             }
 
-            String userName = comment.getUser().getName();
+            String userName = MockDataGenerator.getUserDisplayName(comment.getUserId());
+            String text = comment.getContent() == null ? "" : comment.getContent();
             android.util.Log.d("CommentAdapter", "┌─── bind() START position=" + position + " ───┐");
             android.util.Log.d("CommentAdapter", "│ User: " + userName);
-            android.util.Log.d("CommentAdapter", "│ Text: " + (comment.getText().length() > 30 ? comment.getText().substring(0, 30) + "..." : comment.getText()));
+            android.util.Log.d("CommentAdapter", "│ Text: " + (text.length() > 30 ? text.substring(0, 30) + "..." : text));
 
             // === BASIC COMMENT INFO ===
-            bindUserInfo(userName, comment.getTimestamp());
+            bindUserInfo(userName, comment.getCreatedAt() != null ? comment.getCreatedAt().getTime() : System.currentTimeMillis());
             android.util.Log.d("CommentAdapter", "│ ✅ bindUserInfo done");
 
-            bindCommentText(comment.getText());
+            bindCommentText(text);
             android.util.Log.d("CommentAdapter", "│ ✅ bindCommentText done");
 
             bindUserAvatar(userName);
             android.util.Log.d("CommentAdapter", "│ ✅ bindUserAvatar done");
 
             // === OPTIONAL: VERIFIED BADGE ===
-            bindVerifiedBadge(comment.getUser().isVerified());
+            bindVerifiedBadge(false);
             android.util.Log.d("CommentAdapter", "│ ✅ bindVerifiedBadge done");
 
             // === OPTIONAL: LOCATION ===
-            bindLocation(comment.getLocation());
+            bindLocation(null);
             android.util.Log.d("CommentAdapter", "│ ✅ bindLocation done");
 
             // === INTERACTIONS ===
@@ -267,14 +276,14 @@ public class CommentAdapter extends RecyclerView.Adapter<CommentAdapter.CommentV
         private void bindLikeInteraction(Comment comment, int position) {
             // Like count
             if (likeCount != null) {
-                int count = comment.getLikeCount();
+                long count = comment.getLikeCount();
                 likeCount.setText(count > 0 ? String.valueOf(count) : "");
                 likeCount.setVisibility(count > 0 ? View.VISIBLE : View.GONE);
             }
 
             // Like button
             if (likeButton != null) {
-                boolean isLiked = comment.isLiked();
+                boolean isLiked = likedCommentIds.contains(comment.getId());
                 likeButton.setSelected(isLiked);
                 likeButton.setImageResource(
                         isLiked ? R.drawable.ic_heart_filled : R.drawable.ic_heart
@@ -282,6 +291,11 @@ public class CommentAdapter extends RecyclerView.Adapter<CommentAdapter.CommentV
                 likeButton.setOnClickListener(v -> {
                     if (actionListener != null) {
                         actionListener.onLikeClicked(comment, position);
+                        if (isLiked) {
+                            likedCommentIds.remove(comment.getId());
+                        } else {
+                            likedCommentIds.add(comment.getId());
+                        }
                         updateLikeState(!isLiked);
                     }
                 });
@@ -299,8 +313,8 @@ public class CommentAdapter extends RecyclerView.Adapter<CommentAdapter.CommentV
                 replyButton.setContentDescription("Reply to comment");
             }
 
-            if (replyCount != null && comment.getReplies() != null) {
-                int replyCountValue = comment.getReplies().size();
+            if (replyCount != null) {
+                int replyCountValue = countReplies(comment.getId());
                 if (replyCountValue > 0) {
                     replyCount.setText(String.valueOf(replyCountValue));
                     replyCount.setVisibility(View.VISIBLE);
@@ -312,22 +326,12 @@ public class CommentAdapter extends RecyclerView.Adapter<CommentAdapter.CommentV
 
         private void bindMoreReplies(Comment comment) {
             if (viewMoreReplies != null) {
-                List<Comment> replies = comment.getReplies();
-                boolean hasMoreReplies = comment.isHasMoreReplies();
+                int replyCountValue = countReplies(comment.getId());
 
-                if (replies != null && !replies.isEmpty()) {
+                if (replyCountValue > 0) {
                     viewMoreReplies.setVisibility(View.VISIBLE);
-                    int replyCountValue = replies.size();
                     String text = replyCountValue + " repl" + (replyCountValue > 1 ? "ies" : "y");
                     viewMoreReplies.setText(text);
-                    viewMoreReplies.setOnClickListener(v -> {
-                        if (actionListener != null) {
-                            actionListener.onViewMoreRepliesClicked(comment);
-                        }
-                    });
-                } else if (hasMoreReplies) {
-                    viewMoreReplies.setVisibility(View.VISIBLE);
-                    viewMoreReplies.setText(R.string.view_more_replies);
                     viewMoreReplies.setOnClickListener(v -> {
                         if (actionListener != null) {
                             actionListener.onViewMoreRepliesClicked(comment);
@@ -337,6 +341,19 @@ public class CommentAdapter extends RecyclerView.Adapter<CommentAdapter.CommentV
                     viewMoreReplies.setVisibility(View.GONE);
                 }
             }
+        }
+
+        private int countReplies(String commentId) {
+            if (commentId == null) {
+                return 0;
+            }
+            int count = 0;
+            for (Comment item : comments) {
+                if (commentId.equals(item.getParentId())) {
+                    count++;
+                }
+            }
+            return count;
         }
 
         private void bindLongPressListener(Comment comment, int position) {
