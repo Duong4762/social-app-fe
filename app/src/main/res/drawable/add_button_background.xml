@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="utf-8"?>
+<selector xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- Pressed/Selected state - darker purple -->
+    <item android:state_pressed="true">
+        <shape android:shape="oval">
+            <solid android:color="@color/accent_purple_dark" />
+            <size android:width="64dp" android:height="64dp" />
+        </shape>
+    </item>
+    <item android:state_selected="true">
+        <shape android:shape="oval">
+            <solid android:color="@color/accent_purple_dark" />
+            <size android:width="64dp" android:height="64dp" />
+        </shape>
+    </item>
+    <!-- Default state - faint purple background -->
+    <item>
+        <shape android:shape="oval">
+            <solid android:color="@color/accent_purple_faint" />
+            <size android:width="64dp" android:height="64dp" />
+        </shape>
+    </item>
+</selector>
+

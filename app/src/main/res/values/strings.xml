@@ -16,3 +16,82 @@
     <string name="sample_user_username">\@jess_design</string>
     <string name="follow">Follow</string>
 </resources>
+    <string name="app_name">SocialNine</string>
+
+    <!-- AppBar -->
+    <string name="app_title">SocialNine</string>
+    <string name="notification_bell">Notifications</string>
+
+    <!-- Post Composer -->
+    <string name="composer_placeholder">What\'s new?</string>
+    <string name="btn_post">Post</string>
+    <string name="icon_image">Image</string>
+    <string name="icon_video">Video</string>
+    <string name="icon_location">Location</string>
+    <string name="icon_emoji">Emoji</string>
+
+    <!-- Post Actions -->
+    <string name="action_like">Like</string>
+    <string name="action_comment">Comment</string>
+    <string name="action_share">Share</string>
+    <string name="action_bookmark">Bookmark</string>
+
+    <!-- Bottom Navigation -->
+    <string name="nav_home">Home</string>
+    <string name="nav_search">Search</string>
+    <string name="nav_add">Add</string>
+    <string name="nav_message">Message</string>
+    <string name="nav_profile">Profile</string>
+
+    <!-- Loading States -->
+    <string name="loading">Loading posts...</string>
+    <string name="empty_state">No posts yet. Be the first to share!</string>
+    <string name="error_state">Failed to load posts. Please try again.</string>
+
+    <!-- Accessibility -->
+    <string name="user_avatar">User avatar</string>
+    <string name="post_image">Post image</string>
+    <string name="camera">Camera</string>
+
+    <!-- Comment Fragment -->
+    <string name="write_a_comment">Write a public comment...</string>
+    <string name="emoji">Emoji</string>
+    <string name="gif">GIF</string>
+    <string name="send">Send</string>
+    <string name="like">Like</string>
+    <string name="reply">Reply</string>
+    <string name="share">Share</string>
+    <string name="bookmark">Bookmark</string>
+    <string name="location">Location</string>
+    <string name="verified">Verified</string>
+    <string name="view_more_replies">View more replies...</string>
+    <string name="compose_hint_comment">Write a comment...</string>
+    <string name="comment_empty_error">Comment cannot be empty</string>
+    <string name="drag_handle_desc">Drag to move</string>
+    <string name="attachment_preview">Attachment preview</string>
+    <string name="remove_attachment">Remove attachment</string>
+    <string name="attach_media">Attach media or file</string>
+    <string name="remove">Remove</string>
+
+    <!-- New Post Fragment -->
+    <string name="new_post">New Post</string>
+    <string name="cancel">Cancel</string>
+    <string name="post">Post</string>
+    <string name="posting">Posting...</string>
+    <string name="post_created">Post created successfully!</string>
+    <string name="select_images">Select Images</string>
+    <string name="select_video">Select Video</string>
+    <string name="write_something">Write something...</string>
+    <string name="media_upload">Media Upload</string>
+    <string name="upload_image">Upload Image</string>
+    <string name="upload_video">Upload Video</string>
+    <string name="audience">Audience:</string>
+    <string name="add_location">Add Location</string>
+    <string name="tag_people">Tag People</string>
+    <string name="current_location">Current Location</string>
+    <string name="search_location">Search Location</string>
+    <string name="custom_location">Custom Location</string>
+    <string name="discard_post_question">Discard Post?</string>
+    <string name="discard_post_confirm">Are you sure you want to discard this post?</string>
+    <string name="discard">Discard</string>
+</resources>

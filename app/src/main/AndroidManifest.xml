@@ -12,7 +12,10 @@
         android:supportsRtl="true"
         android:theme="@style/Theme.Socialapp">
         <activity
-            android:name=".MainActivity"
+            android:name=".RegisterActivity"
+            android:exported="true" />
+        <activity
+            android:name=".LoginActivity"
             android:exported="true">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
@@ -21,6 +24,9 @@
             </intent-filter>
         </activity>
         <activity android:name=".ui.search.SearchResultActivity" />
+        <activity
+            android:name=".MainActivity"
+            android:exported="true" />
     </application>
 
 </manifest>

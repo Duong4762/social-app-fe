@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="400dp"
+    android:height="250dp"
+    android:viewportWidth="400"
+    android:viewportHeight="250">
+
+    <!-- Gradient background -->
+    <path
+        android:pathData="M 0,0 L 400,0 L 400,250 L 0,250 Z"
+        android:fillColor="#F59E0B" />
+
+    <!-- Circle 1 -->
+    <path
+        android:pathData="M 200,125 m -60,0 a 60,60 0 1,1 120,0 a 60,60 0 1,1 -120,0"
+        android:fillColor="#FFFFFF"
+        android:alpha="0.25" />
+
+    <!-- Circle 2 -->
+    <path
+        android:pathData="M 80,80 m -25,0 a 25,25 0 1,1 50,0 a 25,25 0 1,1 -50,0"
+        android:fillColor="#FFFFFF"
+        android:alpha="0.2" />
+
+</vector>
