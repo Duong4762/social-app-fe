@@ -8,6 +8,7 @@ import android.view.View;
 import android.widget.Button;
 import android.widget.EditText;
 import android.widget.ProgressBar;
+import android.widget.TextView;
 import android.widget.Toast;
 
 import androidx.activity.EdgeToEdge;
@@ -17,7 +18,6 @@ import androidx.core.view.ViewCompat;
 import androidx.core.view.WindowInsetsCompat;
 
 import com.example.social_app.R;
-import com.example.social_app.data.model.User;
 import com.example.social_app.firebase.FirebaseManager;
 import com.google.firebase.auth.FirebaseUser;
 
@@ -25,8 +25,9 @@ public class LoginActivity extends AppCompatActivity {
 
     private static final String TAG = "LoginActivity";
 
-    private EditText edtEmail, edtPassword;
-    private Button btnLogin, btnGoToRegister;
+    private EditText edtIdentifier, edtPassword;
+    private Button btnLogin;
+    private TextView btnGoToRegister;
     private ProgressBar progressBar;
 
     private final FirebaseManager firebaseManager = FirebaseManager.getInstance();
@@ -52,7 +53,7 @@ public class LoginActivity extends AppCompatActivity {
     }
 
     private void initViews() {
-        edtEmail = findViewById(R.id.edtEmail);
+        edtIdentifier = findViewById(R.id.edtUsername);
         edtPassword = findViewById(R.id.edtPassword);
         btnLogin = findViewById(R.id.btnLogin);
         btnGoToRegister = findViewById(R.id.btnGoToRegister);
@@ -68,11 +69,11 @@ public class LoginActivity extends AppCompatActivity {
     }
 
     private void attemptLogin() {
-        String email = edtEmail.getText().toString().trim();
+        String email = edtIdentifier.getText().toString().trim();
         String password = edtPassword.getText().toString().trim();
 
         if (TextUtils.isEmpty(email)) {
-            edtEmail.setError("Vui lòng nhập email");
+            edtIdentifier.setError("Vui lòng nhập username hoặc email");
             return;
         }
         if (TextUtils.isEmpty(password)) {

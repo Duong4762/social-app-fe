@@ -115,6 +115,12 @@
             app:backgroundTint="@null"
             android:textStyle="bold"
             android:background="@drawable/bg_gradient_button"/>
+        <ProgressBar
+            android:id="@+id/progressBar"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="12dp"
+            android:visibility="gone" />
 
         <TextView
             android:text="OR"
@@ -137,6 +143,7 @@
                 android:textColor="#6B7280"/>
 
             <TextView
+                android:id="@+id/btnGoToRegister"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:text="Sign up"

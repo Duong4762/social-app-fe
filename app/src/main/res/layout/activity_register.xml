@@ -182,6 +182,7 @@
             android:layout_marginTop="8dp"
             android:gravity="center_vertical">
             <TextView
+                android:id="@+id/txtDay"
                 android:layout_width="0dp"
                 android:layout_height="56dp"
                 android:layout_weight="1"
@@ -198,6 +199,7 @@
                 android:layout_height="1dp"/>
 
             <TextView
+                android:id="@+id/txtMonth"
                 android:layout_width="0dp"
                 android:layout_weight="1"
                 android:layout_height="56dp"
@@ -213,6 +215,7 @@
                 android:layout_width="8dp"
                 android:layout_height="1dp"/>
             <TextView
+                android:id="@+id/txtYear"
                 android:layout_width="0dp"
                 android:layout_height="56dp"
                 android:layout_weight="1"
@@ -255,7 +258,7 @@
 
 
         <Button
-            android:id="@+id/btnLogin"
+            android:id="@+id/btnRegister"
             android:layout_width="match_parent"
             android:layout_height="56dp"
             android:textColor="@color/white"
@@ -264,6 +267,12 @@
             android:textStyle="bold"
             app:backgroundTint="@null"
             android:background="@drawable/bg_gradient_button"/>
+        <ProgressBar
+            android:id="@+id/progressBar"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="12dp"
+            android:visibility="gone" />
 
         <TextView
             android:text="OR"
@@ -286,6 +295,7 @@
                 android:textColor="#6B7280"/>
 
             <TextView
+                android:id="@+id/btnGoToLogin"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:text="Login"

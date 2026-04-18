@@ -4,15 +4,6 @@ import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.firestore.FirebaseFirestore;
 import com.google.firebase.storage.FirebaseStorage;
 
-/**
- * FirebaseManager — Singleton cung cấp các Firebase service instances.
- *
- * Sử dụng: FirebaseManager.getInstance().getAuth()
- *          FirebaseManager.getInstance().getFirestore()
- *          FirebaseManager.getInstance().getStorage()
- *
- * Các Firestore collection names được khai báo dưới dạng hằng số để tránh lỗi typo.
- */
 public class FirebaseManager {
 
     // -------------------------------------------------------
