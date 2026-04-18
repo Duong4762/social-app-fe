@@ -11,6 +11,10 @@ import androidx.core.graphics.Insets;
 import androidx.core.view.ViewCompat;
 import androidx.core.view.WindowInsetsCompat;
 import androidx.fragment.app.Fragment;
+
+import com.example.social_app.ui.noti.NotificationsFragment;
+import com.example.social_app.ui.search.SearchFragment;
+import com.google.android.material.bottomnavigation.BottomNavigationView;
 import androidx.fragment.app.FragmentManager;
 import androidx.recyclerview.widget.RecyclerView;
 
@@ -40,8 +44,8 @@ public class MainActivity extends AppCompatActivity {
             v.setPadding(systemBars.left, systemBars.top, systemBars.right, systemBars.bottom);
             return insets;
         });
-
-        // Initialize views
+      
+      // Initialize views
         fragmentManager = getSupportFragmentManager();
         customBottomNav = findViewById(R.id.custom_bottom_nav);
         initializeNavigationButtons();
@@ -221,5 +225,34 @@ public class MainActivity extends AppCompatActivity {
                 .commit();
 
         android.util.Log.d("MainActivity", "NewPostFragment opened successfully");
+
+        BottomNavigationView bottom = findViewById(R.id.bottom_navigation);
+
+        if (savedInstanceState == null) {
+            replace(new SearchFragment());
+            bottom.setSelectedItemId(R.id.nav_search);
+        }
+
+        bottom.setOnItemSelectedListener(item -> {
+            int id = item.getItemId();
+            if (id == R.id.nav_search) {
+                replace(new SearchFragment());
+                return true;
+            } else if (id == R.id.nav_notifications) {
+                replace(new NotificationsFragment());
+                return true;
+            } else {
+
+                replace(PlaceholderFragment.newInstance(item.getTitle().toString()));
+                return true;
+            }
+        });
+    }
+
+    private void replace(Fragment f) {
+        getSupportFragmentManager()
+                .beginTransaction()
+                .replace(R.id.nav_host_fragment, f)
+                .commit();
     }
 }
