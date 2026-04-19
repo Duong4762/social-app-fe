@@ -16,11 +16,8 @@ import androidx.recyclerview.widget.RecyclerView;
 
 import com.example.social_app.fragments.SearchFragment;
 import com.example.social_app.fragments.HomeFragment;
+import com.example.social_app.fragments.SettingsFragment;
 
-/**
- * MainActivity is the main entry point for the SocialNine application.
- * It manages fragment navigation and the custom bottom navigation menu with hide-on-scroll behavior.
- */
 public class MainActivity extends AppCompatActivity {
 
     private View customBottomNav;
@@ -102,7 +99,7 @@ public class MainActivity extends AppCompatActivity {
 
         navBtnSettings.setOnClickListener(v -> {
             selectNavButton(navBtnSettings);
-            showToast("Settings not yet implemented");
+            loadFragment(new SettingsFragment());
         });
     }
 
