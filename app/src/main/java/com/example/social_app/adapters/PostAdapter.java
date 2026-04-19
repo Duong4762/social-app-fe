@@ -16,6 +16,7 @@ import com.example.social_app.R;
 import com.example.social_app.data.model.User;
 import com.example.social_app.data.model.Post;
 import com.example.social_app.utils.MockDataGenerator;
+import com.example.social_app.utils.UserAvatarLoader;
 
 import java.util.ArrayList;
 import java.util.HashSet;
@@ -101,7 +102,9 @@ public class PostAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
 
     @Override
     public void onBindViewHolder(@NonNull RecyclerView.ViewHolder holder, int position) {
-        if (holder instanceof PostViewHolder) {
+        if (holder instanceof ComposerViewHolder) {
+            ((ComposerViewHolder) holder).bind();
+        } else if (holder instanceof PostViewHolder) {
             PostViewHolder postHolder = (PostViewHolder) holder;
             // Position 0 is composer, so actual post index is position - 1
             Post post = posts.get(position - 1);
@@ -119,12 +122,14 @@ public class PostAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
      * ViewHolder for the post composer item at the top of the feed.
      */
     private class ComposerViewHolder extends RecyclerView.ViewHolder {
+        private ImageView composerAvatar;
         private com.google.android.material.button.MaterialButton composerInput;
         private ImageButton composerImageBtn;
 
         ComposerViewHolder(@NonNull View itemView) {
             super(itemView);
             // Initialize composer views
+            composerAvatar = itemView.findViewById(R.id.composer_avatar);
             composerInput = itemView.findViewById(R.id.composer_input);
             composerImageBtn = itemView.findViewById(R.id.composer_image_btn);
 
@@ -151,7 +156,7 @@ public class PostAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
         }
 
         void bind() {
-            // Binding logic for composer view can be implemented here
+            UserAvatarLoader.load(composerAvatar, null);
         }
     }
 
@@ -212,6 +217,8 @@ public class PostAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
 
             // Set post content
             postContent.setText(post.getCaption());
+
+            UserAvatarLoader.load(userAvatar, postUser != null ? postUser.getAvatarUrl() : null);
 
             // Set post image (in a real app, use Glide/Picasso for image loading)
             // For now, use a placeholder

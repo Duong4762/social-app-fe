@@ -6,6 +6,8 @@ import android.view.animation.TranslateAnimation;
 import android.widget.ImageButton;
 
 import androidx.activity.EdgeToEdge;
+import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.graphics.Insets;
 import androidx.core.view.ViewCompat;
@@ -14,8 +16,10 @@ import androidx.fragment.app.Fragment;
 import androidx.fragment.app.FragmentManager;
 import androidx.recyclerview.widget.RecyclerView;
 
+import com.example.social_app.fragments.ChatDetailFragment;
 import com.example.social_app.fragments.SearchFragment;
 import com.example.social_app.fragments.HomeFragment;
+import com.example.social_app.fragments.MessagesFragment;
 import com.example.social_app.fragments.SettingsFragment;
 
 public class MainActivity extends AppCompatActivity {
@@ -43,6 +47,8 @@ public class MainActivity extends AppCompatActivity {
         fragmentManager = getSupportFragmentManager();
         customBottomNav = findViewById(R.id.custom_bottom_nav);
         initializeNavigationButtons();
+
+        fragmentManager.addOnBackStackChangedListener(this::syncChatOverlayVisibility);
 
         // Load home fragment by default
         if (savedInstanceState == null) {
@@ -83,7 +89,7 @@ public class MainActivity extends AppCompatActivity {
 
         navBtnMessage.setOnClickListener(v -> {
             selectNavButton(navBtnMessage);
-            showToast("Messages not yet implemented");
+            loadFragment(new MessagesFragment());
         });
 
         navBtnNotifications.setOnClickListener(v -> {
@@ -187,6 +193,37 @@ public class MainActivity extends AppCompatActivity {
         slideUp.setDuration(300);
         slideUp.setFillAfter(true);
         customBottomNav.startAnimation(slideUp);
+    }
+
+    /**
+     * Mở chat toàn màn hình chồng lên nội dung + bottom nav; bấm back trên hệ thống để đóng.
+     */
+    public void openChatDetail(
+            @NonNull String conversationId,
+            @NonNull String peerName,
+            @Nullable String peerAvatarUrl,
+            @NonNull String peerUserId) {
+        View overlay = findViewById(R.id.full_screen_chat_overlay);
+        if (overlay != null) {
+            overlay.setVisibility(View.VISIBLE);
+        }
+        ChatDetailFragment chat = ChatDetailFragment.newInstance(
+                conversationId, peerName, peerAvatarUrl, peerUserId);
+        fragmentManager.beginTransaction()
+                .replace(R.id.full_screen_chat_overlay, chat)
+                .addToBackStack("chat_detail")
+                .commit();
+        fragmentManager.executePendingTransactions();
+        syncChatOverlayVisibility();
+    }
+
+    private void syncChatOverlayVisibility() {
+        View overlay = findViewById(R.id.full_screen_chat_overlay);
+        if (overlay == null) {
+            return;
+        }
+        Fragment f = fragmentManager.findFragmentById(R.id.full_screen_chat_overlay);
+        overlay.setVisibility(f != null ? View.VISIBLE : View.GONE);
     }
 
     /**

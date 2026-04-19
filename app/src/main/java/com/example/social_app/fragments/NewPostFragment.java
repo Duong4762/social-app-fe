@@ -27,6 +27,7 @@ import androidx.fragment.app.Fragment;
 import androidx.lifecycle.ViewModelProvider;
 
 import com.example.social_app.R;
+import com.example.social_app.utils.UserAvatarLoader;
 import com.example.social_app.viewmodels.NewPostViewModel;
 
 import java.util.ArrayList;
@@ -96,8 +97,7 @@ public class NewPostFragment extends Fragment {
         addLocationRow = view.findViewById(R.id.add_location_row);
         tagPeopleRow = view.findViewById(R.id.tag_people_row);
 
-        // Set placeholder avatar
-        userAvatar.setImageResource(R.drawable.avatar_placeholder);
+        UserAvatarLoader.load(userAvatar, null);
 
         // Set giới hạn ký tự
         postInput.setFilters(new InputFilter[]{new InputFilter.LengthFilter(MAX_CHARACTERS)});

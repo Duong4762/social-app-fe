@@ -198,5 +198,11 @@
         <item name="android:textColor">?android:attr/textColorSecondary</item>
     </style>
 
+    <!-- ShapeableImageView: full circle (avatar clipping); gray fill in layout. -->
+    <style name="ShapeAppearanceOverlay.SocialApp.Circle" parent="">
+        <item name="cornerFamily">rounded</item>
+        <item name="cornerSize">50%</item>
+    </style>
+
 </resources>
 

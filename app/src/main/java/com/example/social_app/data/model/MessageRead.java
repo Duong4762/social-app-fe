@@ -1,47 +1,73 @@
 package com.example.social_app.data.model;
 
+import com.google.firebase.firestore.Exclude;
+import com.google.firebase.firestore.IgnoreExtraProperties;
 import com.google.firebase.firestore.ServerTimestamp;
 
 import java.util.Date;
 
-/**
- * Entity: MessageRead (Trạng thái xem tin nhắn)
- * Firestore collection: message_reads
- *
- * Theo dõi xem một người dùng cụ thể đã đọc một tin nhắn nào đó chưa.
- * - messageId: ID của tin nhắn
- * - userId: ID của người dùng đã đọc
- * - readAt: thời điểm đọc tin nhắn
- *
- * Document ID tổng hợp (composite key): "{messageId}_{userId}"
- */
+@IgnoreExtraProperties
 public class MessageRead {
 
-    private String id;          // composite: "{messageId}_{userId}"
+    /** ID document = "{messageId}_{userId}" — không lưu field id trong Firestore. */
+    private String id;
     private String messageId;
+    /** Người đã đọc tin (reader). */
     private String userId;
+    /** Lọc listener theo hội thoại. */
+    private String conversationId;
 
     @ServerTimestamp
     private Date readAt;
 
     public MessageRead() {}
 
-    public MessageRead(String id, String messageId, String userId) {
+    public MessageRead(String id, String messageId, String userId, String conversationId) {
         this.id = id;
         this.messageId = messageId;
         this.userId = userId;
+        this.conversationId = conversationId;
     }
 
-    // Getters & Setters
-    public String getId() { return id; }
-    public void setId(String id) { this.id = id; }
+    @Exclude
+    public String getId() {
+        return id;
+    }
 
-    public String getMessageId() { return messageId; }
-    public void setMessageId(String messageId) { this.messageId = messageId; }
+    @Exclude
+    public void setId(String id) {
+        this.id = id;
+    }
 
-    public String getUserId() { return userId; }
-    public void setUserId(String userId) { this.userId = userId; }
+    public String getMessageId() {
+        return messageId;
+    }
 
-    public Date getReadAt() { return readAt; }
-    public void setReadAt(Date readAt) { this.readAt = readAt; }
+    public void setMessageId(String messageId) {
+        this.messageId = messageId;
+    }
+
+    public String getUserId() {
+        return userId;
+    }
+
+    public void setUserId(String userId) {
+        this.userId = userId;
+    }
+
+    public String getConversationId() {
+        return conversationId;
+    }
+
+    public void setConversationId(String conversationId) {
+        this.conversationId = conversationId;
+    }
+
+    public Date getReadAt() {
+        return readAt;
+    }
+
+    public void setReadAt(Date readAt) {
+        this.readAt = readAt;
+    }
 }

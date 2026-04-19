@@ -1,5 +1,7 @@
 package com.example.social_app.data.model;
 
+import com.google.firebase.firestore.Exclude;
+import com.google.firebase.firestore.IgnoreExtraProperties;
 import com.google.firebase.firestore.ServerTimestamp;
 
 import java.util.Date;
@@ -14,8 +16,10 @@ import java.util.Date;
  * - repliedMessageId: null nếu không phải reply; chứa ID của tin nhắn được trả lời
  * - messageType: "TEXT" | "IMAGE" | "VIDEO"
  */
+@IgnoreExtraProperties
 public class Message {
 
+    /** ID document Firestore — gán bằng {@code snapshot.getId()} khi đọc; không lưu trong document. */
     private String id;
     private String conversationId;
     private String senderId;
@@ -41,9 +45,16 @@ public class Message {
         this.messageType = messageType;
     }
 
-    // Getters & Setters
-    public String getId() { return id; }
-    public void setId(String id) { this.id = id; }
+    // Getters & Setters — Firestore serialize theo getter; @Exclude tránh ghi id: null khi add/set.
+    @Exclude
+    public String getId() {
+        return id;
+    }
+
+    @Exclude
+    public void setId(String id) {
+        this.id = id;
+    }
 
     public String getConversationId() { return conversationId; }
     public void setConversationId(String conversationId) { this.conversationId = conversationId; }
