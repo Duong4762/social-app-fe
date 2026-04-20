@@ -78,4 +78,7 @@ dependencies {
     implementation(libs.firebase.auth)
     implementation(libs.firebase.firestore)
     implementation(libs.firebase.storage)
+
+    // HTTP client for Cloudinary upload API
+    implementation("com.squareup.okhttp3:okhttp:4.12.0")
 }
