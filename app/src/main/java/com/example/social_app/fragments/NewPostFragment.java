@@ -4,6 +4,13 @@ import android.app.Activity;
 import android.content.Intent;
 import android.net.Uri;
 import android.os.Bundle;
+import android.graphics.Bitmap;
+import android.provider.MediaStore;
+import android.widget.VideoView;
+import android.widget.FrameLayout;
+import androidx.core.content.FileProvider;
+import java.io.File;
+import java.io.FileOutputStream;
 import android.text.Editable;
 import android.text.InputFilter;
 import android.text.TextWatcher;
@@ -26,32 +33,41 @@ import androidx.appcompat.app.AlertDialog;
 import androidx.fragment.app.Fragment;
 import androidx.lifecycle.ViewModelProvider;
 
+import com.bumptech.glide.Glide;
 import com.example.social_app.R;
+import com.example.social_app.firebase.FirebaseManager;
 import com.example.social_app.viewmodels.NewPostViewModel;
+import com.google.firebase.auth.FirebaseUser;
 
 import java.util.ArrayList;
 import java.util.List;
 
+/**
+ * Fragment for creating a new post or editing an existing one.
+ */
 public class NewPostFragment extends Fragment {
 
     private static final int PICK_IMAGE_REQUEST = 1;
     private static final int PICK_VIDEO_REQUEST = 2;
 
     private EditText postInput;
+    private TextView newPostTitle;
     private ImageButton cameraButton;
     private Button uploadImageButton, uploadVideoButton, postButton;
     private ImageButton cancelButton;
     private ImageView userAvatar;
     private Spinner privacySpinner;
 
-    private LinearLayout mediaPreviewContainer;
+    private LinearLayout photoPreviewContainer, videoPreviewContainer;
+    private View photoSectionTitle, videoSectionTitle, photoScrollView, videoScrollView;
     private LinearLayout addLocationRow, tagPeopleRow;
 
+    private TextView locationText;
     private NewPostViewModel newPostViewModel;
-    private List<Uri> selectedMedias;
-    private String selectedLocation = null;
     private List<String> taggedPeople;
-    private String privacyLevel = "Everyone";
+    private String editingPostId;
+    private String privacyLevel = "Public";
+    private String selectedLocation = "";
 
     private static final int MAX_CHARACTERS = 280;
 
@@ -59,12 +75,24 @@ public class NewPostFragment extends Fragment {
         return new NewPostFragment();
     }
 
+    public static NewPostFragment newInstanceForEdit(String postId) {
+        NewPostFragment fragment = new NewPostFragment();
+        Bundle args = new Bundle();
+        args.putString("edit_post_id", postId);
+        fragment.setArguments(args);
+        return fragment;
+    }
+
     @Override
     public void onCreate(@Nullable Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        newPostViewModel = new ViewModelProvider(this).get(NewPostViewModel.class);
-        selectedMedias = new ArrayList<>();
+        // Use requireActivity() to share ViewModel across configuration changes (like Camera intent)
+        newPostViewModel = new ViewModelProvider(requireActivity()).get(NewPostViewModel.class);
         taggedPeople = new ArrayList<>();
+
+        if (getArguments() != null) {
+            editingPostId = getArguments().getString("edit_post_id");
+        }
     }
 
     @Nullable
@@ -75,6 +103,13 @@ public class NewPostFragment extends Fragment {
         initializeViews(view);
         setupListeners();
         setupObservers();
+
+        if (editingPostId != null) {
+            newPostViewModel.loadPostForEdit(editingPostId);
+            newPostTitle.setText(R.string.edit_post);
+            postButton.setText(R.string.save);
+        }
+
         updatePostButtonState();
         renderMediaPreview();
         return view;
@@ -82,6 +117,7 @@ public class NewPostFragment extends Fragment {
 
     private void initializeViews(View view) {
         postInput = view.findViewById(R.id.post_input);
+        newPostTitle = view.findViewById(R.id.new_post_title);
         cameraButton = view.findViewById(R.id.camera_button);
         uploadImageButton = view.findViewById(R.id.upload_image_button);
         uploadVideoButton = view.findViewById(R.id.upload_video_button);
@@ -90,29 +126,49 @@ public class NewPostFragment extends Fragment {
         postButton = view.findViewById(R.id.post_button);
         cancelButton = view.findViewById(R.id.cancel_button);
 
-        mediaPreviewContainer = view.findViewById(R.id.media_preview_container);
+        photoPreviewContainer = view.findViewById(R.id.photo_preview_container);
+        videoPreviewContainer = view.findViewById(R.id.video_preview_container);
+        photoSectionTitle = view.findViewById(R.id.photo_section_title);
+        videoSectionTitle = view.findViewById(R.id.video_section_title);
+        photoScrollView = view.findViewById(R.id.photo_scroll_view);
+        videoScrollView = view.findViewById(R.id.video_scroll_view);
 
-        // Các row hành động "Add Location", "Tag People" phải là LinearLayout có id riêng
         addLocationRow = view.findViewById(R.id.add_location_row);
+        locationText = addLocationRow.findViewById(R.id.action_text);
         tagPeopleRow = view.findViewById(R.id.tag_people_row);
 
-        // Set placeholder avatar
-        userAvatar.setImageResource(R.drawable.avatar_placeholder);
+        // Load Real User Data from Firestore
+        loadUserData();
 
-        // Set giới hạn ký tự
+        // Character limit
         postInput.setFilters(new InputFilter[]{new InputFilter.LengthFilter(MAX_CHARACTERS)});
 
         // Setup privacy spinner
         ArrayAdapter<CharSequence> privacyAdapter = ArrayAdapter.createFromResource(
-                getContext(),
+                requireContext(),
                 R.array.privacy_options,
                 R.layout.item_audience
         );
         privacyAdapter.setDropDownViewResource(R.layout.item_dropdown_audience);
         privacySpinner.setAdapter(privacyAdapter);
 
-        // Set initial post button state
         postButton.setEnabled(false);
+    }
+
+    private void loadUserData() {
+        FirebaseUser currentUser = FirebaseManager.getInstance().getAuth().getCurrentUser();
+        if (currentUser != null) {
+            FirebaseManager.getInstance().getFirestore()
+                    .collection(FirebaseManager.COLLECTION_USERS)
+                    .document(currentUser.getUid())
+                    .get()
+                    .addOnSuccessListener(documentSnapshot -> {
+                        String avatarUrl = documentSnapshot.getString("avatarUrl");
+                        if (avatarUrl != null && !avatarUrl.isEmpty()) {
+                            Glide.with(this).load(avatarUrl).circleCrop().into(userAvatar);
+                        }
+                    });
+        }
     }
 
     private void setupListeners() {
@@ -128,7 +184,6 @@ public class NewPostFragment extends Fragment {
         uploadVideoButton.setOnClickListener(v -> pickVideo());
         cameraButton.setOnClickListener(v -> openCamera());
 
-        // Hành động: Add Location, Tag People
         addLocationRow.setOnClickListener(v -> openLocationPicker());
         tagPeopleRow.setOnClickListener(v -> openPeopleTagger());
 
@@ -140,23 +195,20 @@ public class NewPostFragment extends Fragment {
         });
 
         postButton.setOnClickListener(v -> createPost());
-        cancelButton.setOnClickListener(v -> {
-            requireActivity().getSupportFragmentManager().popBackStack();
-        });
+        cancelButton.setOnClickListener(v -> handleCancel());
     }
 
     private void setupObservers() {
         newPostViewModel.getIsPosting().observe(getViewLifecycleOwner(), isPosting -> {
             postButton.setEnabled(!isPosting);
-            postButton.setText(isPosting ? getString(R.string.posting) : getString(R.string.post));
+            postButton.setText(isPosting ? getString(R.string.posting) : (editingPostId != null ? getString(R.string.save) : getString(R.string.post)));
         });
 
         newPostViewModel.getPostSuccess().observe(getViewLifecycleOwner(), success -> {
             if (success) {
-                Toast.makeText(getContext(), getString(R.string.post_created), Toast.LENGTH_SHORT).show();
-                if (getFragmentManager() != null) {
-                    getFragmentManager().popBackStack();
-                }
+                Toast.makeText(getContext(), editingPostId != null ? "Cập nhật thành công!" : getString(R.string.post_created), Toast.LENGTH_SHORT).show();
+                newPostViewModel.clearData();
+                requireActivity().getSupportFragmentManager().popBackStack();
             }
         });
 
@@ -164,6 +216,59 @@ public class NewPostFragment extends Fragment {
             if (error != null) {
                 Toast.makeText(getContext(), error, Toast.LENGTH_SHORT).show();
             }
+        });
+
+        newPostViewModel.getEditingPost().observe(getViewLifecycleOwner(), post -> {
+            if (post != null) {
+                postInput.setText(post.getCaption());
+                
+                // Hiển thị Location cũ
+                if (post.getLocation() != null && !post.getLocation().isEmpty()) {
+                    selectedLocation = post.getLocation();
+                    locationText.setText(selectedLocation);
+                    locationText.setTextColor(getResources().getColor(R.color.accent_purple));
+                }
+                
+                // Hiển thị Audience (Visibility) cũ
+                if (post.getVisibility() != null) {
+                    String visibility = post.getVisibility();
+                    ArrayAdapter adapter = (ArrayAdapter) privacySpinner.getAdapter();
+                    if (adapter != null) {
+                        for (int i = 0; i < adapter.getCount(); i++) {
+                            String itemText = adapter.getItem(i).toString();
+                            if (itemText.equalsIgnoreCase(visibility)) {
+                                privacySpinner.setSelection(i);
+                                break;
+                            }
+                        }
+                    }
+                }
+
+                // Gán taggedPeople cũ
+                if (post.getTaggedUsers() != null) {
+                    taggedPeople = new ArrayList<>(post.getTaggedUsers());
+                }
+            }
+        });
+
+        newPostViewModel.getEditingMedia().observe(getViewLifecycleOwner(), mediaList -> {
+            if (mediaList != null && !mediaList.isEmpty()) {
+                List<String> urls = new ArrayList<>();
+                for (com.example.social_app.data.model.PostMedia media : mediaList) {
+                    urls.add(media.getMediaUrl());
+                }
+                newPostViewModel.setExistingMediaUrls(urls);
+            }
+        });
+
+        newPostViewModel.getSelectedMedias().observe(getViewLifecycleOwner(), uris -> {
+            renderMediaPreview();
+            updatePostButtonState();
+        });
+
+        newPostViewModel.getExistingMediaUrls().observe(getViewLifecycleOwner(), urls -> {
+            renderMediaPreview();
+            updatePostButtonState();
         });
     }
 
@@ -181,18 +286,23 @@ public class NewPostFragment extends Fragment {
     }
 
     private void openCamera() {
-        Toast.makeText(getContext(), "Camera - Coming soon", Toast.LENGTH_SHORT).show();
+        Intent takePictureIntent = new Intent(MediaStore.ACTION_IMAGE_CAPTURE);
+        if (takePictureIntent.resolveActivity(requireActivity().getPackageManager()) != null) {
+            startActivityForResult(takePictureIntent, PICK_IMAGE_REQUEST);
+        } else {
+            Toast.makeText(getContext(), "Máy ảnh không khả dụng", Toast.LENGTH_SHORT).show();
+        }
     }
 
     private void openLocationPicker() {
-        AlertDialog.Builder builder = new AlertDialog.Builder(getContext());
+        AlertDialog.Builder builder = new AlertDialog.Builder(requireContext());
         builder.setTitle(getString(R.string.add_location))
-                .setItems(new String[]{getString(R.string.current_location), getString(R.string.search_location)}, (dialog, which) -> {
-                    if (which == 0) {
-                        selectedLocation = getString(R.string.current_location);
-                    } else {
-                        selectedLocation = getString(R.string.custom_location);
-                    }
+                .setItems(new String[]{"Vị trí hiện tại", "Tìm kiếm địa điểm"}, (dialog, which) -> {
+                    selectedLocation = (which == 0) ? "Vị trí hiện tại" : "Hà Nội, Việt Nam";
+                    locationText.setText(selectedLocation);
+                    // Sử dụng màu accent để làm nổi bật vị trí đã chọn
+                    locationText.setTextColor(getResources().getColor(R.color.accent_purple));
+                    Toast.makeText(getContext(), "Đã thêm: " + selectedLocation, Toast.LENGTH_SHORT).show();
                 })
                 .show();
     }
@@ -203,16 +313,24 @@ public class NewPostFragment extends Fragment {
 
     private void createPost() {
         String content = postInput.getText().toString().trim();
-        if (content.isEmpty() && selectedMedias.isEmpty()) {
-            Toast.makeText(getContext(), "Post content cannot be empty", Toast.LENGTH_SHORT).show();
+        List<Uri> selectedMedias = newPostViewModel.getSelectedMedias().getValue();
+        List<String> existingMediaUrls = newPostViewModel.getExistingMediaUrls().getValue();
+
+        if (content.isEmpty() && (selectedMedias == null || selectedMedias.isEmpty()) && (existingMediaUrls == null || existingMediaUrls.isEmpty())) {
+            Toast.makeText(getContext(), "Nội dung không được để trống", Toast.LENGTH_SHORT).show();
             return;
         }
-        newPostViewModel.createPost(content, selectedMedias, selectedLocation, taggedPeople, privacyLevel);
+
+        if (editingPostId != null) {
+            newPostViewModel.updatePost(editingPostId, content, selectedMedias != null ? selectedMedias : new ArrayList<>(), existingMediaUrls != null ? existingMediaUrls : new ArrayList<>(), privacyLevel, selectedLocation, taggedPeople);
+        } else {
+            newPostViewModel.createPost(content, selectedMedias != null ? selectedMedias : new ArrayList<>(), selectedLocation, taggedPeople, privacyLevel);
+        }
     }
 
     private void handleCancel() {
         if (hasUnsavedChanges()) {
-            new AlertDialog.Builder(getContext())
+            new AlertDialog.Builder(requireContext())
                     .setTitle(R.string.discard_post_question)
                     .setMessage(R.string.discard_post_confirm)
                     .setPositiveButton(R.string.discard, (dialog, which) -> returnToHome())
@@ -224,28 +342,41 @@ public class NewPostFragment extends Fragment {
     }
 
     private void returnToHome() {
-        if (getFragmentManager() != null) {
-            getFragmentManager().popBackStack();
-        }
+        newPostViewModel.clearData();
+        requireActivity().getSupportFragmentManager().popBackStack();
     }
 
     private boolean hasUnsavedChanges() {
-        return !postInput.getText().toString().isEmpty() || !selectedMedias.isEmpty();
+        List<Uri> selectedMedias = newPostViewModel.getSelectedMedias().getValue();
+        return !postInput.getText().toString().isEmpty() || (selectedMedias != null && !selectedMedias.isEmpty());
     }
 
     private void updatePostButtonState() {
-        boolean hasContent = !postInput.getText().toString().trim().isEmpty() || !selectedMedias.isEmpty();
+        List<Uri> selectedMedias = newPostViewModel.getSelectedMedias().getValue();
+        List<String> existingMediaUrls = newPostViewModel.getExistingMediaUrls().getValue();
+        
+        boolean hasContent = !postInput.getText().toString().trim().isEmpty() 
+                || (selectedMedias != null && !selectedMedias.isEmpty()) 
+                || (existingMediaUrls != null && !existingMediaUrls.isEmpty());
         postButton.setEnabled(hasContent);
     }
 
-    // region Media Preview
     @Override
     public void onActivityResult(int requestCode, int resultCode, @Nullable Intent data) {
         super.onActivityResult(requestCode, resultCode, data);
-        if (resultCode == Activity.RESULT_OK && data != null) {
+        if (resultCode == Activity.RESULT_OK) {
             if (requestCode == PICK_IMAGE_REQUEST) {
-                handleImagePicked(data);
-            } else if (requestCode == PICK_VIDEO_REQUEST) {
+                if (data != null && (data.getData() != null || data.getClipData() != null)) {
+                    handleImagePicked(data);
+                } else if (data != null && data.getExtras() != null && data.getExtras().get("data") != null) {
+                    // Xử lý ảnh chụp từ camera
+                    Bitmap imageBitmap = (Bitmap) data.getExtras().get("data");
+                    Uri uri = saveImageToInternalStorage(imageBitmap);
+                    if (uri != null) {
+                        newPostViewModel.addSelectedMedia(uri);
+                    }
+                }
+            } else if (requestCode == PICK_VIDEO_REQUEST && data != null) {
                 handleVideoPicked(data);
             }
             renderMediaPreview();
@@ -253,58 +384,160 @@ public class NewPostFragment extends Fragment {
         }
     }
 
+    private Uri saveImageToInternalStorage(Bitmap bitmap) {
+        File file = new File(requireContext().getCacheDir(), "camera_image_" + System.currentTimeMillis() + ".jpg");
+        try (FileOutputStream out = new FileOutputStream(file)) {
+            bitmap.compress(Bitmap.CompressFormat.JPEG, 100, out);
+            return Uri.fromFile(file);
+        } catch (Exception e) {
+            e.printStackTrace();
+            return null;
+        }
+    }
+
     private void handleImagePicked(Intent data) {
         if (data.getClipData() != null) {
             int count = data.getClipData().getItemCount();
             for (int i = 0; i < count; i++) {
-                Uri uri = data.getClipData().getItemAt(i).getUri();
-                selectedMedias.add(uri);
+                newPostViewModel.addSelectedMedia(data.getClipData().getItemAt(i).getUri());
             }
         } else if (data.getData() != null) {
-            selectedMedias.add(data.getData());
+            newPostViewModel.addSelectedMedia(data.getData());
         }
     }
 
     private void handleVideoPicked(Intent data) {
         if (data.getData() != null) {
-            selectedMedias.add(data.getData());
+            newPostViewModel.addSelectedMedia(data.getData());
         }
     }
 
-    /**
-     * Render media preview in horizontal LinearLayout
-     */
     private void renderMediaPreview() {
-        mediaPreviewContainer.removeAllViews();
-        LayoutInflater inflater = LayoutInflater.from(getContext());
-        for (int i = 0; i < selectedMedias.size(); i++) {
-            Uri mediaUri = selectedMedias.get(i);
-            View mediaItem = inflater.inflate(R.layout.item_media_preview, mediaPreviewContainer, false);
+        if (photoPreviewContainer == null || videoPreviewContainer == null) return;
+        
+        photoPreviewContainer.removeAllViews();
+        videoPreviewContainer.removeAllViews();
 
-            ImageView imgMedia = mediaItem.findViewById(R.id.media_preview_image);
-            ImageButton btnRemove = mediaItem.findViewById(R.id.media_remove_button);
-            ImageView playIcon = mediaItem.findViewById(R.id.ic_play);
+        List<String> existingUrls = newPostViewModel.getExistingMediaUrls().getValue();
+        List<Uri> selectedUris = newPostViewModel.getSelectedMedias().getValue();
 
-            // TODO: Replace with Glide/Picasso if needed
-            imgMedia.setImageURI(mediaUri);
+        int photoCount = 0;
+        int videoCount = 0;
 
-            // Hiện icon play nếu là video
-            String uriString = mediaUri.toString();
-            if (uriString.contains("video") || uriString.endsWith(".mp4") || uriString.endsWith(".avi") || uriString.endsWith(".mov")) {
-                playIcon.setVisibility(View.VISIBLE);
-            } else {
-                playIcon.setVisibility(View.GONE);
+        if (existingUrls != null) {
+            for (int i = 0; i < existingUrls.size(); i++) {
+                String url = existingUrls.get(i);
+                boolean isVideo = url.toLowerCase().contains("video") || url.endsWith(".mp4") || url.endsWith(".mov");
+                if (isVideo) {
+                    addMediaToLayout(url, true, i, videoPreviewContainer);
+                    videoCount++;
+                } else {
+                    addMediaToLayout(url, true, i, photoPreviewContainer);
+                    photoCount++;
+                }
             }
-
-            int idx = i;
-            btnRemove.setOnClickListener(v -> {
-                selectedMedias.remove(idx);
-                renderMediaPreview();
-                updatePostButtonState();
-            });
-
-            mediaPreviewContainer.addView(mediaItem);
         }
+
+        if (selectedUris != null) {
+            for (int i = 0; i < selectedUris.size(); i++) {
+                Uri uri = selectedUris.get(i);
+                String mimeType = requireContext().getContentResolver().getType(uri);
+                boolean isVideo = (mimeType != null && mimeType.startsWith("video/")) 
+                        || uri.toString().toLowerCase().contains(".mp4") 
+                        || uri.toString().toLowerCase().contains(".mov");
+
+                if (isVideo) {
+                    addMediaToLayout(uri, false, i, videoPreviewContainer);
+                    videoCount++;
+                } else {
+                    addMediaToLayout(uri, false, i, photoPreviewContainer);
+                    photoCount++;
+                }
+            }
+        }
+
+        // Cập nhật hiển thị tiêu đề và scrollview
+        photoSectionTitle.setVisibility(photoCount > 0 ? View.VISIBLE : View.GONE);
+        photoScrollView.setVisibility(photoCount > 0 ? View.VISIBLE : View.GONE);
+        videoSectionTitle.setVisibility(videoCount > 0 ? View.VISIBLE : View.GONE);
+        videoScrollView.setVisibility(videoCount > 0 ? View.VISIBLE : View.GONE);
     }
-    // endregion
+
+    private void addMediaToLayout(Object source, boolean isExisting, int index, LinearLayout container) {
+        View mediaItem = LayoutInflater.from(getContext()).inflate(R.layout.item_media_preview, container, false);
+        ImageView imgMedia = mediaItem.findViewById(R.id.media_preview_image);
+        ImageButton btnRemove = mediaItem.findViewById(R.id.media_remove_button);
+        ImageView playIcon = mediaItem.findViewById(R.id.ic_play);
+
+        LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(250, 250);
+        params.setMargins(0, 0, 16, 0);
+        mediaItem.setLayoutParams(params);
+
+        Glide.with(this).load(source).centerCrop().into(imgMedia);
+
+        String path = source.toString().toLowerCase();
+        boolean isVideo = path.contains("video") || path.contains(".mp4") || path.contains(".mov") || path.contains(".mkv") || path.contains(".3gp");
+        
+        // Better video detection for Uris
+        if (source instanceof Uri) {
+            String mimeType = requireContext().getContentResolver().getType((Uri) source);
+            if (mimeType != null && mimeType.startsWith("video/")) {
+                isVideo = true;
+            }
+        }
+        
+        playIcon.setVisibility(isVideo ? View.VISIBLE : View.GONE);
+
+        final boolean finalIsVideo = isVideo;
+        imgMedia.setOnClickListener(v -> showMediaFullscreen(source, finalIsVideo));
+
+        btnRemove.setOnClickListener(v -> {
+            if (isExisting) {
+                newPostViewModel.removeExistingMedia(index);
+            } else {
+                newPostViewModel.removeSelectedMedia(index);
+            }
+        });
+
+        container.addView(mediaItem);
+    }
+
+    private void showMediaFullscreen(Object source, boolean isVideo) {
+        AlertDialog.Builder builder = new AlertDialog.Builder(requireContext(), android.R.style.Theme_Black_NoTitleBar_Fullscreen);
+        View view = LayoutInflater.from(getContext()).inflate(R.layout.dialog_video_preview, null);
+        VideoView videoView = view.findViewById(R.id.video_view_preview);
+        ImageView imageView = view.findViewById(R.id.image_view_preview);
+        ImageButton btnClose = view.findViewById(R.id.btn_close_preview);
+
+        if (isVideo) {
+            videoView.setVisibility(View.VISIBLE);
+            if (imageView != null) imageView.setVisibility(View.GONE);
+            
+            Uri videoUri = source instanceof Uri ? (Uri) source : Uri.parse((String) source);
+            videoView.setVideoURI(videoUri);
+            videoView.setOnPreparedListener(mp -> {
+                mp.setLooping(true);
+                videoView.start();
+            });
+            videoView.setOnClickListener(v -> {
+                if (videoView.isPlaying()) videoView.pause();
+                else videoView.start();
+            });
+        } else {
+            videoView.setVisibility(View.GONE);
+            if (imageView != null) {
+                imageView.setVisibility(View.VISIBLE);
+                Glide.with(this)
+                        .load(source)
+                        .into(imageView);
+            }
+        }
+        
+        AlertDialog dialog = builder.setView(view).create();
+        if (dialog.getWindow() != null) {
+            dialog.getWindow().setBackgroundDrawableResource(android.R.color.black);
+        }
+        btnClose.setOnClickListener(v -> dialog.dismiss());
+        dialog.show();
+    }
 }

@@ -1,6 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
     android:background="?attr/colorSurface"
@@ -35,8 +36,20 @@
             android:layout_marginStart="12dp"
             style="@style/TextAppearance.Feed.Username"
             app:layout_constraintStart_toEndOf="@id/post_user_avatar"
-            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintEnd_toStartOf="@id/post_more_options"
             app:layout_constraintTop_toTopOf="@id/post_user_avatar" />
+
+        <!-- More Options -->
+        <ImageButton
+            android:id="@+id/post_more_options"
+            android:layout_width="40dp"
+            android:layout_height="40dp"
+            android:background="?attr/selectableItemBackgroundBorderless"
+            android:src="@drawable/ic_more_horiz"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintTop_toTopOf="@id/post_user_avatar"
+            app:layout_constraintBottom_toBottomOf="@id/post_user_avatar"
+            app:tint="?attr/colorOnSurface" />
 
         <!-- Timestamp and Location -->
         <LinearLayout
@@ -79,18 +92,35 @@
             app:layout_constraintEnd_toEndOf="parent"
             app:layout_constraintTop_toBottomOf="@id/post_meta_layout" />
 
-        <!-- Post Image -->
-        <ImageView
-            android:id="@+id/post_image"
+        <!-- Post Media Container (ViewPager2 for multiple images) -->
+        <FrameLayout
+            android:id="@+id/post_media_container"
             android:layout_width="0dp"
-            android:layout_height="250dp"
+            android:layout_height="300dp"
             android:layout_marginTop="12dp"
-            android:contentDescription="@string/post_image"
-            android:scaleType="centerCrop"
-            android:src="@drawable/bg_nav_item_selected"
             app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintEnd_toEndOf="parent"
-            app:layout_constraintTop_toBottomOf="@id/post_content" />
+            app:layout_constraintTop_toBottomOf="@id/post_content">
+
+            <androidx.viewpager2.widget.ViewPager2
+                android:id="@+id/post_view_pager"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent" />
+
+            <TextView
+                android:id="@+id/media_indicator"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_gravity="top|end"
+                android:layout_margin="12dp"
+                android:background="@drawable/bg_indicator"
+                android:paddingHorizontal="8dp"
+                android:paddingVertical="4dp"
+                android:textColor="@color/white"
+                android:textSize="12sp"
+                android:visibility="gone"
+                tools:text="1/3" />
+        </FrameLayout>
 
         <!-- Action Bar -->
         <LinearLayout
@@ -103,7 +133,7 @@
             android:padding="8dp"
             app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintEnd_toEndOf="parent"
-            app:layout_constraintTop_toBottomOf="@id/post_image">
+            app:layout_constraintTop_toBottomOf="@id/post_media_container">
 
             <!-- Like Button -->
             <LinearLayout

@@ -15,11 +15,15 @@ import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
 import com.example.social_app.R;
+import androidx.swiperefreshlayout.widget.SwipeRefreshLayout;
 import com.example.social_app.adapters.PostAdapter;
 import com.example.social_app.data.model.Post;
-import com.example.social_app.utils.MockDataGenerator;
+import com.example.social_app.viewmodels.HomeViewModel;
+import com.example.social_app.viewmodels.NewPostViewModel;
 
 import java.util.List;
+
+import androidx.lifecycle.ViewModelProvider;
 
 /**
  * HomeFragment displays the social media feed with posts and post composer.
@@ -28,10 +32,13 @@ import java.util.List;
 public class HomeFragment extends Fragment implements PostAdapter.OnPostActionListener {
 
     private RecyclerView feedRecyclerView;
+    private SwipeRefreshLayout swipeRefreshLayout;
     private ProgressBar loadingIndicator;
     private LinearLayout emptyState;
     private LinearLayout errorState;
     private PostAdapter postAdapter;
+    private NewPostViewModel newPostViewModel;
+    private HomeViewModel homeViewModel;
 
     private List<Post> posts;
     private boolean isLoading = false;
@@ -69,8 +76,13 @@ public class HomeFragment extends Fragment implements PostAdapter.OnPostActionLi
     public void onViewCreated(@NonNull View view, @Nullable Bundle savedInstanceState) {
         super.onViewCreated(view, savedInstanceState);
 
+        newPostViewModel = new ViewModelProvider(this).get(NewPostViewModel.class);
+        homeViewModel = new ViewModelProvider(this).get(HomeViewModel.class);
+        setupObservers();
+
         // Initialize views
         feedRecyclerView = view.findViewById(R.id.feed_recycler_view);
+        swipeRefreshLayout = view.findViewById(R.id.swipe_refresh_layout);
         loadingIndicator = view.findViewById(R.id.loading_indicator);
         emptyState = view.findViewById(R.id.empty_state);
         errorState = view.findViewById(R.id.error_state);
@@ -85,6 +97,52 @@ public class HomeFragment extends Fragment implements PostAdapter.OnPostActionLi
         view.findViewById(R.id.retry_button).setOnClickListener(v -> {
             errorState.setVisibility(View.GONE);
             loadPosts();
+        });
+
+        // Set up SwipeRefreshLayout
+        swipeRefreshLayout.setOnRefreshListener(() -> {
+            homeViewModel.loadPosts(true);
+        });
+    }
+
+    private void setupObservers() {
+        homeViewModel.getPosts().observe(getViewLifecycleOwner(), postsList -> {
+            if (postsList != null) {
+                this.posts = postsList;
+                if (postsList.isEmpty()) {
+                    showEmptyState();
+                } else {
+                    showFeed();
+                    postAdapter.setEngagementData(homeViewModel.getLikedPostIds(), homeViewModel.getBookmarkedPostIds());
+                    postAdapter.setPosts(postsList);
+                }
+            }
+        });
+
+        homeViewModel.getIsLoading().observe(getViewLifecycleOwner(), loading -> {
+            this.isLoading = loading;
+            showLoading(loading);
+        });
+
+        homeViewModel.getError().observe(getViewLifecycleOwner(), errorMsg -> {
+            if (errorMsg != null) {
+                showErrorState();
+                Toast.makeText(requireContext(), errorMsg, Toast.LENGTH_SHORT).show();
+            }
+        });
+
+        newPostViewModel.getPostSuccess().observe(getViewLifecycleOwner(), success -> {
+            if (success) {
+                Toast.makeText(requireContext(), "Thao tác thành công!", Toast.LENGTH_SHORT).show();
+                homeViewModel.loadPosts(true); // Reload feed từ Firestore
+                newPostViewModel.resetPostSuccess();
+            }
+        });
+
+        newPostViewModel.getError().observe(getViewLifecycleOwner(), error -> {
+            if (error != null) {
+                Toast.makeText(requireContext(), error, Toast.LENGTH_SHORT).show();
+            }
         });
     }
 
@@ -129,65 +187,24 @@ public class HomeFragment extends Fragment implements PostAdapter.OnPostActionLi
      * Loads the initial batch of posts.
      */
     private void loadPosts() {
-        showLoading(true);
-        isLoading = true;
-        currentPage = 0;
-
-        // Simulate network delay with a handler
-        new android.os.Handler().postDelayed(() -> {
-            try {
-                // Generate mock posts
-                posts = MockDataGenerator.generateMockPosts(10);
-
-                if (posts.isEmpty()) {
-                    showEmptyState();
-                } else {
-                    showFeed();
-                    postAdapter.setPosts(posts);
-                }
-            } catch (Exception e) {
-                showErrorState();
-            } finally {
-                showLoading(false);
-                isLoading = false;
-            }
-        }, 500);
+        homeViewModel.loadPosts(true);
     }
 
     /**
      * Loads more posts for infinite scroll.
      */
     private void loadMorePosts() {
-        if (isLoading || !hasMorePosts) return;
-
-        isLoading = true;
-        currentPage++;
-
-        // Simulate network delay
-        new android.os.Handler().postDelayed(() -> {
-            try {
-                // Generate more mock posts
-                List<Post> newPosts = MockDataGenerator.generateMockPosts(5);
-
-                if (newPosts.isEmpty()) {
-                    hasMorePosts = false;
-                } else {
-                    postAdapter.addPosts(newPosts);
-                    posts.addAll(newPosts);
-                }
-            } catch (Exception e) {
-                Toast.makeText(requireContext(), "Failed to load more posts", Toast.LENGTH_SHORT).show();
-            } finally {
-                isLoading = false;
-            }
-        }, 500);
+        homeViewModel.loadPosts(false);
     }
 
     /**
      * Shows the loading indicator.
      */
     private void showLoading(boolean show) {
-        loadingIndicator.setVisibility(show ? View.VISIBLE : View.GONE);
+        if (!show) {
+            swipeRefreshLayout.setRefreshing(false);
+        }
+        loadingIndicator.setVisibility(show && !swipeRefreshLayout.isRefreshing() ? View.VISIBLE : View.GONE);
     }
 
     /**
@@ -203,7 +220,7 @@ public class HomeFragment extends Fragment implements PostAdapter.OnPostActionLi
      * Shows the empty state message.
      */
     private void showEmptyState() {
-        feedRecyclerView.setVisibility(View.GONE);
+        feedRecyclerView.setVisibility(View.VISIBLE);
         emptyState.setVisibility(View.VISIBLE);
         errorState.setVisibility(View.GONE);
     }
@@ -219,18 +236,19 @@ public class HomeFragment extends Fragment implements PostAdapter.OnPostActionLi
 
     @Override
     public void onLikeClicked(Post post, int position) {
-        boolean isLiked = postAdapter.toggleLiked(post.getId());
-        long nextLikeCount = post.getLikeCount() + (isLiked ? 1 : -1);
-        post.setLikeCount(Math.max(0, nextLikeCount));
-        postAdapter.notifyItemChanged(position + 1); // +1 because of composer at position 0
-        Toast.makeText(requireContext(), "Post " + (isLiked ? "liked" : "unliked"), Toast.LENGTH_SHORT).show();
+        homeViewModel.toggleLike(post);
     }
 
     @Override
     public void onCommentClicked(Post post) {
+        // Prevent multiple bottom sheets from opening
+        if (getParentFragmentManager().findFragmentByTag("comments_bottom_sheet") != null) {
+            return;
+        }
+        
         // Open comments in a bottom sheet with swipe-to-dismiss gesture
         BottomSheetCommentFragment bottomSheetCommentFragment = BottomSheetCommentFragment.newInstance(post.getId());
-        bottomSheetCommentFragment.show(requireActivity().getSupportFragmentManager(), "comments_bottom_sheet");
+        bottomSheetCommentFragment.show(getParentFragmentManager(), "comments_bottom_sheet");
     }
 
     @Override
@@ -241,8 +259,7 @@ public class HomeFragment extends Fragment implements PostAdapter.OnPostActionLi
 
     @Override
     public void onBookmarkClicked(Post post) {
-        Toast.makeText(requireContext(), "Bookmark post: " + post.getId(), Toast.LENGTH_SHORT).show();
-        // TODO: Implement bookmark functionality
+        homeViewModel.toggleBookmark(post);
     }
 
     @Override
@@ -256,7 +273,7 @@ public class HomeFragment extends Fragment implements PostAdapter.OnPostActionLi
         android.util.Log.d("HomeFragment", "Composer clicked - opening NewPostFragment");
 
         // Open NewPostFragment
-        NewPostFragment newPostFragment = new NewPostFragment();
+        NewPostFragment newPostFragment = NewPostFragment.newInstance();
         requireActivity().getSupportFragmentManager()
                 .beginTransaction()
                 .replace(R.id.nav_host_fragment, newPostFragment)
@@ -264,6 +281,28 @@ public class HomeFragment extends Fragment implements PostAdapter.OnPostActionLi
                 .commit();
 
         android.util.Log.d("HomeFragment", "NewPostFragment opened from composer");
+    }
+
+    @Override
+    public void onEditPostClicked(Post post) {
+        NewPostFragment editFragment = NewPostFragment.newInstanceForEdit(post.getId());
+        requireActivity().getSupportFragmentManager()
+                .beginTransaction()
+                .replace(R.id.nav_host_fragment, editFragment)
+                .addToBackStack(null)
+                .commit();
+    }
+
+    @Override
+    public void onDeletePostClicked(Post post) {
+        new androidx.appcompat.app.AlertDialog.Builder(requireContext())
+                .setTitle("Xóa bài viết")
+                .setMessage("Bạn có chắc chắn muốn xóa bài viết này?")
+                .setPositiveButton("Xóa", (dialog, which) -> {
+                    newPostViewModel.deletePost(post.getId());
+                })
+                .setNegativeButton("Hủy", null)
+                .show();
     }
 }
 

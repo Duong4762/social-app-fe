@@ -98,4 +98,6 @@
     <string name="discard_post_question">Discard Post?</string>
     <string name="discard_post_confirm">Are you sure you want to discard this post?</string>
     <string name="discard">Discard</string>
+    <string name="edit_post">Edit Post</string>
+    <string name="save">Save</string>
 </resources>

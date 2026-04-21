@@ -7,11 +7,15 @@ import androidx.lifecycle.MutableLiveData;
 import androidx.lifecycle.ViewModel;
 
 import com.example.social_app.data.model.Comment;
-import com.example.social_app.utils.MockDataGenerator;
+import com.example.social_app.firebase.FirebaseManager;
+import com.google.firebase.firestore.FirebaseFirestore;
+import com.google.firebase.firestore.Query;
 
+import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
+import java.util.UUID;
 
 /**
  * ViewModel for managing comment data and operations.
@@ -36,57 +40,60 @@ public class CommentViewModel extends ViewModel {
         return isLoading;
     }
 
-    /**
-     * Load comments for a specific post.
-     */
-    public void loadComments(String postId) {
-        isLoading.setValue(true);
-        android.util.Log.d("CommentViewModel", "loadComments() called for postId: " + postId);
+    private final FirebaseFirestore db;
+    private final FirebaseManager firebaseManager;
 
-        // Load comments on a background thread to avoid blocking UI
-        new Thread(() -> {
-            try {
-                // Simulate network delay
-                Thread.sleep(500);
-
-                // Generate mock comments
-                List<Comment> mockComments = generateMockComments();
-                android.util.Log.d("CommentViewModel", "Generated " + mockComments.size() + " mock comments");
-
-                // Update LiveData on main thread
-                comments.postValue(mockComments);
-                error.postValue(null);
-            } catch (InterruptedException e) {
-                android.util.Log.e("CommentViewModel", "Error loading comments", e);
-                error.postValue("Failed to load comments: " + e.getMessage());
-            } finally {
-                isLoading.postValue(false);
-            }
-        }).start();
+    public CommentViewModel() {
+        firebaseManager = FirebaseManager.getInstance();
+        db = firebaseManager.getFirestore();
     }
 
     /**
-     * Send a new comment on a post.
+     * Load comments for a specific post from Firestore.
+     */
+    public void loadComments(String postId) {
+        isLoading.setValue(true);
+        db.collection(FirebaseManager.COLLECTION_COMMENTS)
+                .whereEqualTo("postId", postId)
+                .get()
+                .addOnSuccessListener(queryDocumentSnapshots -> {
+                    List<Comment> fetchedComments = queryDocumentSnapshots.toObjects(Comment.class);
+                    // Sort manually to avoid index requirement error
+                    fetchedComments.sort((c1, c2) -> {
+                        if (c1.getCreatedAt() == null || c2.getCreatedAt() == null) return 0;
+                        return c2.getCreatedAt().compareTo(c1.getCreatedAt());
+                    });
+                    comments.setValue(fetchedComments);
+                    isLoading.setValue(false);
+                })
+                .addOnFailureListener(e -> {
+                    error.setValue("Lỗi tải bình luận: " + e.getMessage());
+                    isLoading.setValue(false);
+                });
+    }
+
+    /**
+     * Send a new comment to Firestore.
      */
     public void sendComment(String postId, String text) {
-        try {
-            // Simulate network request
-            Comment newComment = new Comment("comment_" + System.currentTimeMillis(),
-                    postId,
-                    MockDataGenerator.generateMockUser().getId(),
-                    null,
-                    text,
-                    0);
-
-            List<Comment> currentComments = comments.getValue();
-            if (currentComments != null) {
-                currentComments.add(0, newComment);
-                comments.setValue(currentComments);
-            }
-            error.setValue(null);
-        } catch (Exception e) {
-            error.setValue("Failed to send comment: " + e.getMessage());
+        String userId = firebaseManager.getAuth().getUid();
+        if (userId == null) {
+            error.setValue("Vui lòng đăng nhập");
+            return;
         }
+
+        String commentId = UUID.randomUUID().toString();
+        Comment newComment = new Comment(commentId, postId, userId, null, text, 0);
+
+        db.collection(FirebaseManager.COLLECTION_COMMENTS).document(commentId)
+                .set(newComment)
+                .addOnSuccessListener(aVoid -> {
+                    // Update like count in Post document (optional, but good for UI)
+                    db.collection(FirebaseManager.COLLECTION_POSTS).document(postId)
+                            .update("commentCount", com.google.firebase.firestore.FieldValue.increment(1));
+                    loadComments(postId); // Refresh list
+                })
+                .addOnFailureListener(e -> error.setValue("Lỗi gửi bình luận: " + e.getMessage()));
     }
 
     /**
@@ -109,29 +116,10 @@ public class CommentViewModel extends ViewModel {
 
     /**
      * Load more comments for pagination (infinite scroll).
-     * Appends new comments to the existing list.
      */
     public void loadMoreComments(String postId) {
-        isLoading.setValue(true);
-        try {
-            // Simulate network delay
-            Thread.sleep(500);
-
-            // Generate mock comments
-            List<Comment> newComments = generateMockComments();
-
-            // Append to existing comments
-            List<Comment> currentComments = comments.getValue();
-            if (currentComments != null) {
-                currentComments.addAll(newComments);
-                comments.setValue(currentComments);
-            }
-            error.setValue(null);
-        } catch (InterruptedException e) {
-            error.setValue("Failed to load more comments: " + e.getMessage());
-        } finally {
-            isLoading.setValue(false);
-        }
+        // Implementation for pagination if needed
+        isLoading.setValue(false);
     }
 
     /**
@@ -146,17 +134,15 @@ public class CommentViewModel extends ViewModel {
      * Delete a comment by ID.
      */
     public void deleteComment(String commentId) {
-        try {
-            List<Comment> currentComments = comments.getValue();
-            if (currentComments != null) {
-                currentComments.removeIf(comment -> comment.getId().equals(commentId));
-                comments.setValue(currentComments);
-                android.util.Log.d("CommentViewModel", "Comment deleted: " + commentId);
-            }
-            error.setValue(null);
-        } catch (Exception e) {
-            error.setValue("Failed to delete comment: " + e.getMessage());
-            android.util.Log.e("CommentViewModel", "Error deleting comment", e);
-        }
+        db.collection(FirebaseManager.COLLECTION_COMMENTS).document(commentId)
+                .delete()
+                .addOnSuccessListener(aVoid -> {
+                    List<Comment> currentComments = comments.getValue();
+                    if (currentComments != null) {
+                        currentComments.removeIf(comment -> comment.getId().equals(commentId));
+                        comments.setValue(currentComments);
+                    }
+                })
+                .addOnFailureListener(e -> error.setValue("Lỗi xóa bình luận: " + e.getMessage()));
     }
 }

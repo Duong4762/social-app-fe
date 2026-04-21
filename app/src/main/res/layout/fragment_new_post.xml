@@ -30,6 +30,7 @@
             app:tint="?attr/colorOnSurfaceVariant"
             android:padding="6dp"/>
         <TextView
+            android:id="@+id/new_post_title"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_weight="1"
@@ -97,14 +98,61 @@
                     android:maxLines="3"/>
             </LinearLayout>
 
-            <!-- Media Preview -->
-            <LinearLayout
-                android:id="@+id/media_preview_container"
+            <!-- Photo Section -->
+            <TextView
+                android:id="@+id/photo_section_title"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Hình ảnh"
+                android:textColor="?attr/colorPrimary"
+                android:textStyle="bold"
+                android:textSize="14sp"
+                android:layout_marginBottom="8dp"
+                android:visibility="gone"/>
+            <HorizontalScrollView
+                android:id="@+id/photo_scroll_view"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:orientation="horizontal"
-                android:layout_marginBottom="18dp">
-            </LinearLayout>
+                android:layout_marginBottom="18dp"
+                android:overScrollMode="never"
+                android:scrollbars="none"
+                android:visibility="gone">
+                <LinearLayout
+                    android:id="@+id/photo_preview_container"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal"
+                    android:gravity="center_vertical">
+                </LinearLayout>
+            </HorizontalScrollView>
+
+            <!-- Video Section -->
+            <TextView
+                android:id="@+id/video_section_title"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Videos"
+                android:textColor="?attr/colorPrimary"
+                android:textStyle="bold"
+                android:textSize="14sp"
+                android:layout_marginBottom="8dp"
+                android:visibility="gone"/>
+            <HorizontalScrollView
+                android:id="@+id/video_scroll_view"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="18dp"
+                android:overScrollMode="never"
+                android:scrollbars="none"
+                android:visibility="gone">
+                <LinearLayout
+                    android:id="@+id/video_preview_container"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal"
+                    android:gravity="center_vertical">
+                </LinearLayout>
+            </HorizontalScrollView>
 
             <!-- MEDIA UPLOAD -->
             <TextView

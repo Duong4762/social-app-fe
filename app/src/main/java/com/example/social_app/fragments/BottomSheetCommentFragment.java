@@ -308,7 +308,19 @@ public class BottomSheetCommentFragment extends BottomSheetDialogFragment implem
             return;
         }
         replyingToUserId = MockDataGenerator.getUserDisplayName(comment.getUserId());
-        if (commentInput != null) commentInput.requestFocus();
+        if (commentInput != null) {
+            commentInput.requestFocus();
+            // Force update text and selection even if already focused
+            commentInput.setText("@" + replyingToUserId + " ");
+            commentInput.setSelection(commentInput.getText().length());
+            
+            // Show soft keyboard explicitly
+            android.view.inputmethod.InputMethodManager imm = (android.view.inputmethod.InputMethodManager) 
+                    requireContext().getSystemService(android.content.Context.INPUT_METHOD_SERVICE);
+            if (imm != null) {
+                imm.showSoftInput(commentInput, android.view.inputmethod.InputMethodManager.SHOW_IMPLICIT);
+            }
+        }
     }
 
     @Override
