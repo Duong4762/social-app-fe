@@ -277,6 +277,31 @@ public class ConversationRepository {
     }
 
     /**
+     * Gửi tin nhắn ảnh (content là image URL).
+     */
+    @NonNull
+    public Task<Void> sendImageMessage(
+            @NonNull String conversationId,
+            @NonNull String senderId,
+            @NonNull String imageUrl) {
+        Message msg = new Message();
+        msg.setConversationId(conversationId);
+        msg.setSenderId(senderId);
+        msg.setRepliedMessageId(null);
+        msg.setContent(imageUrl);
+        msg.setMessageType("IMAGE");
+        return db.collection(FirebaseManager.COLLECTION_MESSAGES)
+                .add(msg)
+                .continueWithTask(task -> {
+                    if (!task.isSuccessful()) {
+                        Exception ex = task.getException();
+                        return Tasks.forException(ex != null ? ex : new Exception("send failed"));
+                    }
+                    return Tasks.forResult(null);
+                });
+    }
+
+    /**
      * Ghi nhận người dùng hiện tại đã đọc một tin (tin do đối phương gửi). Document id cố định để idempotent.
      */
     public void ensureMessageReadByReader(

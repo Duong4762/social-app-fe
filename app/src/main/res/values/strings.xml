@@ -140,6 +140,9 @@
     <string name="chat_label_yesterday">Yesterday</string>
     <string name="chat_typing">%1$s is typing…</string>
     <string name="chat_send_failed">Could not send message</string>
+    <string name="chat_pick_image_title">Chọn ảnh</string>
+    <string name="chat_need_image_permission">App chưa có quyền đọc ảnh</string>
+    <string name="chat_cannot_read_images">Không thể đọc ảnh trong máy</string>
     <string name="chat_tick_sent" translatable="false">✓</string>
     <string name="chat_tick_read" translatable="false">✓✓</string>
 </resources>

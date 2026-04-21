@@ -11,6 +11,7 @@ import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.recyclerview.widget.RecyclerView;
 
+import com.bumptech.glide.Glide;
 import com.example.social_app.R;
 import com.example.social_app.data.model.Message;
 import com.example.social_app.utils.UserAvatarLoader;
@@ -180,23 +181,37 @@ public class ChatMessagesAdapter extends RecyclerView.Adapter<RecyclerView.ViewH
     static final class InVH extends RecyclerView.ViewHolder {
         final ImageView avatar;
         final TextView bubble;
+        final ImageView image;
         final TextView time;
 
         InVH(@NonNull View itemView) {
             super(itemView);
             avatar = itemView.findViewById(R.id.chat_in_avatar);
             bubble = itemView.findViewById(R.id.chat_in_bubble);
+            image = itemView.findViewById(R.id.chat_in_image);
             time = itemView.findViewById(R.id.chat_in_time);
         }
 
         void bind(Message m, SimpleDateFormat tf, String peerAvatar) {
             String body = m.getContent() != null ? m.getContent() : "";
             if ("IMAGE".equalsIgnoreCase(m.getMessageType())) {
-                body = itemView.getContext().getString(R.string.message_preview_sent_photo);
+                bubble.setVisibility(View.GONE);
+                image.setVisibility(View.VISIBLE);
+                Glide.with(itemView)
+                        .load(body)
+                        .placeholder(R.drawable.avatar_placeholder)
+                        .error(R.drawable.avatar_placeholder)
+                        .into(image);
             } else if ("VIDEO".equalsIgnoreCase(m.getMessageType())) {
+                image.setVisibility(View.GONE);
+                bubble.setVisibility(View.VISIBLE);
                 body = itemView.getContext().getString(R.string.message_preview_sent_video);
+                bubble.setText(body);
+            } else {
+                image.setVisibility(View.GONE);
+                bubble.setVisibility(View.VISIBLE);
+                bubble.setText(body);
             }
-            bubble.setText(body);
             Date c = m.getCreatedAt();
             time.setText(c != null ? tf.format(c) : "");
             UserAvatarLoader.load(avatar, peerAvatar);
@@ -205,19 +220,38 @@ public class ChatMessagesAdapter extends RecyclerView.Adapter<RecyclerView.ViewH
 
     static final class OutVH extends RecyclerView.ViewHolder {
         final TextView bubble;
+        final ImageView image;
         final TextView timeTv;
         final TextView read;
 
         OutVH(@NonNull View itemView) {
             super(itemView);
             bubble = itemView.findViewById(R.id.chat_out_bubble);
+            image = itemView.findViewById(R.id.chat_out_image);
             timeTv = itemView.findViewById(R.id.chat_out_time);
             read = itemView.findViewById(R.id.chat_out_read);
         }
 
         void bind(Message m, SimpleDateFormat tf, @NonNull Set<String> peerReadIds) {
             String body = m.getContent() != null ? m.getContent() : "";
-            bubble.setText(body);
+            if ("IMAGE".equalsIgnoreCase(m.getMessageType())) {
+                bubble.setVisibility(View.GONE);
+                image.setVisibility(View.VISIBLE);
+                Glide.with(itemView)
+                        .load(body)
+                        .placeholder(R.drawable.avatar_placeholder)
+                        .error(R.drawable.avatar_placeholder)
+                        .into(image);
+            } else if ("VIDEO".equalsIgnoreCase(m.getMessageType())) {
+                image.setVisibility(View.GONE);
+                bubble.setVisibility(View.VISIBLE);
+                body = itemView.getContext().getString(R.string.message_preview_sent_video);
+                bubble.setText(body);
+            } else {
+                image.setVisibility(View.GONE);
+                bubble.setVisibility(View.VISIBLE);
+                bubble.setText(body);
+            }
             Date c = m.getCreatedAt();
             timeTv.setText(c != null ? tf.format(c) : "");
             read.setVisibility(View.VISIBLE);

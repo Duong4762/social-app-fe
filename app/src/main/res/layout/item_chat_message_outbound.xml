@@ -22,6 +22,17 @@
         android:textSize="15sp"
         tools:text="I'm good, thanks!" />
 
+    <ImageView
+        android:id="@+id/chat_out_image"
+        android:layout_width="220dp"
+        android:layout_height="220dp"
+        android:layout_gravity="end"
+        android:adjustViewBounds="true"
+        android:background="@color/avatar_background"
+        android:contentDescription="@string/post_image"
+        android:scaleType="centerCrop"
+        android:visibility="gone" />
+
     <LinearLayout
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"

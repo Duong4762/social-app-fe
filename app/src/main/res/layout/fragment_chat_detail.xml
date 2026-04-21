@@ -125,6 +125,13 @@
         app:layout_constraintTop_toBottomOf="@id/chat_header_divider"
         tools:listitem="@layout/item_chat_message_outbound" />
 
+    <androidx.constraintlayout.widget.Guideline
+        android:id="@+id/chat_media_half_guideline"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        app:layout_constraintGuide_percent="0.5" />
+
     <LinearLayout
         android:id="@+id/chat_typing_row"
         android:layout_width="wrap_content"
@@ -157,6 +164,67 @@
             android:textSize="13sp"
             tools:text="Elena is typing..." />
     </LinearLayout>
+
+    <FrameLayout
+        android:id="@+id/chat_media_picker_sheet"
+        android:layout_width="0dp"
+        android:layout_height="0dp"
+        android:background="?attr/colorSurface"
+        android:elevation="18dp"
+        android:visibility="gone"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/chat_media_half_guideline">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:orientation="vertical"
+            android:paddingTop="8dp">
+
+            <View
+                android:layout_width="40dp"
+                android:layout_height="4dp"
+                android:layout_gravity="center_horizontal"
+                android:background="@drawable/bg_chat_input_bar" />
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:paddingStart="16dp"
+                android:paddingTop="10dp"
+                android:paddingEnd="16dp"
+                android:paddingBottom="10dp"
+                android:text="@string/chat_pick_image_title"
+                android:textColor="?attr/colorOnSurface"
+                android:textSize="16sp"
+                android:textStyle="bold" />
+
+            <androidx.recyclerview.widget.RecyclerView
+                android:id="@+id/chat_media_picker_list"
+                android:layout_width="match_parent"
+                android:layout_height="0dp"
+                android:layout_weight="1"
+                android:clipToPadding="false"
+                android:paddingStart="8dp"
+                android:paddingEnd="8dp"
+                android:paddingBottom="96dp"
+                tools:listitem="@layout/item_chat_gallery_image" />
+        </LinearLayout>
+
+        <com.google.android.material.floatingactionbutton.FloatingActionButton
+            android:id="@+id/btn_chat_send_image"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_gravity="bottom|center_horizontal"
+            android:layout_marginBottom="24dp"
+            android:contentDescription="@string/cd_send_message"
+            android:src="@drawable/send_message"
+            android:visibility="gone"
+            app:backgroundTint="@color/primary_purple"
+            app:tint="@android:color/white" />
+    </FrameLayout>
 
     <!-- Bottom input -->
     <LinearLayout
