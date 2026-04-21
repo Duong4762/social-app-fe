@@ -98,4 +98,48 @@
     <string name="discard_post_question">Discard Post?</string>
     <string name="discard_post_confirm">Are you sure you want to discard this post?</string>
     <string name="discard">Discard</string>
+
+
+    <!-- ============================================
+     SEARCH & NOTIFICATION STRINGS
+     ============================================ -->
+
+    <!-- Search Placeholders -->
+    <string name="username_placeholder">@username</string>
+    <string name="fullname_placeholder">Full Name</string>
+    <string name="search_hint">Search users or posts...</string>
+
+    <!-- Notification -->
+    <string name="notifications">Notifications</string>
+    <string name="no_notifications">No notifications yet</string>
+    <string name="mark_all_read">Mark all read</string>
+    <string name="notification_like">liked your post</string>
+    <string name="notification_comment">commented on your post</string>
+    <string name="notification_follow">started following you</string>
+    <string name="notification_message">sent you a message</string>
+
+    <!-- Time formats -->
+    <string name="just_now">Just now</string>
+    <string name="minutes_ago">%d minutes ago</string>
+    <string name="hours_ago">%d hours ago</string>
+    <string name="days_ago">%d days ago</string>
+
+    <!-- Follow -->
+    <string name="following">Following</string>
+    <string name="follow_back">Follow back</string>
+
+    <!-- Empty states -->
+    <string name="no_users_found">No users found</string>
+    <string name="no_posts_found">No posts found</string>
+    <string name="recent_searches">Recent searches</string>
+    <string name="clear_all">Clear all</string>
+
+    <!-- Tab titles -->
+    <string name="tab_people">People</string>
+    <string name="tab_posts_tab">Posts</string>
+
+    <!-- Search result counts -->
+    <string name="followers_count">%s followers</string>
+    <string name="posts_count">%s posts</string>
+
 </resources>
