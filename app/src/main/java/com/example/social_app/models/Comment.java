@@ -16,6 +16,7 @@ public class Comment {
     private boolean isLiked;
     private List<Comment> replies;
     private boolean hasMoreReplies;
+    private boolean isReply = false;
 
     public Comment(){
     }
@@ -103,5 +104,17 @@ public class Comment {
 
     public void setHasMoreReplies(boolean hasMoreReplies) {
         this.hasMoreReplies = hasMoreReplies;
+    }
+
+    public boolean isReply() {
+        return isReply;
+    }
+
+    public void setIsReply(boolean reply) {
+        isReply = reply;
+    }
+
+    public boolean hasMoreReplies() {
+        return hasMoreReplies;
     }
 }
