@@ -119,7 +119,7 @@
                 android:contentDescription="@string/like"
                 android:padding="0dp"
                 android:scaleType="centerInside"
-                android:src="@drawable/ic_heart_outline"
+                android:src="@drawable/ic_heart"
                 app:tint="?attr/colorOnSurfaceVariant" />
 
             <TextView
@@ -149,7 +149,7 @@
                 android:contentDescription="@string/reply"
                 android:padding="0dp"
                 android:scaleType="centerInside"
-                android:src="@drawable/ic_comment_outline"
+                android:src="@drawable/ic_comment"
                 app:tint="?attr/colorOnSurfaceVariant" />
 
             <TextView
