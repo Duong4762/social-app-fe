@@ -32,8 +32,9 @@ import androidx.swiperefreshlayout.widget.SwipeRefreshLayout;
 
 import com.example.social_app.R;
 import com.example.social_app.adapters.CommentAdapter;
-import com.example.social_app.models.Comment;
-import com.example.social_app.models.User;
+import com.example.social_app.data.model.Comment;
+import com.example.social_app.data.model.User;
+import com.example.social_app.utils.MockDataGenerator;
 import com.example.social_app.viewmodels.CommentViewModel;
 
 import java.util.ArrayList;
@@ -95,12 +96,12 @@ public class CommentFragment extends Fragment implements CommentAdapter.OnCommen
         for (int i = 1; i <= 10; i++) {
             Comment comment = new Comment();
             comment.setId(String.valueOf(i));
-            comment.setText("Comment test số " + i);
+            comment.setContent("Comment test số " + i);
             User user = new User();
-            user.setName("User " + i);
-            comment.setUser(user);
+            user.setId("user_" + i);
+            user.setFullName("User " + i);
+            comment.setUserId(user.getId());
             comment.setLikeCount(i * 10);
-            comment.setReplies(new ArrayList<>());
             fakeComments.add(comment);
         }
         commentAdapter.setComments(fakeComments);
@@ -308,8 +309,8 @@ public class CommentFragment extends Fragment implements CommentAdapter.OnCommen
 
     @Override
     public void onReplyClicked(Comment comment) {
-        if (comment == null || comment.getUser() == null) return;
-        replyingToUserId = comment.getUser().getName();
+        if (comment == null) return;
+        replyingToUserId = MockDataGenerator.getUserDisplayName(comment.getUserId());
         if (commentInput != null) commentInput.requestFocus();
     }
 
@@ -381,7 +382,7 @@ public class CommentFragment extends Fragment implements CommentAdapter.OnCommen
     private void shareComment(Comment comment) {
         Intent sendIntent = new Intent();
         sendIntent.setAction(Intent.ACTION_SEND);
-        sendIntent.putExtra(Intent.EXTRA_TEXT, comment.getText());
+        sendIntent.putExtra(Intent.EXTRA_TEXT, comment.getContent());
         sendIntent.setType("text/plain");
         startActivity(sendIntent);
     }
@@ -389,7 +390,7 @@ public class CommentFragment extends Fragment implements CommentAdapter.OnCommen
     private void copyCommentText(Comment comment) {
         ClipboardManager clipboard =
                 (ClipboardManager) requireContext().getSystemService(Context.CLIPBOARD_SERVICE);
-        ClipData clip = ClipData.newPlainText("comment", comment.getText());
+        ClipData clip = ClipData.newPlainText("comment", comment.getContent());
         clipboard.setPrimaryClip(clip);
         Toast.makeText(getContext(), "Comment copied to clipboard", Toast.LENGTH_SHORT).show();
     }

@@ -6,10 +6,12 @@ import androidx.lifecycle.LiveData;
 import androidx.lifecycle.MutableLiveData;
 import androidx.lifecycle.ViewModel;
 
-import com.example.social_app.models.Comment;
+import com.example.social_app.data.model.Comment;
 import com.example.social_app.utils.MockDataGenerator;
 
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
 /**
  * ViewModel for managing comment data and operations.
@@ -20,6 +22,7 @@ public class CommentViewModel extends ViewModel {
     private final MutableLiveData<List<Comment>> comments = new MutableLiveData<>();
     private final MutableLiveData<String> error = new MutableLiveData<>();
     private final MutableLiveData<Boolean> isLoading = new MutableLiveData<>();
+    private final Set<String> likedCommentIds = new HashSet<>();
 
     public LiveData<List<Comment>> getComments() {
         return comments;
@@ -68,15 +71,12 @@ public class CommentViewModel extends ViewModel {
     public void sendComment(String postId, String text) {
         try {
             // Simulate network request
-            Comment newComment = new Comment(
-                    "comment_" + System.currentTimeMillis(),
-                    MockDataGenerator.generateMockUser(),
-                    text,
-                    System.currentTimeMillis(),
-                    0,
+            Comment newComment = new Comment("comment_" + System.currentTimeMillis(),
+                    postId,
+                    MockDataGenerator.generateMockUser().getId(),
                     null,
-                    false
-            );
+                    text,
+                    0);
 
             List<Comment> currentComments = comments.getValue();
             if (currentComments != null) {
@@ -94,10 +94,11 @@ public class CommentViewModel extends ViewModel {
      */
     public void toggleLike(Comment comment) {
         try {
-            comment.setLiked(!comment.isLiked());
-            if (comment.isLiked()) {
+            String commentId = comment.getId();
+            if (commentId != null && likedCommentIds.add(commentId)) {
                 comment.setLikeCount(comment.getLikeCount() + 1);
             } else {
+                likedCommentIds.remove(commentId);
                 comment.setLikeCount(Math.max(0, comment.getLikeCount() - 1));
             }
             comments.setValue(comments.getValue()); // Trigger update
@@ -137,32 +138,8 @@ public class CommentViewModel extends ViewModel {
      * Load more replies for a comment.
      */
     public void loadMoreReplies(String commentId) {
-        isLoading.setValue(true);
-        try {
-            // Simulate network delay
-            Thread.sleep(500);
-
-            // Generate mock replies
-            List<Comment> mockReplies = generateMockComments();
-
-            // Find the comment and add replies
-            List<Comment> currentComments = comments.getValue();
-            if (currentComments != null) {
-                for (Comment comment : currentComments) {
-                    if (comment.getId().equals(commentId)) {
-                        comment.setReplies(mockReplies);
-                        comment.setHasMoreReplies(false);
-                        break;
-                    }
-                }
-                comments.setValue(currentComments);
-            }
-            error.setValue(null);
-        } catch (InterruptedException e) {
-            error.setValue("Failed to load replies: " + e.getMessage());
-        } finally {
-            isLoading.setValue(false);
-        }
+        // No-op in mock mode: replies are represented by parentId relation.
+        error.setValue(null);
     }
 
     /**

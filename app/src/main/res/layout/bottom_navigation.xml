@@ -5,7 +5,7 @@
     android:id="@+id/custom_bottom_nav_container"
     android:layout_width="match_parent"
     android:layout_height="72dp"
-    android:background="#12131D"
+    android:background="@color/white"
     android:elevation="16dp">
 
     <!-- Main Navigation Bar Background -->
@@ -13,123 +13,116 @@
         android:id="@+id/bottom_nav_layout"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
+        android:paddingStart="12dp"
+        android:paddingEnd="12dp"
         android:paddingTop="4dp"
         android:paddingBottom="8dp"
-        android:background="#12131D">
+        android:background="@color/white">
 
         <!-- Home Icon -->
         <ImageButton
             android:id="@+id/nav_btn_home"
-            android:layout_width="48dp"
-            android:layout_height="48dp"
+            android:layout_width="52dp"
+            android:layout_height="52dp"
             android:src="@drawable/ic_home"
             android:contentDescription="@string/nav_home"
             android:background="?attr/selectableItemBackgroundBorderless"
             android:scaleType="centerInside"
-            app:tint="@color/nav_icon_tint"
+            app:tint="@color/black"
             app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintEnd_toStartOf="@id/nav_btn_search"
+            app:layout_constraintHorizontal_chainStyle="spread_inside"
             app:layout_constraintTop_toTopOf="parent"
-            app:layout_constraintBottom_toBottomOf="parent"
-            android:layout_marginStart="12dp" />
+            app:layout_constraintBottom_toBottomOf="parent" />
 
         <!-- Search Icon -->
         <ImageButton
             android:id="@+id/nav_btn_search"
-            android:layout_width="48dp"
-            android:layout_height="48dp"
+            android:layout_width="52dp"
+            android:layout_height="52dp"
             android:src="@drawable/ic_search"
             android:contentDescription="@string/nav_search"
             android:background="?attr/selectableItemBackgroundBorderless"
             android:scaleType="centerInside"
-            app:tint="@color/nav_icon_tint"
+            app:tint="@color/black"
             app:layout_constraintStart_toEndOf="@id/nav_btn_home"
-            app:layout_constraintTop_toTopOf="parent"
-            app:layout_constraintBottom_toBottomOf="parent"
-            android:layout_marginStart="8dp" />
-
-        <!-- Spacer for center -->
-
-        <!-- Message Icon -->
-        <Space
-            android:id="@+id/spacer_center"
-            android:layout_width="0dp"
-            android:layout_height="0dp"
-            app:layout_constraintBottom_toBottomOf="parent"
             app:layout_constraintEnd_toStartOf="@id/nav_btn_message"
-            app:layout_constraintHorizontal_bias="0.0"
-            app:layout_constraintStart_toEndOf="@id/nav_btn_search"
             app:layout_constraintTop_toTopOf="parent"
-            app:layout_constraintVertical_bias="0.0" />
+            app:layout_constraintBottom_toBottomOf="parent" />
 
+        <!-- Message Icon (center) -->
         <ImageButton
             android:id="@+id/nav_btn_message"
-            android:layout_width="48dp"
-            android:layout_height="48dp"
+            android:layout_width="52dp"
+            android:layout_height="52dp"
             android:src="@drawable/ic_message"
             android:contentDescription="@string/nav_message"
             android:background="?attr/selectableItemBackgroundBorderless"
             android:scaleType="centerInside"
-            app:tint="@color/nav_icon_tint"
+            app:tint="@color/black"
+            app:layout_constraintStart_toEndOf="@id/nav_btn_search"
+            app:layout_constraintEnd_toStartOf="@id/nav_btn_notifications"
+            app:layout_constraintTop_toTopOf="parent"
+            app:layout_constraintBottom_toBottomOf="parent" />
+
+        <!-- Notification Icon (old message position) -->
+        <ImageButton
+            android:id="@+id/nav_btn_notifications"
+            android:layout_width="52dp"
+            android:layout_height="52dp"
+            android:src="@drawable/ic_notifications"
+            android:contentDescription="@string/notification_bell"
+            android:background="?attr/selectableItemBackgroundBorderless"
+            android:scaleType="centerInside"
+            app:tint="@color/black"
+            app:layout_constraintStart_toEndOf="@id/nav_btn_message"
             app:layout_constraintEnd_toStartOf="@id/nav_btn_profile"
             app:layout_constraintTop_toTopOf="parent"
-            app:layout_constraintBottom_toBottomOf="parent"
-            android:layout_marginEnd="8dp" />
+            app:layout_constraintBottom_toBottomOf="parent" />
 
-        <!-- Message Notification Badge -->
+        <!-- Notification Badge -->
         <View
-            android:id="@+id/message_badge"
+            android:id="@+id/notification_badge"
             android:layout_width="10dp"
             android:layout_height="10dp"
             android:background="@drawable/notification_badge"
             android:visibility="gone"
-            app:layout_constraintEnd_toEndOf="@id/nav_btn_message"
-            app:layout_constraintTop_toTopOf="@id/nav_btn_message"
+            app:layout_constraintEnd_toEndOf="@id/nav_btn_notifications"
+            app:layout_constraintTop_toTopOf="@id/nav_btn_notifications"
             android:layout_marginEnd="2dp"
             android:layout_marginTop="2dp" />
 
         <!-- Profile Icon -->
         <ImageButton
             android:id="@+id/nav_btn_profile"
-            android:layout_width="48dp"
-            android:layout_height="48dp"
+            android:layout_width="52dp"
+            android:layout_height="52dp"
             android:src="@drawable/ic_profile"
             android:contentDescription="@string/nav_profile"
             android:background="?attr/selectableItemBackgroundBorderless"
             android:scaleType="centerInside"
-            app:tint="@color/nav_icon_tint"
+            app:tint="@color/black"
+            app:layout_constraintStart_toEndOf="@id/nav_btn_notifications"
+            app:layout_constraintEnd_toStartOf="@id/nav_btn_settings"
+            app:layout_constraintTop_toTopOf="parent"
+            app:layout_constraintBottom_toBottomOf="parent" />
+
+        <!-- Settings Icon (rightmost) -->
+        <ImageButton
+            android:id="@+id/nav_btn_settings"
+            android:layout_width="52dp"
+            android:layout_height="52dp"
+            android:src="@drawable/ic_settings"
+            android:contentDescription="@string/nav_settings"
+            android:background="?attr/selectableItemBackgroundBorderless"
+            android:scaleType="centerInside"
+            app:tint="@color/black"
+            app:layout_constraintStart_toEndOf="@id/nav_btn_profile"
             app:layout_constraintEnd_toEndOf="parent"
             app:layout_constraintTop_toTopOf="parent"
-            app:layout_constraintBottom_toBottomOf="parent"
-            android:layout_marginEnd="12dp" />
+            app:layout_constraintBottom_toBottomOf="parent" />
 
     </androidx.constraintlayout.widget.ConstraintLayout>
-
-    <!-- Centered Floating Action Button for Add New Post -->
-    <FrameLayout
-        android:id="@+id/fab_add_container"
-        android:layout_width="64dp"
-        android:layout_height="64dp"
-        android:layout_gravity="center_horizontal"
-        android:layout_marginTop="5dp">
-
-        <!-- Shadow/Elevation effect -->
-        <View
-            android:layout_width="64dp"
-            android:layout_height="64dp"
-            android:background="@drawable/ic_add_shadow" />
-
-        <!-- Add button with circle background -->
-        <ImageButton
-            android:id="@+id/nav_btn_add"
-            android:layout_width="64dp"
-            android:layout_height="64dp"
-            android:src="@drawable/ic_add"
-            android:contentDescription="@string/nav_add"
-            android:background="@drawable/add_button_background"
-            android:scaleType="centerInside"
-            android:elevation="8dp" />
-
-    </FrameLayout>
 
 </FrameLayout>
 

@@ -16,7 +16,7 @@ import androidx.recyclerview.widget.RecyclerView;
 
 import com.example.social_app.R;
 import com.example.social_app.adapters.PostAdapter;
-import com.example.social_app.models.Post;
+import com.example.social_app.data.model.Post;
 import com.example.social_app.utils.MockDataGenerator;
 
 import java.util.List;
@@ -219,9 +219,11 @@ public class HomeFragment extends Fragment implements PostAdapter.OnPostActionLi
 
     @Override
     public void onLikeClicked(Post post, int position) {
-        post.toggleLike();
+        boolean isLiked = postAdapter.toggleLiked(post.getId());
+        long nextLikeCount = post.getLikeCount() + (isLiked ? 1 : -1);
+        post.setLikeCount(Math.max(0, nextLikeCount));
         postAdapter.notifyItemChanged(position + 1); // +1 because of composer at position 0
-        Toast.makeText(requireContext(), "Post " + (post.isLiked() ? "liked" : "unliked"), Toast.LENGTH_SHORT).show();
+        Toast.makeText(requireContext(), "Post " + (isLiked ? "liked" : "unliked"), Toast.LENGTH_SHORT).show();
     }
 
     @Override

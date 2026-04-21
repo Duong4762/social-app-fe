@@ -2,12 +2,9 @@ package com.example.social_app.utils;
 
 import java.util.Calendar;
 
-/**
- * Constants used throughout the SocialNine application.
- */
 public class Constants {
     // App Name
-    public static final String APP_NAME = "SocialNine";
+    public static final String APP_NAME = "Social9";
 
     // Time constants
     public static final long HOUR_IN_MILLIS = 3600000;

@@ -1,8 +1,27 @@
+<?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="app_name">SocialNine</string>
+    <string name="app_name">Social9</string>
+
+    <string name="results_with_query">Results: %1$s</string>
+    <string name="tab_users">Users</string>
+    <string name="tab_posts">Posts</string>
+    <string name="search_results">Search results</string>
+    <string name="search_empty_state">Search results will appear here.</string>
+    <string name="search_no_result">No results for "%1$s".</string>
+    <string name="sample_query">Design trends</string>
+
+    <!-- contentDescription -->
+    <string name="cd_back">Back</string>
+    <string name="cd_search">Search</string>
+    <string name="cd_toggle_password">Toggle password visibility</string>
+    <string name="cd_dropdown">Open dropdown</string>
+    <string name="cd_tabs">Search result tabs</string>
+    <string name="sample_user_name">Jessica Martinez</string>
+    <string name="sample_user_username">\@jess_design</string>
+    <string name="follow">Follow</string>
 
     <!-- AppBar -->
-    <string name="app_title">SocialNine</string>
+    <string name="app_title">Social9</string>
     <string name="notification_bell">Notifications</string>
 
     <!-- Post Composer -->
@@ -25,6 +44,8 @@
     <string name="nav_add">Add</string>
     <string name="nav_message">Message</string>
     <string name="nav_profile">Profile</string>
+    <string name="nav_settings">Settings</string>
+    <string name="logout">Log out</string>
 
     <!-- Loading States -->
     <string name="loading">Loading posts...</string>
