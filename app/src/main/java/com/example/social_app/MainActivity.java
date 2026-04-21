@@ -16,11 +16,18 @@ import androidx.fragment.app.Fragment;
 import androidx.fragment.app.FragmentManager;
 import androidx.recyclerview.widget.RecyclerView;
 
+import com.example.social_app.firebase.FirebaseManager;
 import com.example.social_app.fragments.ChatDetailFragment;
 import com.example.social_app.fragments.SearchFragment;
 import com.example.social_app.fragments.HomeFragment;
 import com.example.social_app.fragments.MessagesFragment;
 import com.example.social_app.fragments.SettingsFragment;
+import com.google.firebase.auth.FirebaseAuth;
+import com.google.firebase.auth.FirebaseUser;
+import com.google.firebase.firestore.SetOptions;
+
+import java.util.HashMap;
+import java.util.Map;
 
 public class MainActivity extends AppCompatActivity {
 
@@ -30,6 +37,18 @@ public class MainActivity extends AppCompatActivity {
     private FragmentManager fragmentManager;
     private boolean isBottomNavVisible = true;
     private int currentSelectedNav = R.id.nav_btn_home;
+
+    @Override
+    protected void onStart() {
+        super.onStart();
+        updateCurrentUserActiveStatus(true);
+    }
+
+    @Override
+    protected void onStop() {
+        updateCurrentUserActiveStatus(false);
+        super.onStop();
+    }
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -244,6 +263,22 @@ public class MainActivity extends AppCompatActivity {
      */
     private void showToast(String message) {
         android.widget.Toast.makeText(this, message, android.widget.Toast.LENGTH_SHORT).show();
+    }
+
+    private void updateCurrentUserActiveStatus(boolean isActive) {
+        FirebaseUser currentUser = FirebaseAuth.getInstance().getCurrentUser();
+        if (currentUser == null) {
+            return;
+        }
+        Map<String, Object> payload = new HashMap<>();
+        payload.put("isActive", isActive);
+        payload.put("updatedAt", com.google.firebase.firestore.FieldValue.serverTimestamp());
+
+        FirebaseManager.getInstance()
+                .getFirestore()
+                .collection(FirebaseManager.COLLECTION_USERS)
+                .document(currentUser.getUid())
+                .set(payload, SetOptions.merge());
     }
 
 }

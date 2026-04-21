@@ -133,6 +133,7 @@
 
     <!-- Chat detail (full screen) -->
     <string name="chat_active_now">Active now</string>
+    <string name="chat_not_active_now">Offline</string>
     <string name="chat_info">Conversation info</string>
     <string name="chat_message_hint">Message…</string>
     <string name="chat_label_today">Today</string>

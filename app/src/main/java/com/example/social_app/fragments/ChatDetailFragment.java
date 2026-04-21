@@ -43,6 +43,7 @@ public class ChatDetailFragment extends Fragment {
     private ConversationRepository repository;
     private ListenerRegistration messagesListener;
     private ListenerRegistration readReceiptsListener;
+    private ListenerRegistration peerStatusListener;
     private ChatMessagesAdapter messagesAdapter;
     private RecyclerView recyclerView;
     private LinearLayoutManager layoutManager;
@@ -50,6 +51,8 @@ public class ChatDetailFragment extends Fragment {
     private String mConversationId;
     private String mPeerUid;
     private String mMyUid;
+    private TextView headerStatus;
+    private View headerOnlineDot;
     private final List<Message> mLastMessages = new ArrayList<>();
     private Set<String> mPeerReadMessageIds = Collections.emptySet();
     /** Tránh ghi trùng message_reads khi snapshot lặp lại. */
@@ -106,6 +109,8 @@ public class ChatDetailFragment extends Fragment {
 
         ImageView headerAvatar = view.findViewById(R.id.chat_header_avatar);
         TextView headerName = view.findViewById(R.id.chat_header_name);
+        headerStatus = view.findViewById(R.id.chat_header_status);
+        headerOnlineDot = view.findViewById(R.id.chat_header_online_dot);
         headerName.setText(peerName);
         UserAvatarLoader.load(headerAvatar, peerAvatar);
 
@@ -167,6 +172,7 @@ public class ChatDetailFragment extends Fragment {
         });
 
         startListening(peerAvatar);
+        listenPeerActiveStatus();
     }
 
     private void startListening(@Nullable String peerAvatar) {
@@ -243,6 +249,40 @@ public class ChatDetailFragment extends Fragment {
         if (readReceiptsListener != null) {
             readReceiptsListener.remove();
             readReceiptsListener = null;
+        }
+        if (peerStatusListener != null) {
+            peerStatusListener.remove();
+            peerStatusListener = null;
+        }
+    }
+
+    private void listenPeerActiveStatus() {
+        if (mPeerUid == null || mPeerUid.trim().isEmpty()) {
+            return;
+        }
+        peerStatusListener = repository.listenUserActiveStatus(
+                mPeerUid,
+                new ConversationRepository.UserActiveStatusCallback() {
+                    @Override
+                    public void onStatusChanged(boolean isActive) {
+                        updateHeaderStatusUi(isActive);
+                    }
+
+                    @Override
+                    public void onError(@NonNull Exception e) {
+                        updateHeaderStatusUi(false);
+                    }
+                });
+    }
+
+    private void updateHeaderStatusUi(boolean isActive) {
+        if (headerStatus != null) {
+            headerStatus.setText(isActive
+                    ? R.string.chat_active_now
+                    : R.string.chat_not_active_now);
+        }
+        if (headerOnlineDot != null) {
+            headerOnlineDot.setVisibility(isActive ? View.VISIBLE : View.INVISIBLE);
         }
     }
 

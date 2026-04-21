@@ -65,8 +65,6 @@ dependencies {
     implementation("androidx.lifecycle:lifecycle-livedata:2.4.1")
 
     testImplementation(libs.junit)
-    // InstantTaskExecutorRule cho LiveData / ViewModel unit tests (src/test)
-    testImplementation("androidx.arch.core:core-testing:2.2.0")
     androidTestImplementation(libs.ext.junit)
     androidTestImplementation(libs.espresso.core)
 
@@ -80,5 +78,5 @@ dependencies {
     implementation(libs.firebase.auth)
     implementation(libs.firebase.firestore)
     implementation(libs.firebase.storage)
-    implementation(libs.glide)
+    implementation("com.squareup.okhttp3:okhttp:4.12.0")
 }

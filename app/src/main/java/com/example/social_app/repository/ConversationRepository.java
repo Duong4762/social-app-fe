@@ -335,6 +335,32 @@ public class ConversationRepository {
     }
 
     @NonNull
+    public ListenerRegistration listenUserActiveStatus(
+            @NonNull String userId,
+            @NonNull UserActiveStatusCallback callback) {
+        return db.collection(FirebaseManager.COLLECTION_USERS)
+                .document(userId)
+                .addSnapshotListener((snap, e) -> {
+                    if (e != null) {
+                        callback.onError(e);
+                        return;
+                    }
+                    boolean isActive = false;
+                    if (snap != null && snap.exists()) {
+                        Boolean value = snap.getBoolean("isActive");
+                        isActive = value != null && value;
+                    }
+                    callback.onStatusChanged(isActive);
+                });
+    }
+
+    public interface UserActiveStatusCallback {
+        void onStatusChanged(boolean isActive);
+
+        void onError(@NonNull Exception e);
+    }
+
+    @NonNull
     private static String formatRelativeTime(long timeMillis) {
         long now = System.currentTimeMillis();
         long diff = now - timeMillis;

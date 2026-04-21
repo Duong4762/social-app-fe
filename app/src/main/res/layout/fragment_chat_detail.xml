@@ -48,6 +48,7 @@
                 app:shapeAppearanceOverlay="@style/ShapeAppearanceOverlay.SocialApp.Circle" />
 
             <View
+                android:id="@+id/chat_header_online_dot"
                 android:layout_width="10dp"
                 android:layout_height="10dp"
                 android:layout_gravity="bottom|end"
