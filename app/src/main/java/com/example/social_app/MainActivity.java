@@ -16,6 +16,7 @@ import androidx.recyclerview.widget.RecyclerView;
 
 import com.example.social_app.fragments.HomeFragment;
 import com.example.social_app.fragments.NotificationFragment;
+import com.example.social_app.fragments.ProfileFragment;
 import com.example.social_app.fragments.SearchFragment;
 import com.example.social_app.fragments.SettingsFragment;
 
@@ -99,7 +100,7 @@ public class MainActivity extends AppCompatActivity {
         // ==================== PROFILE ====================
         navBtnProfile.setOnClickListener(v -> {
             selectNavButton(navBtnProfile);
-            showToast("Profile not yet implemented");
+            loadFragment(new ProfileFragment());
         });
 
         // ==================== SETTINGS ====================
