@@ -1,8 +1,6 @@
 package com.example.social_app.fragments;
 
 import android.app.AlertDialog;
-import android.graphics.Bitmap;
-import android.graphics.BitmapFactory;
 import android.os.Bundle;
 import android.text.TextUtils;
 import android.view.LayoutInflater;
@@ -26,15 +24,11 @@ import com.example.social_app.data.model.Notification;
 import com.example.social_app.data.model.Post;
 import com.example.social_app.data.model.User;
 import com.example.social_app.firebase.FirebaseManager;
+import com.example.social_app.utils.UserAvatarLoader;
 import com.google.firebase.auth.FirebaseUser;
 
-import java.io.InputStream;
-import java.net.HttpURLConnection;
-import java.net.URL;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
 
 public class OtherProfileFragment extends Fragment {
 
@@ -59,7 +53,6 @@ public class OtherProfileFragment extends Fragment {
     private Button btnFollow;
     private Button btnChat;
 
-    private final ExecutorService avatarExecutor = Executors.newSingleThreadExecutor();
     private String targetUserId;
     private String currentUserId;
     private boolean isFollowing = false;
@@ -192,50 +185,7 @@ public class OtherProfileFragment extends Fragment {
     }
 
     private void loadAvatar(String avatarUrl) {
-        if (TextUtils.isEmpty(avatarUrl)) {
-            imgAvatar.setImageResource(R.drawable.avatar_placeholder);
-            return;
-        }
-        if (avatarUrl.startsWith("http://") || avatarUrl.startsWith("https://")) {
-            loadRemoteAvatar(avatarUrl);
-            return;
-        }
-        imgAvatar.setImageResource(R.drawable.avatar_placeholder);
-    }
-
-    private void loadRemoteAvatar(String url) {
-        imgAvatar.setImageResource(R.drawable.avatar_placeholder);
-        avatarExecutor.execute(() -> {
-            Bitmap bitmap = null;
-            HttpURLConnection connection = null;
-            try {
-                connection = (HttpURLConnection) new URL(url).openConnection();
-                connection.setDoInput(true);
-                connection.setConnectTimeout(8000);
-                connection.setReadTimeout(8000);
-                connection.connect();
-                InputStream input = connection.getInputStream();
-                bitmap = BitmapFactory.decodeStream(input);
-                input.close();
-            } catch (Exception ignored) {
-                // Keep placeholder.
-            } finally {
-                if (connection != null) {
-                    connection.disconnect();
-                }
-            }
-
-            Bitmap finalBitmap = bitmap;
-            if (isAdded()) {
-                requireActivity().runOnUiThread(() -> {
-                    if (finalBitmap != null) {
-                        imgAvatar.setImageBitmap(finalBitmap);
-                    } else {
-                        imgAvatar.setImageResource(R.drawable.avatar_placeholder);
-                    }
-                });
-            }
-        });
+        UserAvatarLoader.load(imgAvatar, avatarUrl);
     }
 
     private String safeOrDefault(String value, String fallback) {
@@ -676,10 +626,5 @@ public class OtherProfileFragment extends Fragment {
         tabEmptyState.setVisibility(View.VISIBLE);
     }
 
-    @Override
-    public void onDestroy() {
-        super.onDestroy();
-        avatarExecutor.shutdownNow();
-    }
 }
 

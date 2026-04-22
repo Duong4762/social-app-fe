@@ -3,8 +3,6 @@ package com.example.social_app.fragments;
 import android.Manifest;
 import android.app.AlertDialog;
 import android.content.pm.PackageManager;
-import android.graphics.Bitmap;
-import android.graphics.BitmapFactory;
 import android.net.Uri;
 import android.os.Bundle;
 import android.text.TextUtils;
@@ -31,21 +29,17 @@ import com.example.social_app.adapters.UserSearchAdapter;
 import com.example.social_app.data.model.Post;
 import com.example.social_app.data.model.User;
 import com.example.social_app.firebase.FirebaseManager;
+import com.example.social_app.utils.UserAvatarLoader;
 import com.example.social_app.utils.CloudinaryUploadUtil;
 import com.google.firebase.auth.FirebaseUser;
 import com.google.firebase.firestore.FirebaseFirestore;
 
 import java.io.File;
-import java.io.InputStream;
-import java.net.HttpURLConnection;
-import java.net.URL;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
 
 public class ProfileFragment extends Fragment {
 
@@ -67,7 +61,6 @@ public class ProfileFragment extends Fragment {
     private Button btnEditProfile;
     private RecyclerView rvPosts;
 
-    private final ExecutorService avatarExecutor = Executors.newSingleThreadExecutor();
     private FirebaseUser currentAuthUser;
     private String currentUserId;
     private User currentUserProfile;
@@ -228,7 +221,7 @@ public class ProfileFragment extends Fragment {
         tvUsernameTop.setText(username);
         tvBio.setText("Chưa có tiểu sử");
         currentAvatarUrl = "";
-        imgAvatar.setImageResource(R.drawable.avatar_placeholder);
+        loadAvatar("");
 
         User fallbackUser = new User();
         fallbackUser.setId(authUser.getUid());
@@ -241,74 +234,7 @@ public class ProfileFragment extends Fragment {
     }
 
     private void loadAvatar(String avatarUrl) {
-        if (TextUtils.isEmpty(avatarUrl)) {
-            imgAvatar.setImageResource(R.drawable.avatar_placeholder);
-            return;
-        }
-
-        if (avatarUrl.startsWith("http://") || avatarUrl.startsWith("https://")) {
-            loadRemoteAvatar(avatarUrl);
-            return;
-        }
-
-        if (avatarUrl.startsWith("drawable/")) {
-            String drawableName = avatarUrl.substring("drawable/".length());
-            int resourceId = requireContext().getResources().getIdentifier(
-                    drawableName,
-                    "drawable",
-                    requireContext().getPackageName()
-            );
-            if (resourceId != 0) {
-                imgAvatar.setImageResource(resourceId);
-                return;
-            }
-        }
-
-        if (avatarUrl.startsWith("content://")
-                || avatarUrl.startsWith("file://")
-                || avatarUrl.startsWith("android.resource://")) {
-            imgAvatar.setImageURI(Uri.parse(avatarUrl));
-            return;
-        }
-
-        imgAvatar.setImageResource(R.drawable.avatar_placeholder);
-    }
-
-    private void loadRemoteAvatar(String url) {
-        imgAvatar.setImageResource(R.drawable.avatar_placeholder);
-
-        avatarExecutor.execute(() -> {
-            Bitmap bitmap = null;
-            HttpURLConnection connection = null;
-            try {
-                URL avatarUrl = new URL(url);
-                connection = (HttpURLConnection) avatarUrl.openConnection();
-                connection.setDoInput(true);
-                connection.setConnectTimeout(8000);
-                connection.setReadTimeout(8000);
-                connection.connect();
-                InputStream input = connection.getInputStream();
-                bitmap = BitmapFactory.decodeStream(input);
-                input.close();
-            } catch (Exception ignored) {
-                // Keep placeholder if any error occurs.
-            } finally {
-                if (connection != null) {
-                    connection.disconnect();
-                }
-            }
-
-            Bitmap finalBitmap = bitmap;
-            if (isAdded()) {
-                requireActivity().runOnUiThread(() -> {
-                    if (finalBitmap != null) {
-                        imgAvatar.setImageBitmap(finalBitmap);
-                    } else {
-                        imgAvatar.setImageResource(R.drawable.avatar_placeholder);
-                    }
-                });
-            }
-        });
+        UserAvatarLoader.load(imgAvatar, avatarUrl);
     }
 
     private void openAvatarPreviewDialog() {
@@ -882,7 +808,6 @@ public class ProfileFragment extends Fragment {
     @Override
     public void onDestroy() {
         super.onDestroy();
-        avatarExecutor.shutdownNow();
     }
 }
 

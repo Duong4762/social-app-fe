@@ -12,6 +12,7 @@ import androidx.recyclerview.widget.RecyclerView;
 
 import com.example.social_app.R;
 import com.example.social_app.data.model.User;
+import com.example.social_app.utils.UserAvatarLoader;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -79,7 +80,7 @@ public class UserSearchAdapter extends RecyclerView.Adapter<UserSearchAdapter.Us
 
             username.setText(displayName);
             fullName.setText(userHandle);
-            avatar.setImageResource(R.drawable.avatar_placeholder);
+            UserAvatarLoader.load(avatar, user.getAvatarUrl());
             followButton.setText("Follow");
             followButton.setOnClickListener(v -> {
                 if (actionListener != null) actionListener.onFollowClicked(user, position);

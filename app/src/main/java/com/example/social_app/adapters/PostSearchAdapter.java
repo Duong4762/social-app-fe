@@ -14,6 +14,7 @@ import com.example.social_app.R;
 import com.example.social_app.data.model.Post;
 import com.example.social_app.data.model.User;
 import com.example.social_app.utils.MockDataGenerator;
+import com.example.social_app.utils.UserAvatarLoader;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -76,7 +77,7 @@ public class PostSearchAdapter extends RecyclerView.Adapter<PostSearchAdapter.Po
             postContent.setText(post.getCaption() != null ? post.getCaption() : "");
             likeCount.setText(String.valueOf(post.getLikeCount()));
             commentCount.setText(String.valueOf(post.getCommentCount()));
-            userAvatar.setImageResource(R.drawable.avatar_placeholder);
+            UserAvatarLoader.load(userAvatar, user != null ? user.getAvatarUrl() : null);
             postImage.setImageResource(R.drawable.bg_nav_item_selected);
             itemView.setOnClickListener(v -> {
                 if (clickListener != null) clickListener.onPostClicked(post);

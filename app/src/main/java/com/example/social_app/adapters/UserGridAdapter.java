@@ -12,6 +12,7 @@ import androidx.recyclerview.widget.RecyclerView;
 
 import com.example.social_app.R;
 import com.example.social_app.data.model.User;
+import com.example.social_app.utils.UserAvatarLoader;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -66,7 +67,7 @@ public class UserGridAdapter extends RecyclerView.Adapter<UserGridAdapter.UserGr
 
         void bind(User user) {
             username.setText("@" + (user.getUsername() != null ? user.getUsername() : "user"));
-            avatar.setImageResource(R.drawable.avatar_placeholder);
+            UserAvatarLoader.load(avatar, user.getAvatarUrl());
             itemView.setOnClickListener(v -> {
                 if (listener != null) listener.onUserClick(user);
             });

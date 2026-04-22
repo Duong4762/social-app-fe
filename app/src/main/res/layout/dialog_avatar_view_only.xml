@@ -9,7 +9,7 @@
         android:layout_width="match_parent"
         android:layout_height="320dp"
         android:adjustViewBounds="true"
-        android:background="@drawable/bg_circle"
+        android:background="@drawable/bg_avatar_circle"
         android:contentDescription="@string/user_avatar"
         android:scaleType="centerCrop"
         android:src="@drawable/avatar_placeholder" />
