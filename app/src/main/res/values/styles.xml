@@ -204,5 +204,10 @@
         <item name="cornerSize">50%</item>
     </style>
 
+    <style name="TextAppearance.Search.Tab" parent="TextAppearance.Material3.TitleSmall">
+        <item name="android:fontFamily">@font/inter</item>
+        <item name="android:textStyle">bold</item>
+    </style>
+
 </resources>
 

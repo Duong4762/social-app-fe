@@ -20,6 +20,9 @@ import com.example.social_app.firebase.FirebaseManager;
 import com.example.social_app.fragments.ChatDetailFragment;
 import com.example.social_app.fragments.SearchFragment;
 import com.example.social_app.fragments.HomeFragment;
+import com.example.social_app.fragments.NotificationFragment;
+import com.example.social_app.fragments.ProfileFragment;
+import com.example.social_app.fragments.SearchFragment;
 import com.example.social_app.fragments.MessagesFragment;
 import com.example.social_app.fragments.SettingsFragment;
 import com.google.firebase.auth.FirebaseAuth;
@@ -61,8 +64,8 @@ public class MainActivity extends AppCompatActivity {
             v.setPadding(systemBars.left, systemBars.top, systemBars.right, systemBars.bottom);
             return insets;
         });
-      
-      // Initialize views
+
+        // Initialize views
         fragmentManager = getSupportFragmentManager();
         customBottomNav = findViewById(R.id.custom_bottom_nav);
         initializeNavigationButtons();
@@ -93,7 +96,7 @@ public class MainActivity extends AppCompatActivity {
         navBtnSettings = customBottomNav.findViewById(R.id.nav_btn_settings);
         notificationBadge = customBottomNav.findViewById(R.id.notification_badge);
 
-        // Set click listeners
+        // ==================== HOME ====================
         navBtnHome.setOnClickListener(v -> {
             selectNavButton(navBtnHome);
             HomeFragment homeFragment = new HomeFragment();
@@ -114,12 +117,12 @@ public class MainActivity extends AppCompatActivity {
         navBtnNotifications.setOnClickListener(v -> {
             selectNavButton(navBtnNotifications);
             removeNotificationBadge();
-            showToast("Notifications not yet implemented");
+            loadFragment(new NotificationFragment());  // ✅ Đã sửa
         });
 
         navBtnProfile.setOnClickListener(v -> {
             selectNavButton(navBtnProfile);
-            showToast("Profile not yet implemented");
+            loadFragment(new ProfileFragment());
         });
 
         navBtnSettings.setOnClickListener(v -> {
@@ -146,7 +149,7 @@ public class MainActivity extends AppCompatActivity {
     }
 
     /**
-     * Shows a notification badge on the message navigation button.
+     * Shows a notification badge on the notification navigation button.
      */
     public void showNotificationBadge() {
         if (notificationBadge != null) {
@@ -155,7 +158,7 @@ public class MainActivity extends AppCompatActivity {
     }
 
     /**
-     * Removes the notification badge from the message navigation button.
+     * Removes the notification badge from the notification navigation button.
      */
     public void removeNotificationBadge() {
         if (notificationBadge != null) {

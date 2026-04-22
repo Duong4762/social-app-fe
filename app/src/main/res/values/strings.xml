@@ -100,6 +100,94 @@
     <string name="discard_post_confirm">Are you sure you want to discard this post?</string>
     <string name="discard">Discard</string>
 
+
+    <!-- ============================================
+     SEARCH & NOTIFICATION STRINGS
+     ============================================ -->
+
+    <!-- Search Placeholders -->
+    <string name="username_placeholder">username</string>
+    <string name="fullname_placeholder">Full Name</string>
+    <string name="search_hint">Search users or posts...</string>
+
+    <!-- Notification -->
+    <string name="notifications">Notifications</string>
+    <string name="no_notifications">No notifications yet</string>
+    <string name="mark_all_read">Mark all read</string>
+    <string name="notification_like">liked your post</string>
+    <string name="notification_comment">commented on your post</string>
+    <string name="notification_follow">started following you</string>
+    <string name="notification_message">sent you a message</string>
+
+    <!-- Time formats -->
+    <string name="just_now">Just now</string>
+    <string name="minutes_ago">%d minutes ago</string>
+    <string name="hours_ago">%d hours ago</string>
+    <string name="days_ago">%d days ago</string>
+
+    <!-- Follow -->
+    <string name="following">Following</string>
+    <string name="follow_back">Follow back</string>
+
+    <!-- Empty states -->
+    <string name="no_users_found">No users found</string>
+    <string name="no_posts_found">No posts found</string>
+    <string name="recent_searches">Recent searches</string>
+    <string name="clear_all">Clear all</string>
+
+    <!-- Tab titles -->
+    <string name="tab_people">People</string>
+    <string name="tab_posts_tab">Posts</string>
+
+    <!-- Search result counts -->
+    <string name="followers_count">%s followers</string>
+    <string name="posts_count">%s posts</string>
+
+    <!-- Profile -->
+    <string name="profile_username_top">username</string>
+    <string name="profile_change_avatar">Thay doi</string>
+    <string name="profile_save_avatar">Luu thay doi</string>
+    <string name="profile_pick_image_source">Chon nguon anh</string>
+    <string name="profile_pick_camera">Chup anh</string>
+    <string name="profile_pick_gallery">Chon tu thu vien</string>
+    <string name="profile_camera_permission_denied">Ban can cap quyen camera de chup anh</string>
+    <string name="profile_avatar_updated">Cap nhat avatar thanh cong</string>
+    <string name="profile_avatar_update_failed">Cap nhat avatar that bai</string>
+    <string name="profile_avatar_save_empty">Hay chon anh truoc khi luu</string>
+    <string name="profile_open_avatar_preview">Xem anh dai dien</string>
+    <string name="profile_close">Dong</string>
+    <string name="cloudinary_cloud_name"></string>
+    <string name="cloudinary_upload_preset"></string>
+    <string name="cloudinary_config_missing">Chua cau hinh Cloudinary cloud_name va upload_preset</string>
+    <string name="profile_edit_title">Chinh sua trang ca nhan</string>
+    <string name="profile_edit_full_name">Ho ten</string>
+    <string name="profile_edit_username">Username</string>
+    <string name="profile_edit_email">Email</string>
+    <string name="profile_edit_bio">Bio</string>
+    <string name="profile_edit_gender">Gioi tinh</string>
+    <string name="profile_edit_dob">Ngay sinh (yyyy-MM-dd)</string>
+    <string name="profile_edit_cancel">Huy</string>
+    <string name="profile_edit_done">Xong</string>
+    <string name="profile_edit_save_failed">Luu thong tin that bai</string>
+    <string name="profile_edit_save_success">Da cap nhat thong tin ca nhan</string>
+    <string name="profile_edit_required_username">Username khong duoc de trong</string>
+    <string name="profile_edit_required_email">Email khong duoc de trong</string>
+    <string name="profile_chat">Chat</string>
+    <string name="follow_loading">Loading...</string>
+    <string name="follow_action_failed">Khong the thuc hien thao tac follow</string>
+    <string name="follow_own_profile">Trang cua ban</string>
+    <string name="follow_own_profile_not_allowed">Ban khong the follow chinh minh</string>
+    <string name="unfollow_confirm_title">Bo theo doi?</string>
+    <string name="unfollow_confirm_message">Ban co chac chan muon bo theo doi nguoi dung nay khong?</string>
+    <string name="unfollow_action">Bo theo doi</string>
+    <string name="profile_tab_posts">Bài viết</string>
+    <string name="profile_tab_followers">Người theo dõi</string>
+    <string name="profile_tab_following">Đang theo dõi</string>
+    <string name="profile_empty_posts">Chua co bai viet</string>
+    <string name="profile_empty_followers">Chua co nguoi theo doi</string>
+    <string name="profile_empty_following">Chua theo doi ai</string>
+
+
     <!-- Messages -->
     <string name="messages_title">Messages</string>
     <string name="messages_search_hint">Search</string>
