@@ -22,8 +22,13 @@ import androidx.core.content.FileProvider;
 import androidx.fragment.app.Fragment;
 import androidx.activity.result.ActivityResultLauncher;
 import androidx.activity.result.contract.ActivityResultContracts;
+import androidx.recyclerview.widget.LinearLayoutManager;
+import androidx.recyclerview.widget.RecyclerView;
 
 import com.example.social_app.R;
+import com.example.social_app.adapters.PostSearchAdapter;
+import com.example.social_app.adapters.UserSearchAdapter;
+import com.example.social_app.data.model.Post;
 import com.example.social_app.data.model.User;
 import com.example.social_app.firebase.FirebaseManager;
 import com.example.social_app.utils.CloudinaryUploadUtil;
@@ -34,7 +39,9 @@ import java.io.File;
 import java.io.InputStream;
 import java.net.HttpURLConnection;
 import java.net.URL;
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.concurrent.ExecutorService;
@@ -47,11 +54,18 @@ public class ProfileFragment extends Fragment {
     private TextView tvHandle;
     private TextView tvBio;
     private TextView tvChangeAvatar;
+    private TextView tabThreads;
+    private TextView tabReplies;
+    private TextView tabReposts;
     private TextView tvBlog;
     private TextView tvFollowed;
     private TextView tvFollower;
+    private TextView tabEmptyState;
+    private View tabIndicator;
+    private View tabLoading;
     private ImageView imgAvatar;
     private Button btnEditProfile;
+    private RecyclerView rvPosts;
 
     private final ExecutorService avatarExecutor = Executors.newSingleThreadExecutor();
     private FirebaseUser currentAuthUser;
@@ -65,6 +79,9 @@ public class ProfileFragment extends Fragment {
     private Button btnSaveAvatar;
     private String currentAvatarUrl;
     private boolean isAvatarUploading = false;
+    private String selectedTab = "posts";
+    private PostSearchAdapter postAdapter;
+    private UserSearchAdapter userAdapter;
 
     private final ActivityResultLauncher<String> galleryLauncher =
             registerForActivityResult(new ActivityResultContracts.GetContent(), uri -> {
@@ -119,14 +136,24 @@ public class ProfileFragment extends Fragment {
         tvBio = view.findViewById(R.id.tvBio);
         imgAvatar = view.findViewById(R.id.imgAvatar);
         tvChangeAvatar = view.findViewById(R.id.tvChangeAvatar);
+        tabThreads = view.findViewById(R.id.tabThreads);
+        tabReplies = view.findViewById(R.id.tabReplies);
+        tabReposts = view.findViewById(R.id.tabReposts);
         tvBlog = view.findViewById(R.id.tvBlog);
         tvFollowed = view.findViewById(R.id.tvFollowed);
         tvFollower = view.findViewById(R.id.tvFollower);
+        tabEmptyState = view.findViewById(R.id.tabEmptyState);
+        tabIndicator = view.findViewById(R.id.tabIndicator);
+        tabLoading = view.findViewById(R.id.tabLoading);
         btnEditProfile = view.findViewById(R.id.btnEditProfile);
+        rvPosts = view.findViewById(R.id.rvPosts);
 
         imgAvatar.setOnClickListener(v -> openAvatarPreviewDialog());
         tvChangeAvatar.setOnClickListener(v -> openAvatarPreviewDialog());
         btnEditProfile.setOnClickListener(v -> openEditProfileDialog());
+
+        setupRecycler();
+        setupTabs();
     }
 
     private void loadCurrentUserProfile() {
@@ -173,6 +200,7 @@ public class ProfileFragment extends Fragment {
                 });
 
         refreshProfileStats();
+        loadTabContent();
     }
 
     private void bindProfile(User user, FirebaseUser authUser) {
@@ -633,6 +661,214 @@ public class ProfileFragment extends Fragment {
                     }
                     tvBlog.setText(query.size() + " Posts");
                 });
+    }
+
+    private void setupRecycler() {
+        rvPosts.setLayoutManager(new LinearLayoutManager(requireContext()));
+        postAdapter = new PostSearchAdapter(requireContext(), post ->
+                Toast.makeText(requireContext(), "View post", Toast.LENGTH_SHORT).show());
+        userAdapter = new UserSearchAdapter(requireContext(), new UserSearchAdapter.OnUserActionListener() {
+            @Override
+            public void onUserClicked(User user) {
+                if (user == null || user.getId() == null || user.getId().isEmpty()) {
+                    return;
+                }
+                requireActivity().getSupportFragmentManager()
+                        .beginTransaction()
+                        .replace(R.id.nav_host_fragment, OtherProfileFragment.newInstance(user.getId()))
+                        .addToBackStack(null)
+                        .commit();
+            }
+
+            @Override
+            public void onFollowClicked(User user, int position) {
+                Toast.makeText(requireContext(), "Follow from list - Coming soon", Toast.LENGTH_SHORT).show();
+            }
+        });
+        rvPosts.setAdapter(postAdapter);
+    }
+
+    private void setupTabs() {
+        tabThreads.setOnClickListener(v -> {
+            selectedTab = "posts";
+            updateTabUI();
+            loadTabContent();
+        });
+        tabReplies.setOnClickListener(v -> {
+            selectedTab = "followers";
+            updateTabUI();
+            loadTabContent();
+        });
+        tabReposts.setOnClickListener(v -> {
+            selectedTab = "following";
+            updateTabUI();
+            loadTabContent();
+        });
+        updateTabUI();
+    }
+
+    private void updateTabUI() {
+        tabThreads.setTextColor(requireContext().getColor(R.color.text));
+        tabReplies.setTextColor(requireContext().getColor(R.color.muted));
+        tabReposts.setTextColor(requireContext().getColor(R.color.muted));
+        tabThreads.setTextSize(14f);
+        tabReplies.setTextSize(14f);
+        tabReposts.setTextSize(14f);
+
+        TextView selectedView = tabThreads;
+        if ("followers".equals(selectedTab)) {
+            selectedView = tabReplies;
+            tabReplies.setTextColor(requireContext().getColor(R.color.text));
+        } else if ("following".equals(selectedTab)) {
+            selectedView = tabReposts;
+            tabReposts.setTextColor(requireContext().getColor(R.color.text));
+        } else {
+            tabThreads.setTextColor(requireContext().getColor(R.color.text));
+        }
+
+        final TextView finalSelectedView = selectedView;
+        tabIndicator.post(() -> {
+            float center = finalSelectedView.getX() + finalSelectedView.getWidth() / 2f;
+            tabIndicator.setX(center - tabIndicator.getWidth() / 2f);
+        });
+    }
+
+    private void loadTabContent() {
+        if (TextUtils.isEmpty(currentUserId) || !isAdded()) {
+            return;
+        }
+        setTabLoading(true);
+        tabEmptyState.setVisibility(View.GONE);
+
+        if ("posts".equals(selectedTab)) {
+            rvPosts.setAdapter(postAdapter);
+            FirebaseManager.getInstance().getFirestore()
+                    .collection(FirebaseManager.COLLECTION_POSTS)
+                    .whereEqualTo("userId", currentUserId)
+                    .get()
+                    .addOnSuccessListener(query -> {
+                        if (!isAdded()) {
+                            return;
+                        }
+                        List<Post> posts = new ArrayList<>();
+                        query.getDocuments().forEach(doc -> {
+                            Post post = doc.toObject(Post.class);
+                            if (post != null) {
+                                post.setId(doc.getId());
+                                posts.add(post);
+                            }
+                        });
+                        postAdapter.setPosts(posts);
+                        setTabLoading(false);
+                        showEmptyIfNeeded(posts.isEmpty());
+                    })
+                    .addOnFailureListener(e -> {
+                        if (!isAdded()) {
+                            return;
+                        }
+                        postAdapter.setPosts(new ArrayList<>());
+                        setTabLoading(false);
+                        showEmptyIfNeeded(true);
+                    });
+            return;
+        }
+
+        rvPosts.setAdapter(userAdapter);
+        String field = "followers".equals(selectedTab) ? "followingId" : "followerId";
+        String idFieldToLoad = "followers".equals(selectedTab) ? "followerId" : "followingId";
+
+        FirebaseManager.getInstance().getFirestore()
+                .collection(FirebaseManager.COLLECTION_FOLLOWS)
+                .whereEqualTo(field, currentUserId)
+                .get()
+                .addOnSuccessListener(query -> {
+                    if (!isAdded()) {
+                        return;
+                    }
+                    List<String> ids = new ArrayList<>();
+                    query.getDocuments().forEach(doc -> {
+                        String uid = doc.getString(idFieldToLoad);
+                        if (uid != null && !uid.isEmpty()) {
+                            ids.add(uid);
+                        }
+                    });
+                    loadUsersByIds(ids);
+                })
+                .addOnFailureListener(e -> {
+                    if (!isAdded()) {
+                        return;
+                    }
+                    userAdapter.setUsers(new ArrayList<>());
+                    setTabLoading(false);
+                    showEmptyIfNeeded(true);
+                });
+    }
+
+    private void loadUsersByIds(List<String> userIds) {
+        if (!isAdded()) {
+            return;
+        }
+        if (userIds == null || userIds.isEmpty()) {
+            userAdapter.setUsers(new ArrayList<>());
+            setTabLoading(false);
+            showEmptyIfNeeded(true);
+            return;
+        }
+
+        List<User> users = new ArrayList<>();
+        int[] remaining = {userIds.size()};
+        for (String uid : userIds) {
+            FirebaseManager.getInstance().getFirestore()
+                    .collection(FirebaseManager.COLLECTION_USERS)
+                    .document(uid)
+                    .get()
+                    .addOnSuccessListener(doc -> {
+                        if (doc.exists()) {
+                            User user = doc.toObject(User.class);
+                            if (user != null) {
+                                if (TextUtils.isEmpty(user.getId())) {
+                                    user.setId(doc.getId());
+                                }
+                                users.add(user);
+                            }
+                        }
+                        remaining[0]--;
+                        if (remaining[0] == 0 && isAdded()) {
+                            userAdapter.setUsers(users);
+                            setTabLoading(false);
+                            showEmptyIfNeeded(users.isEmpty());
+                        }
+                    })
+                    .addOnFailureListener(e -> {
+                        remaining[0]--;
+                        if (remaining[0] == 0 && isAdded()) {
+                            userAdapter.setUsers(users);
+                            setTabLoading(false);
+                            showEmptyIfNeeded(users.isEmpty());
+                        }
+                    });
+        }
+    }
+
+    private void setTabLoading(boolean loading) {
+        tabLoading.setVisibility(loading ? View.VISIBLE : View.GONE);
+        rvPosts.setVisibility(loading ? View.INVISIBLE : View.VISIBLE);
+    }
+
+    private void showEmptyIfNeeded(boolean isEmpty) {
+        if (!isEmpty) {
+            tabEmptyState.setVisibility(View.GONE);
+            return;
+        }
+
+        if ("followers".equals(selectedTab)) {
+            tabEmptyState.setText(getString(R.string.profile_empty_followers));
+        } else if ("following".equals(selectedTab)) {
+            tabEmptyState.setText(getString(R.string.profile_empty_following));
+        } else {
+            tabEmptyState.setText(getString(R.string.profile_empty_posts));
+        }
+        tabEmptyState.setVisibility(View.VISIBLE);
     }
 
     @Override

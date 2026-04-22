@@ -159,7 +159,7 @@
             android:layout_height="wrap_content"
             android:layout_marginHorizontal="16dp"
             android:layout_marginVertical="10dp"
-            android:text="Bài viết"
+            android:text="@string/profile_tab_posts"
             android:textColor="@color/text"
             android:textStyle="bold" />
 
@@ -169,7 +169,7 @@
             android:layout_height="wrap_content"
             android:layout_marginHorizontal="16dp"
             android:layout_marginVertical="10dp"
-            android:text="Người theo dõi"
+            android:text="@string/profile_tab_followers"
             android:textColor="@color/muted" />
 
         <TextView
@@ -178,7 +178,7 @@
             android:layout_height="wrap_content"
             android:layout_marginHorizontal="16dp"
             android:layout_marginVertical="10dp"
-            android:text="Người đang theo dõi"
+            android:text="@string/profile_tab_following"
             android:textColor="@color/muted" />
     </LinearLayout>
 
@@ -187,8 +187,8 @@
         android:layout_width="48dp"
         android:layout_height="2dp"
         android:background="@color/text"
-        app:layout_constraintEnd_toEndOf="@id/tabThreads"
-        app:layout_constraintStart_toStartOf="@id/tabThreads"
+        app:layout_constraintEnd_toEndOf="@id/tabLayout"
+        app:layout_constraintStart_toStartOf="@id/tabLayout"
         app:layout_constraintTop_toBottomOf="@id/tabLayout" />
 
     <androidx.recyclerview.widget.RecyclerView
@@ -200,5 +200,29 @@
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toBottomOf="@id/tabLayout" />
+
+    <ProgressBar
+        android:id="@+id/tabLoading"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:visibility="gone"
+        app:layout_constraintBottom_toBottomOf="@id/rvPosts"
+        app:layout_constraintEnd_toEndOf="@id/rvPosts"
+        app:layout_constraintStart_toStartOf="@id/rvPosts"
+        app:layout_constraintTop_toTopOf="@id/rvPosts" />
+
+    <TextView
+        android:id="@+id/tabEmptyState"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:gravity="center"
+        android:text="@string/profile_empty_posts"
+        android:textColor="@color/muted"
+        android:textSize="14sp"
+        android:visibility="gone"
+        app:layout_constraintBottom_toBottomOf="@id/rvPosts"
+        app:layout_constraintEnd_toEndOf="@id/rvPosts"
+        app:layout_constraintStart_toStartOf="@id/rvPosts"
+        app:layout_constraintTop_toTopOf="@id/rvPosts" />
 
 </androidx.constraintlayout.widget.ConstraintLayout>
