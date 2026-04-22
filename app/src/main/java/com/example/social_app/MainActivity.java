@@ -14,8 +14,9 @@ import androidx.fragment.app.Fragment;
 import androidx.fragment.app.FragmentManager;
 import androidx.recyclerview.widget.RecyclerView;
 
-import com.example.social_app.fragments.SearchFragment;
 import com.example.social_app.fragments.HomeFragment;
+import com.example.social_app.fragments.NotificationFragment;
+import com.example.social_app.fragments.SearchFragment;
 import com.example.social_app.fragments.SettingsFragment;
 
 public class MainActivity extends AppCompatActivity {
@@ -38,8 +39,8 @@ public class MainActivity extends AppCompatActivity {
             v.setPadding(systemBars.left, systemBars.top, systemBars.right, systemBars.bottom);
             return insets;
         });
-      
-      // Initialize views
+
+        // Initialize views
         fragmentManager = getSupportFragmentManager();
         customBottomNav = findViewById(R.id.custom_bottom_nav);
         initializeNavigationButtons();
@@ -68,7 +69,7 @@ public class MainActivity extends AppCompatActivity {
         navBtnSettings = customBottomNav.findViewById(R.id.nav_btn_settings);
         notificationBadge = customBottomNav.findViewById(R.id.notification_badge);
 
-        // Set click listeners
+        // ==================== HOME ====================
         navBtnHome.setOnClickListener(v -> {
             selectNavButton(navBtnHome);
             HomeFragment homeFragment = new HomeFragment();
@@ -76,27 +77,32 @@ public class MainActivity extends AppCompatActivity {
             loadFragment(homeFragment);
         });
 
+        // ==================== SEARCH (Ngọc) ====================
         navBtnSearch.setOnClickListener(v -> {
             selectNavButton(navBtnSearch);
             loadFragment(new SearchFragment());
         });
 
+        // ==================== MESSAGE ====================
         navBtnMessage.setOnClickListener(v -> {
             selectNavButton(navBtnMessage);
             showToast("Messages not yet implemented");
         });
 
+        // ==================== NOTIFICATIONS (Ngọc) ====================
         navBtnNotifications.setOnClickListener(v -> {
             selectNavButton(navBtnNotifications);
             removeNotificationBadge();
-            showToast("Notifications not yet implemented");
+            loadFragment(new NotificationFragment());  // ✅ Đã sửa
         });
 
+        // ==================== PROFILE ====================
         navBtnProfile.setOnClickListener(v -> {
             selectNavButton(navBtnProfile);
             showToast("Profile not yet implemented");
         });
 
+        // ==================== SETTINGS ====================
         navBtnSettings.setOnClickListener(v -> {
             selectNavButton(navBtnSettings);
             loadFragment(new SettingsFragment());
@@ -121,7 +127,7 @@ public class MainActivity extends AppCompatActivity {
     }
 
     /**
-     * Shows a notification badge on the message navigation button.
+     * Shows a notification badge on the notification navigation button.
      */
     public void showNotificationBadge() {
         if (notificationBadge != null) {
@@ -130,7 +136,7 @@ public class MainActivity extends AppCompatActivity {
     }
 
     /**
-     * Removes the notification badge from the message navigation button.
+     * Removes the notification badge from the notification navigation button.
      */
     public void removeNotificationBadge() {
         if (notificationBadge != null) {
