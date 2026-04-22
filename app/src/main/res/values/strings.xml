@@ -142,4 +142,7 @@
     <string name="followers_count">%s followers</string>
     <string name="posts_count">%s posts</string>
 
+    <!-- Profile -->
+    <string name="profile_username_top">username</string>
+
 </resources>
