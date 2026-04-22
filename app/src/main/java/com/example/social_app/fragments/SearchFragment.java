@@ -24,11 +24,14 @@ import com.example.social_app.adapters.PostSearchAdapter;
 import com.example.social_app.adapters.UserSearchAdapter;
 import com.example.social_app.data.model.Post;
 import com.example.social_app.data.model.User;
+import com.example.social_app.firebase.FirebaseManager;
 import com.example.social_app.utils.MockDataGenerator;
 import com.google.android.material.tabs.TabLayout;
+import com.google.firebase.firestore.FirebaseFirestore;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Locale;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
@@ -43,6 +46,7 @@ public class SearchFragment extends Fragment {
     private RecyclerView usersRecyclerView;
     private RecyclerView postsRecyclerView;
     private ProgressBar searchLoadingProgress;
+    private ProgressBar globalLoadingProgress;
     private TextView searchEmptyStateText;
     private View searchResultsContainer;
 
@@ -56,8 +60,10 @@ public class SearchFragment extends Fragment {
 
     private ExecutorService executor = Executors.newSingleThreadExecutor();
     private Handler mainHandler = new Handler(Looper.getMainLooper());
+    private FirebaseFirestore firestore;
 
     private boolean isSearchMode = false;
+    private String lastSearchQuery = "";
 
     public SearchFragment() {
         super(R.layout.fragment_search);
@@ -70,7 +76,8 @@ public class SearchFragment extends Fragment {
         initViews(view);
         setupRecyclerViews();
         setupSearchListener();
-        loadMockData();
+        firestore = FirebaseManager.getInstance().getFirestore();
+        loadSearchData();
     }
 
     private void initViews(View view) {
@@ -82,6 +89,7 @@ public class SearchFragment extends Fragment {
         usersRecyclerView = view.findViewById(R.id.usersRecyclerView);
         postsRecyclerView = view.findViewById(R.id.postsRecyclerView);
         searchLoadingProgress = view.findViewById(R.id.searchLoadingProgress);
+        globalLoadingProgress = view.findViewById(R.id.globalLoadingProgress);
         searchEmptyStateText = view.findViewById(R.id.searchEmptyStateText);
 
         // Khởi tạo tab
@@ -131,22 +139,16 @@ public class SearchFragment extends Fragment {
         tabLayout.addOnTabSelectedListener(new TabLayout.OnTabSelectedListener() {
             @Override
             public void onTabSelected(TabLayout.Tab tab) {
-                if (tab.getPosition() == 0) {
-                    usersRecyclerView.setVisibility(View.VISIBLE);
-                    postsRecyclerView.setVisibility(View.GONE);
-                    searchEmptyStateText.setVisibility(filteredUsers.isEmpty() ? View.VISIBLE : View.GONE);
-                } else {
-                    usersRecyclerView.setVisibility(View.GONE);
-                    postsRecyclerView.setVisibility(View.VISIBLE);
-                    searchEmptyStateText.setVisibility(filteredPosts.isEmpty() ? View.VISIBLE : View.GONE);
-                }
+                updateResultTabVisibility(tab.getPosition());
             }
 
             @Override
             public void onTabUnselected(TabLayout.Tab tab) {}
 
             @Override
-            public void onTabReselected(TabLayout.Tab tab) {}
+            public void onTabReselected(TabLayout.Tab tab) {
+                updateResultTabVisibility(tab.getPosition());
+            }
         });
     }
 
@@ -157,6 +159,7 @@ public class SearchFragment extends Fragment {
                     (event != null && event.getAction() == KeyEvent.ACTION_DOWN &&
                             event.getKeyCode() == KeyEvent.KEYCODE_ENTER)) {
                 String query = searchInput.getText().toString().trim();
+                lastSearchQuery = query;
                 performSearch(query);
                 return true;
             }
@@ -175,6 +178,7 @@ public class SearchFragment extends Fragment {
             public void afterTextChanged(Editable s) {
                 if (s.toString().trim().isEmpty() && isSearchMode) {
                     // Quay lại suggested users
+                    lastSearchQuery = "";
                     isSearchMode = false;
                     showSuggestedMode();
                 }
@@ -182,21 +186,57 @@ public class SearchFragment extends Fragment {
         });
     }
 
-    private void loadMockData() {
-        executor.execute(() -> {
-            List<User> users = new ArrayList<>();
-            for (int i = 0; i < 30; i++) {
-                users.add(MockDataGenerator.generateMockUser(i));
-            }
+    private void loadSearchData() {
+        loadUsersFromFirebase();
+        executor.execute(() -> allPosts = MockDataGenerator.generateMockPosts(50));
+    }
 
-            List<Post> posts = MockDataGenerator.generateMockPosts(50);
+    private void loadUsersFromFirebase() {
+        setGlobalLoading(true);
+        String currentUid = FirebaseManager.getInstance().getAuth().getCurrentUser() != null
+                ? FirebaseManager.getInstance().getAuth().getCurrentUser().getUid()
+                : null;
 
-            mainHandler.post(() -> {
-                allUsers = users;
-                allPosts = posts;
-                showSuggestedMode();
-            });
-        });
+        firestore.collection(FirebaseManager.COLLECTION_USERS)
+                .get()
+                .addOnSuccessListener(queryDocumentSnapshots -> {
+                    List<User> users = new ArrayList<>();
+                    for (com.google.firebase.firestore.DocumentSnapshot document : queryDocumentSnapshots.getDocuments()) {
+                        User user = document.toObject(User.class);
+                        if (user == null) {
+                            continue;
+                        }
+
+                        if (user.getId() == null || user.getId().isEmpty()) {
+                            user.setId(document.getId());
+                        }
+
+                        if (currentUid != null && currentUid.equals(user.getId())) {
+                            continue;
+                        }
+                        users.add(user);
+                    }
+
+                    if (!isAdded()) {
+                        return;
+                    }
+                    setGlobalLoading(false);
+                    allUsers = users;
+                    if (isSearchMode && !lastSearchQuery.isEmpty()) {
+                        performSearch(lastSearchQuery);
+                    } else {
+                        showSuggestedMode();
+                    }
+                })
+                .addOnFailureListener(e -> {
+                    if (!isAdded()) {
+                        return;
+                    }
+                    setGlobalLoading(false);
+                    allUsers = new ArrayList<>();
+                    showSuggestedMode();
+                    Toast.makeText(requireContext(), "Cannot load users", Toast.LENGTH_SHORT).show();
+                });
     }
 
     private void showSuggestedMode() {
@@ -211,19 +251,22 @@ public class SearchFragment extends Fragment {
     }
 
     private void performSearch(String query) {
+        lastSearchQuery = query.trim();
         if (query.isEmpty()) {
             showSuggestedMode();
             return;
         }
 
         isSearchMode = true;
-        String lowerQuery = query.toLowerCase();
+        String lowerQuery = query.toLowerCase(Locale.ROOT);
 
         // Chuyển sang chế độ search
         suggestedLabel.setVisibility(View.GONE);
         suggestedUsersRecycler.setVisibility(View.GONE);
         searchResultsContainer.setVisibility(View.VISIBLE);
         searchLoadingProgress.setVisibility(View.VISIBLE);
+        usersRecyclerView.setVisibility(View.GONE);
+        postsRecyclerView.setVisibility(View.GONE);
         tabLayout.setVisibility(View.GONE);
         searchEmptyStateText.setVisibility(View.GONE);
 
@@ -231,8 +274,9 @@ public class SearchFragment extends Fragment {
             // Lọc users
             List<User> users = new ArrayList<>();
             for (User user : allUsers) {
-                if ((user.getUsername() != null && user.getUsername().toLowerCase().contains(lowerQuery)) ||
-                        (user.getFullName() != null && user.getFullName().toLowerCase().contains(lowerQuery))) {
+                String username = user.getUsername() == null ? "" : user.getUsername().toLowerCase(Locale.ROOT);
+                String fullName = user.getFullName() == null ? "" : user.getFullName().toLowerCase(Locale.ROOT);
+                if (username.contains(lowerQuery) || fullName.contains(lowerQuery)) {
                     users.add(user);
                 }
             }
@@ -240,7 +284,7 @@ public class SearchFragment extends Fragment {
             // Lọc posts
             List<Post> posts = new ArrayList<>();
             for (Post post : allPosts) {
-                if (post.getCaption() != null && post.getCaption().toLowerCase().contains(lowerQuery)) {
+                if (post.getCaption() != null && post.getCaption().toLowerCase(Locale.ROOT).contains(lowerQuery)) {
                     posts.add(post);
                 }
             }
@@ -264,12 +308,32 @@ public class SearchFragment extends Fragment {
                     searchEmptyStateText.setVisibility(View.GONE);
                     if (!filteredUsers.isEmpty()) {
                         tabLayout.selectTab(tabLayout.getTabAt(0));
+                        updateResultTabVisibility(0);
                     } else {
                         tabLayout.selectTab(tabLayout.getTabAt(1));
+                        updateResultTabVisibility(1);
                     }
                 }
             });
         });
+    }
+
+    private void updateResultTabVisibility(int tabPosition) {
+        if (tabPosition == 0) {
+            usersRecyclerView.setVisibility(View.VISIBLE);
+            postsRecyclerView.setVisibility(View.GONE);
+            searchEmptyStateText.setVisibility(filteredUsers.isEmpty() ? View.VISIBLE : View.GONE);
+        } else {
+            usersRecyclerView.setVisibility(View.GONE);
+            postsRecyclerView.setVisibility(View.VISIBLE);
+            searchEmptyStateText.setVisibility(filteredPosts.isEmpty() ? View.VISIBLE : View.GONE);
+        }
+    }
+
+    private void setGlobalLoading(boolean isLoading) {
+        if (globalLoadingProgress != null) {
+            globalLoadingProgress.setVisibility(isLoading ? View.VISIBLE : View.GONE);
+        }
     }
 
     @Override

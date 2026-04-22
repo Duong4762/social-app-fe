@@ -4,7 +4,6 @@ import android.content.Context;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
-import android.widget.Button;
 import android.widget.ImageView;
 import android.widget.TextView;
 
@@ -60,7 +59,7 @@ public class UserSearchAdapter extends RecyclerView.Adapter<UserSearchAdapter.Us
         ImageView avatar;
         TextView username;
         TextView fullName;
-        Button followButton;
+        TextView followButton;
 
         UserViewHolder(@NonNull View itemView) {
             super(itemView);
@@ -71,8 +70,15 @@ public class UserSearchAdapter extends RecyclerView.Adapter<UserSearchAdapter.Us
         }
 
         void bind(User user, int position) {
-            username.setText("@" + (user.getUsername() != null ? user.getUsername() : "user"));
-            fullName.setText(user.getFullName() != null ? user.getFullName() : "User Name");
+            String displayName = user.getFullName() != null && !user.getFullName().trim().isEmpty()
+                    ? user.getFullName()
+                    : "Unknown User";
+            String userHandle = user.getUsername() != null && !user.getUsername().trim().isEmpty()
+                    ? "@" + user.getUsername()
+                    : "@unknown";
+
+            username.setText(displayName);
+            fullName.setText(userHandle);
             avatar.setImageResource(R.drawable.avatar_placeholder);
             followButton.setText("Follow");
             followButton.setOnClickListener(v -> {
