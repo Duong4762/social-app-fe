@@ -49,6 +49,10 @@
     <color name="gray">#64748B</color>
     <color name="purple">#C813EC</color>
 
+    <!-- Avatar circle: no stroke, gray fill behind image -->
+    <color name="avatar_background">#E5E7EB</color>
+    <color name="avatar_background_on_dark">#475569</color>
+
     <!-- ========== BỔ SUNG CHO SEARCH VÀ NOTIFICATION ========== -->
 
     <!-- Text Colors -->

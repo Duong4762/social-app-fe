@@ -28,4 +28,19 @@
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintEnd_toEndOf="parent" />
 
+    <!-- Full-screen chat overlay (above bottom nav); visibility toggled from MainActivity -->
+    <androidx.fragment.app.FragmentContainerView
+        android:id="@+id/full_screen_chat_overlay"
+        android:layout_width="0dp"
+        android:layout_height="0dp"
+        android:background="?attr/colorSurface"
+        android:clickable="true"
+        android:elevation="16dp"
+        android:focusable="true"
+        android:visibility="gone"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent" />
+
 </androidx.constraintlayout.widget.ConstraintLayout>

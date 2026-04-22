@@ -15,6 +15,10 @@ public class Constants {
     public static final String EXTRA_POST_ID = "post_id";
     public static final String EXTRA_USER_ID = "user_id";
 
+    /** Default profile image when user avatar URL is missing or invalid. */
+    public static final String DEFAULT_AVATAR_URL =
+            "https://res.cloudinary.com/da7xnxfyd/image/upload/q_auto/f_auto/v1776566197/user_eyd4bk.png";
+
     // Fragment tags
     public static final String TAG_HOME_FRAGMENT = "home_fragment";
     public static final String TAG_SEARCH_FRAGMENT = "search_fragment";

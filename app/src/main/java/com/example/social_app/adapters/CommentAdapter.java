@@ -14,7 +14,9 @@ import androidx.recyclerview.widget.RecyclerView;
 
 import com.example.social_app.R;
 import com.example.social_app.data.model.Comment;
+import com.example.social_app.data.model.User;
 import com.example.social_app.utils.MockDataGenerator;
+import com.example.social_app.utils.UserAvatarLoader;
 
 import java.util.ArrayList;
 import java.util.HashSet;
@@ -201,7 +203,7 @@ public class CommentAdapter extends RecyclerView.Adapter<CommentAdapter.CommentV
             bindCommentText(text);
             android.util.Log.d("CommentAdapter", "│ ✅ bindCommentText done");
 
-            bindUserAvatar(userName);
+            bindUserAvatar(comment, userName);
             android.util.Log.d("CommentAdapter", "│ ✅ bindUserAvatar done");
 
             // === OPTIONAL: VERIFIED BADGE ===
@@ -247,9 +249,10 @@ public class CommentAdapter extends RecyclerView.Adapter<CommentAdapter.CommentV
             }
         }
 
-        private void bindUserAvatar(String userName) {
+        private void bindUserAvatar(Comment comment, String userName) {
             if (avatar != null) {
-                avatar.setImageResource(R.drawable.avatar_placeholder);
+                User user = MockDataGenerator.getUserById(comment.getUserId());
+                UserAvatarLoader.load(avatar, user != null ? user.getAvatarUrl() : null);
                 avatar.setContentDescription(
                         context.getString(R.string.user_avatar) + " - " + userName
                 );

@@ -1,0 +1,58 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="horizontal"
+    android:paddingBottom="10dp">
+
+    <com.google.android.material.imageview.ShapeableImageView
+        android:id="@+id/chat_in_avatar"
+        android:layout_width="32dp"
+        android:layout_height="32dp"
+        android:layout_marginEnd="8dp"
+        android:background="@color/avatar_background"
+        android:scaleType="centerCrop"
+        android:src="@drawable/avatar_placeholder"
+        app:shapeAppearanceOverlay="@style/ShapeAppearanceOverlay.SocialApp.Circle" />
+
+    <LinearLayout
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:maxWidth="280dp">
+
+        <TextView
+            android:id="@+id/chat_in_bubble"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:background="@drawable/bg_chat_bubble_in"
+            android:paddingStart="14dp"
+            android:paddingTop="10dp"
+            android:paddingEnd="14dp"
+            android:paddingBottom="10dp"
+            android:textColor="?attr/colorOnSurface"
+            android:textSize="15sp"
+            tools:text="Hey! How are you?" />
+
+        <ImageView
+            android:id="@+id/chat_in_image"
+            android:layout_width="220dp"
+            android:layout_height="220dp"
+            android:adjustViewBounds="true"
+            android:background="@color/avatar_background"
+            android:contentDescription="@string/post_image"
+            android:scaleType="centerCrop"
+            android:visibility="gone" />
+
+        <TextView
+            android:id="@+id/chat_in_time"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="4dp"
+            android:textColor="?attr/colorOnSurfaceVariant"
+            android:textSize="11sp"
+            tools:text="10:42 AM" />
+    </LinearLayout>
+</LinearLayout>

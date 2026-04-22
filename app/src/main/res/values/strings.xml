@@ -12,6 +12,7 @@
 
     <!-- contentDescription -->
     <string name="cd_back">Back</string>
+    <string name="cd_send_message">Send message</string>
     <string name="cd_search">Search</string>
     <string name="cd_toggle_password">Toggle password visibility</string>
     <string name="cd_dropdown">Open dropdown</string>
@@ -186,4 +187,50 @@
     <string name="profile_empty_followers">Chua co nguoi theo doi</string>
     <string name="profile_empty_following">Chua theo doi ai</string>
 
+
+    <!-- Messages -->
+    <string name="messages_title">Messages</string>
+    <string name="messages_search_hint">Search</string>
+    <string name="messages_compose">New message</string>
+    <string name="messages_empty">Chưa có cuộc trò chuyện</string>
+    <string name="messages_need_login">Đăng nhập để xem tin nhắn</string>
+    <string name="message_preview_sent_photo">Đã gửi ảnh</string>
+    <string name="message_preview_sent_video">Đã gửi video</string>
+    <string name="message_no_messages_yet">Chưa có tin nhắn</string>
+    <string name="story_sarah">Sarah</string>
+    <string name="story_alex">Alex</string>
+    <string name="story_jordan">Jordan</string>
+    <string name="msg_preview_alex">Hey, did you see the post?</string>
+    <string name="msg_preview_sarah">See you at 8! Don\'t forget the snacks.</string>
+    <string name="msg_preview_david">Sent a photo</string>
+    <string name="msg_preview_elena">That looks amazing! Where is it?</string>
+    <string name="msg_preview_marcus">Let me know when you\'re free to chat abo…</string>
+    <string name="msg_preview_lily">Reacted 😂 to your message</string>
+    <string name="time_2m_ago">2m ago</string>
+    <string name="time_1h_ago">1h ago</string>
+    <string name="time_3h_ago">3h ago</string>
+    <string name="time_5h_ago">5h ago</string>
+    <string name="time_yesterday">Yesterday</string>
+    <string name="time_tuesday">Tuesday</string>
+    <string name="name_alex_johnson">Alex Johnson</string>
+    <string name="name_sarah_miller">Sarah Miller</string>
+    <string name="name_david_chen">David Chen</string>
+    <string name="name_elena_rodriguez">Elena Rodriguez</string>
+    <string name="name_marcus_wright">Marcus Wright</string>
+    <string name="name_lily_evans">Lily Evans</string>
+
+    <!-- Chat detail (full screen) -->
+    <string name="chat_active_now">Active now</string>
+    <string name="chat_not_active_now">Offline</string>
+    <string name="chat_info">Conversation info</string>
+    <string name="chat_message_hint">Message…</string>
+    <string name="chat_label_today">Today</string>
+    <string name="chat_label_yesterday">Yesterday</string>
+    <string name="chat_typing">%1$s is typing…</string>
+    <string name="chat_send_failed">Could not send message</string>
+    <string name="chat_pick_image_title">Chọn ảnh</string>
+    <string name="chat_need_image_permission">App chưa có quyền đọc ảnh</string>
+    <string name="chat_cannot_read_images">Không thể đọc ảnh trong máy</string>
+    <string name="chat_tick_sent" translatable="false">✓</string>
+    <string name="chat_tick_read" translatable="false">✓✓</string>
 </resources>
