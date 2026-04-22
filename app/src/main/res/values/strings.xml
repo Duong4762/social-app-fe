@@ -171,5 +171,13 @@
     <string name="profile_edit_save_success">Da cap nhat thong tin ca nhan</string>
     <string name="profile_edit_required_username">Username khong duoc de trong</string>
     <string name="profile_edit_required_email">Email khong duoc de trong</string>
+    <string name="profile_chat">Chat</string>
+    <string name="follow_loading">Loading...</string>
+    <string name="follow_action_failed">Khong the thuc hien thao tac follow</string>
+    <string name="follow_own_profile">Trang cua ban</string>
+    <string name="follow_own_profile_not_allowed">Ban khong the follow chinh minh</string>
+    <string name="unfollow_confirm_title">Bo theo doi?</string>
+    <string name="unfollow_confirm_message">Ban co chac chan muon bo theo doi nguoi dung nay khong?</string>
+    <string name="unfollow_action">Bo theo doi</string>
 
 </resources>

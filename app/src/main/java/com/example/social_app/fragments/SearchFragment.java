@@ -95,7 +95,7 @@ public class SearchFragment extends Fragment {
         suggestedAdapter = new UserSearchAdapter(requireContext(), new UserSearchAdapter.OnUserActionListener() {
             @Override
             public void onUserClicked(User user) {
-                Toast.makeText(requireContext(), "View profile: " + user.getFullName(), Toast.LENGTH_SHORT).show();
+                openOtherProfile(user);
             }
 
             @Override
@@ -110,7 +110,7 @@ public class SearchFragment extends Fragment {
         userSearchAdapter = new UserSearchAdapter(requireContext(), new UserSearchAdapter.OnUserActionListener() {
             @Override
             public void onUserClicked(User user) {
-                Toast.makeText(requireContext(), "View profile: " + user.getFullName(), Toast.LENGTH_SHORT).show();
+                openOtherProfile(user);
             }
 
             @Override
@@ -276,5 +276,18 @@ public class SearchFragment extends Fragment {
     public void onDestroy() {
         super.onDestroy();
         executor.shutdown();
+    }
+
+    private void openOtherProfile(User user) {
+        if (user == null || user.getId() == null || user.getId().trim().isEmpty()) {
+            Toast.makeText(requireContext(), "Không tìm thấy người dùng", Toast.LENGTH_SHORT).show();
+            return;
+        }
+
+        requireActivity().getSupportFragmentManager()
+                .beginTransaction()
+                .replace(R.id.nav_host_fragment, OtherProfileFragment.newInstance(user.getId()))
+                .addToBackStack(null)
+                .commit();
     }
 }

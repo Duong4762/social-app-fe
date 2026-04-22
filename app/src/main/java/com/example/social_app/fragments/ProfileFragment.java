@@ -47,6 +47,9 @@ public class ProfileFragment extends Fragment {
     private TextView tvHandle;
     private TextView tvBio;
     private TextView tvChangeAvatar;
+    private TextView tvBlog;
+    private TextView tvFollowed;
+    private TextView tvFollower;
     private ImageView imgAvatar;
     private Button btnEditProfile;
 
@@ -116,6 +119,9 @@ public class ProfileFragment extends Fragment {
         tvBio = view.findViewById(R.id.tvBio);
         imgAvatar = view.findViewById(R.id.imgAvatar);
         tvChangeAvatar = view.findViewById(R.id.tvChangeAvatar);
+        tvBlog = view.findViewById(R.id.tvBlog);
+        tvFollowed = view.findViewById(R.id.tvFollowed);
+        tvFollower = view.findViewById(R.id.tvFollower);
         btnEditProfile = view.findViewById(R.id.btnEditProfile);
 
         imgAvatar.setOnClickListener(v -> openAvatarPreviewDialog());
@@ -165,6 +171,8 @@ public class ProfileFragment extends Fragment {
                     Toast.makeText(requireContext(), "Không tải được hồ sơ người dùng", Toast.LENGTH_SHORT).show();
                     bindFallbackProfile(authUser);
                 });
+
+        refreshProfileStats();
     }
 
     private void bindProfile(User user, FirebaseUser authUser) {
@@ -586,6 +594,45 @@ public class ProfileFragment extends Fragment {
 
     private String safeOrDefault(String value, String fallback) {
         return TextUtils.isEmpty(value) ? fallback : value;
+    }
+
+    private void refreshProfileStats() {
+        if (TextUtils.isEmpty(currentUserId)) {
+            return;
+        }
+
+        FirebaseManager.getInstance().getFirestore()
+                .collection(FirebaseManager.COLLECTION_FOLLOWS)
+                .whereEqualTo("followingId", currentUserId)
+                .get()
+                .addOnSuccessListener(query -> {
+                    if (!isAdded()) {
+                        return;
+                    }
+                    tvFollowed.setText(query.size() + " Followers");
+                });
+
+        FirebaseManager.getInstance().getFirestore()
+                .collection(FirebaseManager.COLLECTION_FOLLOWS)
+                .whereEqualTo("followerId", currentUserId)
+                .get()
+                .addOnSuccessListener(query -> {
+                    if (!isAdded()) {
+                        return;
+                    }
+                    tvFollower.setText(query.size() + " Following");
+                });
+
+        FirebaseManager.getInstance().getFirestore()
+                .collection(FirebaseManager.COLLECTION_POSTS)
+                .whereEqualTo("userId", currentUserId)
+                .get()
+                .addOnSuccessListener(query -> {
+                    if (!isAdded()) {
+                        return;
+                    }
+                    tvBlog.setText(query.size() + " Posts");
+                });
     }
 
     @Override
