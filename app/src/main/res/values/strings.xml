@@ -158,5 +158,18 @@
     <string name="cloudinary_cloud_name"></string>
     <string name="cloudinary_upload_preset"></string>
     <string name="cloudinary_config_missing">Chua cau hinh Cloudinary cloud_name va upload_preset</string>
+    <string name="profile_edit_title">Chinh sua trang ca nhan</string>
+    <string name="profile_edit_full_name">Ho ten</string>
+    <string name="profile_edit_username">Username</string>
+    <string name="profile_edit_email">Email</string>
+    <string name="profile_edit_bio">Bio</string>
+    <string name="profile_edit_gender">Gioi tinh</string>
+    <string name="profile_edit_dob">Ngay sinh (yyyy-MM-dd)</string>
+    <string name="profile_edit_cancel">Huy</string>
+    <string name="profile_edit_done">Xong</string>
+    <string name="profile_edit_save_failed">Luu thong tin that bai</string>
+    <string name="profile_edit_save_success">Da cap nhat thong tin ca nhan</string>
+    <string name="profile_edit_required_username">Username khong duoc de trong</string>
+    <string name="profile_edit_required_email">Email khong duoc de trong</string>
 
 </resources>

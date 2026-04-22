@@ -11,6 +11,7 @@ import android.text.TextUtils;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.widget.Button;
+import android.widget.EditText;
 import android.widget.ImageView;
 import android.widget.TextView;
 import android.widget.Toast;
@@ -33,7 +34,9 @@ import java.io.File;
 import java.io.InputStream;
 import java.net.HttpURLConnection;
 import java.net.URL;
+import java.util.HashMap;
 import java.util.Locale;
+import java.util.Map;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
@@ -45,10 +48,12 @@ public class ProfileFragment extends Fragment {
     private TextView tvBio;
     private TextView tvChangeAvatar;
     private ImageView imgAvatar;
+    private Button btnEditProfile;
 
     private final ExecutorService avatarExecutor = Executors.newSingleThreadExecutor();
     private FirebaseUser currentAuthUser;
     private String currentUserId;
+    private User currentUserProfile;
     private Uri pendingAvatarUri;
     private Uri cameraOutputUri;
     private AlertDialog avatarDialog;
@@ -111,9 +116,11 @@ public class ProfileFragment extends Fragment {
         tvBio = view.findViewById(R.id.tvBio);
         imgAvatar = view.findViewById(R.id.imgAvatar);
         tvChangeAvatar = view.findViewById(R.id.tvChangeAvatar);
+        btnEditProfile = view.findViewById(R.id.btnEditProfile);
 
         imgAvatar.setOnClickListener(v -> openAvatarPreviewDialog());
         tvChangeAvatar.setOnClickListener(v -> openAvatarPreviewDialog());
+        btnEditProfile.setOnClickListener(v -> openEditProfileDialog());
     }
 
     private void loadCurrentUserProfile() {
@@ -146,6 +153,8 @@ public class ProfileFragment extends Fragment {
                         bindFallbackProfile(authUser);
                         return;
                     }
+                    user.setId(authUser.getUid());
+                    currentUserProfile = user;
 
                     bindProfile(user, authUser);
                 })
@@ -184,6 +193,15 @@ public class ProfileFragment extends Fragment {
         tvBio.setText("Chưa có tiểu sử");
         currentAvatarUrl = "";
         imgAvatar.setImageResource(R.drawable.avatar_placeholder);
+
+        User fallbackUser = new User();
+        fallbackUser.setId(authUser.getUid());
+        fallbackUser.setFullName("Người dùng");
+        fallbackUser.setUsername(username);
+        fallbackUser.setEmail(email != null ? email : "");
+        fallbackUser.setBio("Chưa có tiểu sử");
+        fallbackUser.setAvatarUrl("");
+        currentUserProfile = fallbackUser;
     }
 
     private void loadAvatar(String avatarUrl) {
@@ -448,6 +466,122 @@ public class ProfileFragment extends Fragment {
                 ? getString(R.string.profile_avatar_update_failed)
                 : getString(R.string.profile_avatar_update_failed) + ": " + message;
         Toast.makeText(requireContext(), errorText, Toast.LENGTH_LONG).show();
+    }
+
+    private void openEditProfileDialog() {
+        if (!isAdded() || currentAuthUser == null) {
+            return;
+        }
+
+        if (currentUserProfile == null) {
+            loadCurrentUserProfile();
+            Toast.makeText(requireContext(), getString(R.string.loading), Toast.LENGTH_SHORT).show();
+            return;
+        }
+
+        View dialogView = LayoutInflater.from(requireContext())
+                .inflate(R.layout.dialog_edit_profile, null, false);
+
+        EditText edtFullName = dialogView.findViewById(R.id.edtFullName);
+        EditText edtUsername = dialogView.findViewById(R.id.edtUsername);
+        EditText edtEmail = dialogView.findViewById(R.id.edtEmail);
+        EditText edtBio = dialogView.findViewById(R.id.edtBio);
+        EditText edtGender = dialogView.findViewById(R.id.edtGender);
+        EditText edtDateOfBirth = dialogView.findViewById(R.id.edtDateOfBirth);
+        ImageView imgEditProfileAvatar = dialogView.findViewById(R.id.imgEditProfileAvatar);
+        Button btnCancel = dialogView.findViewById(R.id.btnCancelEditProfile);
+        Button btnDone = dialogView.findViewById(R.id.btnDoneEditProfile);
+
+        imgEditProfileAvatar.setImageDrawable(imgAvatar.getDrawable());
+
+        edtFullName.setText(safeOrDefault(currentUserProfile.getFullName(), ""));
+        edtUsername.setText(safeOrDefault(currentUserProfile.getUsername(), ""));
+        edtEmail.setText(safeOrDefault(currentUserProfile.getEmail(), ""));
+        edtBio.setText(safeOrDefault(currentUserProfile.getBio(), ""));
+        edtGender.setText(safeOrDefault(currentUserProfile.getGender(), ""));
+        edtDateOfBirth.setText(safeOrDefault(currentUserProfile.getDateOfBirth(), ""));
+
+        AlertDialog editDialog = new AlertDialog.Builder(requireContext())
+                .setTitle(getString(R.string.profile_edit_title))
+                .setView(dialogView)
+                .setCancelable(false)
+                .create();
+
+        btnCancel.setOnClickListener(v -> editDialog.dismiss());
+        btnDone.setOnClickListener(v -> {
+            String fullName = edtFullName.getText().toString().trim();
+            String username = edtUsername.getText().toString().trim();
+            String email = edtEmail.getText().toString().trim();
+            String bio = edtBio.getText().toString().trim();
+            String gender = edtGender.getText().toString().trim();
+            String dateOfBirth = edtDateOfBirth.getText().toString().trim();
+
+            if (TextUtils.isEmpty(username)) {
+                edtUsername.setError(getString(R.string.profile_edit_required_username));
+                return;
+            }
+            if (TextUtils.isEmpty(email)) {
+                edtEmail.setError(getString(R.string.profile_edit_required_email));
+                return;
+            }
+
+            btnDone.setEnabled(false);
+            btnDone.setText(getString(R.string.posting));
+            saveProfileChanges(editDialog, btnDone, fullName, username, email, bio, gender, dateOfBirth);
+        });
+
+        editDialog.show();
+    }
+
+    private void saveProfileChanges(
+            AlertDialog dialog,
+            Button btnDone,
+            String fullName,
+            String username,
+            String email,
+            String bio,
+            String gender,
+            String dateOfBirth
+    ) {
+        if (!isAdded() || TextUtils.isEmpty(currentUserId)) {
+            return;
+        }
+
+        Map<String, Object> updates = new HashMap<>();
+        updates.put("fullName", fullName);
+        updates.put("username", username);
+        updates.put("email", email);
+        updates.put("bio", bio);
+        updates.put("gender", gender);
+        updates.put("dateOfBirth", dateOfBirth);
+
+        FirebaseManager.getInstance().getFirestore()
+                .collection(FirebaseManager.COLLECTION_USERS)
+                .document(currentUserId)
+                .update(updates)
+                .addOnSuccessListener(unused -> {
+                    if (!isAdded()) {
+                        return;
+                    }
+                    currentUserProfile.setFullName(fullName);
+                    currentUserProfile.setUsername(username);
+                    currentUserProfile.setEmail(email);
+                    currentUserProfile.setBio(bio);
+                    currentUserProfile.setGender(gender);
+                    currentUserProfile.setDateOfBirth(dateOfBirth);
+                    bindProfile(currentUserProfile, currentAuthUser);
+                    Toast.makeText(requireContext(), getString(R.string.profile_edit_save_success), Toast.LENGTH_SHORT).show();
+                    dialog.dismiss();
+                })
+                .addOnFailureListener(e -> {
+                    if (!isAdded()) {
+                        return;
+                    }
+                    btnDone.setEnabled(true);
+                    btnDone.setText(getString(R.string.profile_edit_done));
+                    String message = getString(R.string.profile_edit_save_failed) + ": " + e.getMessage();
+                    Toast.makeText(requireContext(), message, Toast.LENGTH_LONG).show();
+                });
     }
 
     private String safeOrDefault(String value, String fallback) {
