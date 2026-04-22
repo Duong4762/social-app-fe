@@ -32,6 +32,18 @@
         app:layout_constraintTop_toBottomOf="@id/tvUsernameTop" />
 
     <TextView
+        android:id="@+id/tvChangeAvatar"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="6dp"
+        android:text="@string/profile_change_avatar"
+        android:textColor="@color/primary_purple"
+        android:textStyle="bold"
+        app:layout_constraintEnd_toEndOf="@id/imgAvatar"
+        app:layout_constraintStart_toStartOf="@id/imgAvatar"
+        app:layout_constraintTop_toBottomOf="@id/imgAvatar" />
+
+    <TextView
         android:id="@+id/tvName"
         android:layout_width="0dp"
         android:layout_height="wrap_content"
@@ -175,7 +187,9 @@
         android:layout_width="48dp"
         android:layout_height="2dp"
         android:background="@color/text"
-         />
+        app:layout_constraintEnd_toEndOf="@id/tabThreads"
+        app:layout_constraintStart_toStartOf="@id/tabThreads"
+        app:layout_constraintTop_toBottomOf="@id/tabLayout" />
 
     <androidx.recyclerview.widget.RecyclerView
         android:id="@+id/rvPosts"

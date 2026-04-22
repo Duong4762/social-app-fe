@@ -1,28 +1,39 @@
 package com.example.social_app.fragments;
 
+import android.Manifest;
+import android.app.AlertDialog;
+import android.content.pm.PackageManager;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.net.Uri;
 import android.os.Bundle;
 import android.text.TextUtils;
+import android.view.LayoutInflater;
 import android.view.View;
+import android.widget.Button;
 import android.widget.ImageView;
 import android.widget.TextView;
 import android.widget.Toast;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
+import androidx.core.content.FileProvider;
 import androidx.fragment.app.Fragment;
+import androidx.activity.result.ActivityResultLauncher;
+import androidx.activity.result.contract.ActivityResultContracts;
 
 import com.example.social_app.R;
 import com.example.social_app.data.model.User;
 import com.example.social_app.firebase.FirebaseManager;
+import com.example.social_app.utils.CloudinaryUploadUtil;
 import com.google.firebase.auth.FirebaseUser;
 import com.google.firebase.firestore.FirebaseFirestore;
 
+import java.io.File;
 import java.io.InputStream;
 import java.net.HttpURLConnection;
 import java.net.URL;
+import java.util.Locale;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
@@ -32,9 +43,55 @@ public class ProfileFragment extends Fragment {
     private TextView tvName;
     private TextView tvHandle;
     private TextView tvBio;
+    private TextView tvChangeAvatar;
     private ImageView imgAvatar;
 
     private final ExecutorService avatarExecutor = Executors.newSingleThreadExecutor();
+    private FirebaseUser currentAuthUser;
+    private String currentUserId;
+    private Uri pendingAvatarUri;
+    private Uri cameraOutputUri;
+    private AlertDialog avatarDialog;
+    private ImageView avatarLargePreview;
+    private TextView tvChangeAvatarAction;
+    private Button btnSaveAvatar;
+    private String currentAvatarUrl;
+    private boolean isAvatarUploading = false;
+
+    private final ActivityResultLauncher<String> galleryLauncher =
+            registerForActivityResult(new ActivityResultContracts.GetContent(), uri -> {
+                if (uri == null || !isAdded()) {
+                    return;
+                }
+                pendingAvatarUri = uri;
+                if (avatarLargePreview != null) {
+                    avatarLargePreview.setImageURI(uri);
+                }
+            });
+
+    private final ActivityResultLauncher<Uri> cameraLauncher =
+            registerForActivityResult(new ActivityResultContracts.TakePicture(), success -> {
+                if (!success || cameraOutputUri == null || !isAdded()) {
+                    return;
+                }
+                pendingAvatarUri = cameraOutputUri;
+                if (avatarLargePreview != null) {
+                    avatarLargePreview.setImageURI(cameraOutputUri);
+                }
+            });
+
+    private final ActivityResultLauncher<String> cameraPermissionLauncher =
+            registerForActivityResult(new ActivityResultContracts.RequestPermission(), granted -> {
+                if (granted) {
+                    launchCamera();
+                } else if (isAdded()) {
+                    Toast.makeText(
+                            requireContext(),
+                            getString(R.string.profile_camera_permission_denied),
+                            Toast.LENGTH_SHORT
+                    ).show();
+                }
+            });
 
     public ProfileFragment() {
         super(R.layout.fragment_profile);
@@ -53,16 +110,22 @@ public class ProfileFragment extends Fragment {
         tvHandle = view.findViewById(R.id.tvHandle);
         tvBio = view.findViewById(R.id.tvBio);
         imgAvatar = view.findViewById(R.id.imgAvatar);
+        tvChangeAvatar = view.findViewById(R.id.tvChangeAvatar);
+
+        imgAvatar.setOnClickListener(v -> openAvatarPreviewDialog());
+        tvChangeAvatar.setOnClickListener(v -> openAvatarPreviewDialog());
     }
 
     private void loadCurrentUserProfile() {
         FirebaseManager firebaseManager = FirebaseManager.getInstance();
         FirebaseUser authUser = firebaseManager.getAuth().getCurrentUser();
+        currentAuthUser = authUser;
 
         if (authUser == null) {
             Toast.makeText(requireContext(), "Phiên đăng nhập đã hết hạn", Toast.LENGTH_SHORT).show();
             return;
         }
+        currentUserId = authUser.getUid();
 
         FirebaseFirestore db = firebaseManager.getFirestore();
         db.collection(FirebaseManager.COLLECTION_USERS)
@@ -105,6 +168,7 @@ public class ProfileFragment extends Fragment {
         tvUsernameTop.setText(username);
         tvBio.setText(bio);
 
+        currentAvatarUrl = user.getAvatarUrl();
         loadAvatar(user.getAvatarUrl());
     }
 
@@ -118,6 +182,7 @@ public class ProfileFragment extends Fragment {
         tvHandle.setText("@" + username);
         tvUsernameTop.setText(username);
         tvBio.setText("Chưa có tiểu sử");
+        currentAvatarUrl = "";
         imgAvatar.setImageResource(R.drawable.avatar_placeholder);
     }
 
@@ -192,6 +257,199 @@ public class ProfileFragment extends Fragment {
         });
     }
 
+    private void openAvatarPreviewDialog() {
+        if (!isAdded()) {
+            return;
+        }
+
+        View dialogView = LayoutInflater.from(requireContext())
+                .inflate(R.layout.dialog_avatar_preview, null, false);
+
+        avatarLargePreview = dialogView.findViewById(R.id.imgAvatarLarge);
+        tvChangeAvatarAction = dialogView.findViewById(R.id.tvChangeAvatarAction);
+        btnSaveAvatar = dialogView.findViewById(R.id.btnSaveAvatar);
+
+        if (pendingAvatarUri != null) {
+            avatarLargePreview.setImageURI(pendingAvatarUri);
+        } else {
+            avatarLargePreview.setImageDrawable(imgAvatar.getDrawable());
+        }
+
+        tvChangeAvatarAction.setOnClickListener(v -> showImageSourceChooser());
+        btnSaveAvatar.setOnClickListener(v -> saveAvatarChange());
+
+        avatarDialog = new AlertDialog.Builder(requireContext())
+                .setTitle(getString(R.string.profile_open_avatar_preview))
+                .setView(dialogView)
+                .setNegativeButton(getString(R.string.profile_close), null)
+                .create();
+        avatarDialog.setOnDismissListener(dialog -> {
+            avatarLargePreview = null;
+            btnSaveAvatar = null;
+            tvChangeAvatarAction = null;
+            if (!isAvatarUploading) {
+                pendingAvatarUri = null;
+            }
+        });
+        avatarDialog.show();
+    }
+
+    private void showImageSourceChooser() {
+        if (!isAdded()) {
+            return;
+        }
+        String[] options = {
+                getString(R.string.profile_pick_camera),
+                getString(R.string.profile_pick_gallery)
+        };
+        new AlertDialog.Builder(requireContext())
+                .setTitle(getString(R.string.profile_pick_image_source))
+                .setItems(options, (dialog, which) -> {
+                    if (which == 0) {
+                        requestCameraAndOpen();
+                    } else {
+                        galleryLauncher.launch("image/*");
+                    }
+                })
+                .show();
+    }
+
+    private void requestCameraAndOpen() {
+        if (!isAdded()) {
+            return;
+        }
+        if (requireContext().checkSelfPermission(Manifest.permission.CAMERA)
+                == PackageManager.PERMISSION_GRANTED) {
+            launchCamera();
+        } else {
+            cameraPermissionLauncher.launch(Manifest.permission.CAMERA);
+        }
+    }
+
+    private void launchCamera() {
+        if (!isAdded()) {
+            return;
+        }
+        try {
+            File cacheDir = new File(requireContext().getCacheDir(), "images");
+            if (!cacheDir.exists()) {
+                //noinspection ResultOfMethodCallIgnored
+                cacheDir.mkdirs();
+            }
+            String fileName = String.format(Locale.US, "avatar_%d.jpg", System.currentTimeMillis());
+            File imageFile = new File(cacheDir, fileName);
+            cameraOutputUri = FileProvider.getUriForFile(
+                    requireContext(),
+                    requireContext().getPackageName() + ".fileprovider",
+                    imageFile
+            );
+            cameraLauncher.launch(cameraOutputUri);
+        } catch (Exception e) {
+            Toast.makeText(requireContext(), "Khong the mo camera", Toast.LENGTH_SHORT).show();
+        }
+    }
+
+    private void saveAvatarChange() {
+        if (!isAdded()) {
+            return;
+        }
+        if (pendingAvatarUri == null) {
+            Toast.makeText(requireContext(), getString(R.string.profile_avatar_save_empty), Toast.LENGTH_SHORT).show();
+            return;
+        }
+        if (currentAuthUser == null || TextUtils.isEmpty(currentUserId)) {
+            Toast.makeText(requireContext(), "Phien dang nhap khong hop le", Toast.LENGTH_SHORT).show();
+            return;
+        }
+
+        if (btnSaveAvatar != null) {
+            btnSaveAvatar.setEnabled(false);
+            btnSaveAvatar.setText(getString(R.string.posting));
+        }
+        if (tvChangeAvatarAction != null) {
+            tvChangeAvatarAction.setEnabled(false);
+            tvChangeAvatarAction.setAlpha(0.5f);
+        }
+        isAvatarUploading = true;
+
+        String cloudName = getString(R.string.cloudinary_cloud_name).trim();
+        String uploadPreset = getString(R.string.cloudinary_upload_preset).trim();
+        if (TextUtils.isEmpty(cloudName) || TextUtils.isEmpty(uploadPreset)) {
+            if (btnSaveAvatar != null) {
+                btnSaveAvatar.setEnabled(true);
+                btnSaveAvatar.setText(getString(R.string.profile_save_avatar));
+            }
+            Toast.makeText(requireContext(), getString(R.string.cloudinary_config_missing), Toast.LENGTH_LONG).show();
+            return;
+        }
+
+        CloudinaryUploadUtil.uploadImage(
+                requireContext(),
+                pendingAvatarUri,
+                cloudName,
+                uploadPreset,
+                new CloudinaryUploadUtil.UploadCallback() {
+                    @Override
+                    public void onSuccess(String secureUrl, String publicId) {
+                        FirebaseManager.getInstance().getFirestore()
+                                .collection(FirebaseManager.COLLECTION_USERS)
+                                .document(currentUserId)
+                                .update("avatarUrl", secureUrl)
+                                .addOnSuccessListener(unused -> {
+                                    if (!isAdded()) {
+                                        return;
+                                    }
+                                    pendingAvatarUri = null;
+                                    currentAvatarUrl = secureUrl;
+                                    loadAvatar(secureUrl);
+                                    isAvatarUploading = false;
+                                    if (btnSaveAvatar != null) {
+                                        btnSaveAvatar.setEnabled(true);
+                                        btnSaveAvatar.setText(getString(R.string.profile_save_avatar));
+                                    }
+                                    if (tvChangeAvatarAction != null) {
+                                        tvChangeAvatarAction.setEnabled(true);
+                                        tvChangeAvatarAction.setAlpha(1f);
+                                    }
+                                    Toast.makeText(requireContext(), getString(R.string.profile_avatar_updated), Toast.LENGTH_SHORT).show();
+                                    if (avatarDialog != null) {
+                                        avatarDialog.dismiss();
+                                    }
+                                })
+                                .addOnFailureListener(e -> onAvatarSaveFailed());
+                    }
+
+                    @Override
+                    public void onError(String message, Throwable throwable) {
+                        onAvatarSaveFailed(message);
+                    }
+                }
+        );
+    }
+
+    private void onAvatarSaveFailed() {
+        onAvatarSaveFailed(getString(R.string.profile_avatar_update_failed));
+    }
+
+    private void onAvatarSaveFailed(String message) {
+        if (!isAdded()) {
+            return;
+        }
+        isAvatarUploading = false;
+        if (btnSaveAvatar != null) {
+            btnSaveAvatar.setEnabled(true);
+            btnSaveAvatar.setText(getString(R.string.profile_save_avatar));
+        }
+        if (tvChangeAvatarAction != null) {
+            tvChangeAvatarAction.setEnabled(true);
+            tvChangeAvatarAction.setAlpha(1f);
+        }
+        String errorText = TextUtils.isEmpty(message)
+                ? getString(R.string.profile_avatar_update_failed)
+                : getString(R.string.profile_avatar_update_failed) + ": " + message;
+        Toast.makeText(requireContext(), errorText, Toast.LENGTH_LONG).show();
+    }
+
     private String safeOrDefault(String value, String fallback) {
         return TextUtils.isEmpty(value) ? fallback : value;
     }
@@ -199,6 +457,14 @@ public class ProfileFragment extends Fragment {
     @Override
     public void onDestroyView() {
         super.onDestroyView();
+        if (avatarDialog != null) {
+            avatarDialog.dismiss();
+        }
+    }
+
+    @Override
+    public void onDestroy() {
+        super.onDestroy();
         avatarExecutor.shutdownNow();
     }
 }

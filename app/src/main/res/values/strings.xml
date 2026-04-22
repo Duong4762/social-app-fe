@@ -144,5 +144,19 @@
 
     <!-- Profile -->
     <string name="profile_username_top">username</string>
+    <string name="profile_change_avatar">Thay doi</string>
+    <string name="profile_save_avatar">Luu thay doi</string>
+    <string name="profile_pick_image_source">Chon nguon anh</string>
+    <string name="profile_pick_camera">Chup anh</string>
+    <string name="profile_pick_gallery">Chon tu thu vien</string>
+    <string name="profile_camera_permission_denied">Ban can cap quyen camera de chup anh</string>
+    <string name="profile_avatar_updated">Cap nhat avatar thanh cong</string>
+    <string name="profile_avatar_update_failed">Cap nhat avatar that bai</string>
+    <string name="profile_avatar_save_empty">Hay chon anh truoc khi luu</string>
+    <string name="profile_open_avatar_preview">Xem anh dai dien</string>
+    <string name="profile_close">Dong</string>
+    <string name="cloudinary_cloud_name"></string>
+    <string name="cloudinary_upload_preset"></string>
+    <string name="cloudinary_config_missing">Chua cau hinh Cloudinary cloud_name va upload_preset</string>
 
 </resources>
