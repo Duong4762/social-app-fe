@@ -19,7 +19,7 @@ import androidx.recyclerview.widget.RecyclerView;
 
 import com.example.social_app.MainActivity;
 import com.example.social_app.R;
-import com.example.social_app.adapters.PostSearchAdapter;
+import com.example.social_app.adapters.PostAdapter;
 import com.example.social_app.adapters.UserSearchAdapter;
 import com.example.social_app.data.model.Follow;
 import com.example.social_app.data.model.Notification;
@@ -28,12 +28,16 @@ import com.example.social_app.data.model.User;
 import com.example.social_app.firebase.FirebaseManager;
 import com.example.social_app.repository.ConversationRepository;
 import com.example.social_app.utils.UserAvatarLoader;
+import com.example.social_app.viewmodels.HomeViewModel;
+import com.example.social_app.viewmodels.NewPostViewModel;
 import com.google.firebase.auth.FirebaseUser;
 
 import java.util.ArrayList;
 import java.util.List;
 
-public class OtherProfileFragment extends Fragment {
+import androidx.lifecycle.ViewModelProvider;
+
+public class OtherProfileFragment extends Fragment implements PostAdapter.OnPostActionListener {
 
     private static final String ARG_USER_ID = "user_id";
 
@@ -61,9 +65,11 @@ public class OtherProfileFragment extends Fragment {
     private boolean isFollowing = false;
     private boolean isFollowLoading = false;
     private String selectedTab = "posts";
-    private PostSearchAdapter postAdapter;
+    private PostAdapter postAdapter;
     private UserSearchAdapter userAdapter;
     private User profileUser;
+    private HomeViewModel homeViewModel;
+    private NewPostViewModel newPostViewModel;
 
     public OtherProfileFragment() {
         super(R.layout.fragment_other_profile);
@@ -80,6 +86,8 @@ public class OtherProfileFragment extends Fragment {
     @Override
     public void onViewCreated(@NonNull View view, @Nullable Bundle savedInstanceState) {
         super.onViewCreated(view, savedInstanceState);
+        homeViewModel = new ViewModelProvider(this).get(HomeViewModel.class);
+        newPostViewModel = new ViewModelProvider(this).get(NewPostViewModel.class);
         bindViews(view);
         setupActions();
         loadUserProfile();
@@ -496,8 +504,8 @@ public class OtherProfileFragment extends Fragment {
 
     private void setupRecycler() {
         rvPosts.setLayoutManager(new LinearLayoutManager(requireContext()));
-        postAdapter = new PostSearchAdapter(requireContext(), post ->
-                Toast.makeText(requireContext(), "View post", Toast.LENGTH_SHORT).show());
+        postAdapter = new PostAdapter(requireContext(), this);
+        postAdapter.setUseSearchLayout(true);
         userAdapter = new UserSearchAdapter(requireContext(), new UserSearchAdapter.OnUserActionListener() {
             @Override
             public void onUserClicked(User user) {
@@ -706,5 +714,91 @@ public class OtherProfileFragment extends Fragment {
         tabEmptyState.setVisibility(View.VISIBLE);
     }
 
+    @Override
+    public void onUserClicked(String userId) {
+        if (userId == null || userId.isEmpty()) return;
+        if (userId.equals(currentUserId)) {
+            requireActivity().getSupportFragmentManager()
+                    .beginTransaction()
+                    .replace(R.id.nav_host_fragment, new ProfileFragment())
+                    .addToBackStack(null)
+                    .commit();
+        } else if (!userId.equals(targetUserId)) {
+            requireActivity().getSupportFragmentManager()
+                    .beginTransaction()
+                    .replace(R.id.nav_host_fragment, OtherProfileFragment.newInstance(userId))
+                    .addToBackStack(null)
+                    .commit();
+        }
+    }
+
+    @Override
+    public void onLikeClicked(Post post, int position) {
+        homeViewModel.toggleLike(post);
+    }
+
+    @Override
+    public void onCommentClicked(Post post) {
+        BottomSheetCommentFragment bottomSheetCommentFragment = BottomSheetCommentFragment.newInstance(post.getId());
+        bottomSheetCommentFragment.show(getParentFragmentManager(), "comments_bottom_sheet");
+    }
+
+    @Override
+    public void onShareClicked(Post post) {
+        android.content.Intent shareIntent = new android.content.Intent(android.content.Intent.ACTION_SEND);
+        shareIntent.setType("text/plain");
+        shareIntent.putExtra(android.content.Intent.EXTRA_TEXT, post.getCaption());
+        startActivity(android.content.Intent.createChooser(shareIntent, "Share post"));
+    }
+
+    @Override
+    public void onBookmarkClicked(Post post) {
+        homeViewModel.toggleBookmark(post);
+    }
+
+    @Override
+    public void onComposerPostClicked(String content) {}
+
+    @Override
+    public void onComposerClicked() {}
+
+    @Override
+    public void onComposerImageClicked() {}
+
+    @Override
+    public void onEditPostClicked(Post post) {
+        NewPostFragment editFragment = NewPostFragment.newInstanceForEdit(post.getId());
+        requireActivity().getSupportFragmentManager()
+                .beginTransaction()
+                .replace(R.id.nav_host_fragment, editFragment)
+                .addToBackStack(null)
+                .commit();
+    }
+
+    @Override
+    public void onDeletePostClicked(Post post) {
+        new androidx.appcompat.app.AlertDialog.Builder(requireContext())
+                .setTitle("Xóa bài viết")
+                .setMessage("Bạn có chắc chắn muốn xóa bài viết này?")
+                .setPositiveButton("Xóa", (dialog, which) -> {
+                    newPostViewModel.deletePost(post.getId());
+                    loadTabContent();
+                })
+                .setNegativeButton("Hủy", null)
+                .show();
+    }
+
+    @Override
+    public void onReportPostClicked(Post post) {
+        String[] reasons = {"Nội dung không phù hợp", "Spam", "Quấy rối", "Thông tin sai lệch", "Khác"};
+        new androidx.appcompat.app.AlertDialog.Builder(requireContext())
+                .setTitle("Báo cáo bài viết")
+                .setItems(reasons, (dialog, which) -> {
+                    homeViewModel.reportPost(post, reasons[which]);
+                    Toast.makeText(requireContext(), "Cảm ơn bạn đã báo cáo.", Toast.LENGTH_SHORT).show();
+                })
+                .setNegativeButton("Hủy", null)
+                .show();
+    }
 }
 

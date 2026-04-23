@@ -13,6 +13,7 @@ import androidx.annotation.NonNull;
 import androidx.recyclerview.widget.RecyclerView;
 import androidx.viewpager2.widget.ViewPager2;
 
+import com.bumptech.glide.Glide;
 import com.example.social_app.R;
 import com.example.social_app.data.model.PostMedia;
 import com.example.social_app.data.model.User;
@@ -42,22 +43,30 @@ public class PostAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
     private final Set<String> likedPostIds = new HashSet<>();
     private final Set<String> bookmarkedPostIds = new HashSet<>();
 
+    private boolean useSearchLayout = false;
+
     public interface OnPostActionListener {
         void onLikeClicked(Post post, int position);
         void onCommentClicked(Post post);
         void onShareClicked(Post post);
         void onBookmarkClicked(Post post);
+        void onUserClicked(String userId); // NEW: Handle user clicks
         void onComposerPostClicked(String content);
-        void onComposerClicked();  // NEW: Handle composer clicks to open new post creation
-        void onComposerImageClicked(); // NEW: Handle image button clicks to pick image
+        void onComposerClicked();
+        void onComposerImageClicked();
         void onEditPostClicked(Post post);
         void onDeletePostClicked(Post post);
+        void onReportPostClicked(Post post);
     }
 
     public PostAdapter(Context context, OnPostActionListener actionListener) {
         this.context = context;
         this.posts = new ArrayList<>();
         this.actionListener = actionListener;
+    }
+
+    public void setUseSearchLayout(boolean useSearchLayout) {
+        this.useSearchLayout = useSearchLayout;
     }
 
     /**
@@ -101,6 +110,9 @@ public class PostAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
 
     @Override
     public int getItemViewType(int position) {
+        if (useSearchLayout) {
+            return VIEW_TYPE_POST;
+        }
         // First item is always the composer
         return position == 0 ? VIEW_TYPE_COMPOSER : VIEW_TYPE_POST;
     }
@@ -112,7 +124,8 @@ public class PostAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
             View view = LayoutInflater.from(context).inflate(R.layout.item_post_composer, parent, false);
             return new ComposerViewHolder(view);
         } else {
-            View view = LayoutInflater.from(context).inflate(R.layout.item_post, parent, false);
+            int layoutId = useSearchLayout ? R.layout.item_post_search : R.layout.item_post;
+            View view = LayoutInflater.from(context).inflate(layoutId, parent, false);
             return new PostViewHolder(view);
         }
     }
@@ -123,14 +136,22 @@ public class PostAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
             ((ComposerViewHolder) holder).bind();
         } else if (holder instanceof PostViewHolder) {
             PostViewHolder postHolder = (PostViewHolder) holder;
-            // Position 0 is composer, so actual post index is position - 1
-            Post post = posts.get(position - 1);
-            postHolder.bind(post, position - 1);
+            if (useSearchLayout) {
+                Post post = posts.get(position);
+                postHolder.bind(post, position);
+            } else {
+                // Position 0 is composer, so actual post index is position - 1
+                Post post = posts.get(position - 1);
+                postHolder.bind(post, position - 1);
+            }
         }
     }
 
     @Override
     public int getItemCount() {
+        if (useSearchLayout) {
+            return posts.size();
+        }
         // +1 for the composer item at the top
         return posts.size() + 1;
     }
@@ -208,6 +229,7 @@ public class PostAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
             timestamp = itemView.findViewById(R.id.post_timestamp);
             location = itemView.findViewById(R.id.post_location);
             postContent = itemView.findViewById(R.id.post_content);
+            postImage = itemView.findViewById(R.id.post_image);
             likeIcon = itemView.findViewById(R.id.post_like_icon);
             likeCount = itemView.findViewById(R.id.post_like_count);
             commentIcon = itemView.findViewById(R.id.post_comment_icon);
@@ -253,31 +275,53 @@ public class PostAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
             }
 
             // Set timestamp
-            long createdAt = post.getCreatedAt() != null
-                    ? post.getCreatedAt().getTime()
-                    : System.currentTimeMillis();
-            timestamp.setText(MockDataGenerator.getTimeDifferenceString(createdAt));
+            if (timestamp != null) {
+                long createdAt = post.getCreatedAt() != null
+                        ? post.getCreatedAt().getTime()
+                        : System.currentTimeMillis();
+                timestamp.setText(MockDataGenerator.getTimeDifferenceString(createdAt));
+            }
 
             // Set location
-            if (post.getLocation() != null && !post.getLocation().isEmpty()) {
-                location.setVisibility(View.VISIBLE);
-                location.setText(post.getLocation());
-            } else {
-                location.setVisibility(View.GONE);
+            if (location != null) {
+                if (post.getLocation() != null && !post.getLocation().isEmpty()) {
+                    location.setVisibility(View.VISIBLE);
+                    location.setText(post.getLocation());
+                } else {
+                    location.setVisibility(View.GONE);
+                }
             }
 
             // Set post content
-            postContent.setText(post.getCaption());
-
-            UserAvatarLoader.load(userAvatar, postUser != null ? postUser.getAvatarUrl() : null);
+            if (postContent != null) {
+                postContent.setText(post.getCaption());
+            }
 
             // Load media from Firestore
-            loadPostMedia(post.getId());
+            if (postViewPager != null) {
+                loadPostMedia(post.getId());
+            } else if (postImage != null) {
+                // For Search Layout, just show the first image if available
+                FirebaseFirestore.getInstance().collection(FirebaseManager.COLLECTION_POST_MEDIA)
+                        .whereEqualTo("postId", post.getId())
+                        .orderBy("order")
+                        .limit(1)
+                        .get()
+                        .addOnSuccessListener(querySnapshot -> {
+                            if (!querySnapshot.isEmpty()) {
+                                String url = querySnapshot.getDocuments().get(0).getString("mediaUrl");
+                                postImage.setVisibility(View.VISIBLE);
+                                Glide.with(context).load(url).into(postImage);
+                            } else {
+                                postImage.setVisibility(View.GONE);
+                            }
+                        });
+            }
 
             // Set engagement counts
-            likeCount.setText(String.valueOf(post.getLikeCount()));
-            commentCount.setText(String.valueOf(post.getCommentCount()));
-            shareCount.setText(String.valueOf(post.getShareCount()));
+            if (likeCount != null) likeCount.setText(String.valueOf(post.getLikeCount()));
+            if (commentCount != null) commentCount.setText(String.valueOf(post.getCommentCount()));
+            if (shareCount != null) shareCount.setText(String.valueOf(post.getShareCount()));
 
             // Update like icon based on liked state
             updateLikeIcon(post);
@@ -287,64 +331,108 @@ public class PostAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
 
             // Setup more options click listener
             ImageView moreOptions = itemView.findViewById(R.id.post_more_options);
-            String currentUserId = FirebaseManager.getInstance().getAuth().getUid();
-            
-            // Chỉ hiển thị dấu ba chấm hoặc chỉ cho phép sửa/xóa nếu là bài viết của mình
-            if (currentUserId != null && currentUserId.equals(post.getUserId())) {
+            if (moreOptions != null) {
+                String currentUserId = FirebaseManager.getInstance().getAuth().getUid();
+                
+                // Luôn hiển thị dấu ba chấm
                 moreOptions.setVisibility(View.VISIBLE);
                 moreOptions.setOnClickListener(v -> {
                     android.widget.PopupMenu popup = new android.widget.PopupMenu(context, v);
-                    popup.getMenu().add("Chỉnh sửa");
-                    popup.getMenu().add("Xóa");
+                    
+                    if (currentUserId != null && currentUserId.equals(post.getUserId())) {
+                        // Bài viết của mình: Hiện Chỉnh sửa và Xóa
+                        popup.getMenu().add("Chỉnh sửa");
+                        popup.getMenu().add("Xóa");
+                    } else {
+                        // Bài viết của người khác: Hiện Báo cáo
+                        popup.getMenu().add("Báo cáo");
+                    }
+                    
                     popup.setOnMenuItemClickListener(item -> {
                         if (item.getTitle().equals("Chỉnh sửa")) {
                             if (actionListener != null) actionListener.onEditPostClicked(post);
                         } else if (item.getTitle().equals("Xóa")) {
                             if (actionListener != null) actionListener.onDeletePostClicked(post);
+                        } else if (item.getTitle().equals("Báo cáo")) {
+                            if (actionListener != null) actionListener.onReportPostClicked(post);
                         }
                         return true;
                     });
                     popup.show();
                 });
-            } else {
-                moreOptions.setVisibility(View.GONE);
             }
 
             // Set up click listeners - ONLY ONCE
-            likeContainer.setOnClickListener(v -> {
-                if (actionListener != null) {
-                    actionListener.onLikeClicked(post, position);
-                }
-            });
+            if (userAvatar != null) {
+                userAvatar.setOnClickListener(v -> {
+                    if (actionListener != null) actionListener.onUserClicked(post.getUserId());
+                });
+            }
+            if (username != null) {
+                username.setOnClickListener(v -> {
+                    if (actionListener != null) actionListener.onUserClicked(post.getUserId());
+                });
+            }
 
-            commentContainer.setOnClickListener(v -> {
-                android.util.Log.d("PostAdapter", "Comment clicked for post: " + post.getId());
-                if (actionListener != null) {
-                    actionListener.onCommentClicked(post);
-                }
-            });
-
-            shareContainer.setOnClickListener(v -> {
-                if (actionListener != null) {
-                    actionListener.onShareClicked(post);
-                }
-            });
-
-            bookmarkIcon.setOnClickListener(v -> {
-                if (actionListener != null) {
-                    actionListener.onBookmarkClicked(post);
-                }
-                // Toggle bookmark state locally for immediate feedback
-                String postId = post.getId();
-                if (postId != null) {
-                    if (bookmarkedPostIds.contains(postId)) {
-                        bookmarkedPostIds.remove(postId);
-                    } else {
-                        bookmarkedPostIds.add(postId);
+            if (likeContainer != null) {
+                likeContainer.setOnClickListener(v -> {
+                    if (actionListener != null) {
+                        actionListener.onLikeClicked(post, position);
                     }
-                }
-                updateBookmarkIcon(post);
-            });
+                });
+            } else if (likeIcon != null) {
+                likeIcon.setOnClickListener(v -> {
+                    if (actionListener != null) {
+                        actionListener.onLikeClicked(post, position);
+                    }
+                });
+            }
+
+            if (commentContainer != null) {
+                commentContainer.setOnClickListener(v -> {
+                    if (actionListener != null) {
+                        actionListener.onCommentClicked(post);
+                    }
+                });
+            } else if (commentIcon != null) {
+                commentIcon.setOnClickListener(v -> {
+                    if (actionListener != null) {
+                        actionListener.onCommentClicked(post);
+                    }
+                });
+            }
+
+            if (shareContainer != null) {
+                shareContainer.setOnClickListener(v -> {
+                    if (actionListener != null) {
+                        actionListener.onShareClicked(post);
+                    }
+                });
+            } else if (shareIcon != null) {
+                shareIcon.setOnClickListener(v -> {
+                    if (actionListener != null) {
+                        actionListener.onShareClicked(post);
+                    }
+                });
+            }
+
+            if (bookmarkIcon != null) {
+                bookmarkIcon.setOnClickListener(v -> {
+                    if (actionListener != null) {
+                        actionListener.onBookmarkClicked(post);
+                    }
+                    // Toggle bookmark state locally for immediate feedback
+                    String postId = post.getId();
+                    if (postId != null) {
+                        if (bookmarkedPostIds.contains(postId)) {
+                            bookmarkedPostIds.remove(postId);
+                        } else {
+                            bookmarkedPostIds.add(postId);
+                        }
+                    }
+                    updateBookmarkIcon(post);
+                });
+            }
         }
 
         private void loadPostMedia(String postId) {

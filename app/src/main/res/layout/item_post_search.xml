@@ -6,7 +6,7 @@
     android:padding="12dp"
     android:background="?attr/selectableItemBackground">
 
-    <!-- Header: Avatar + Username -->
+    <!-- Header: Avatar + Username + More Options -->
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
@@ -23,15 +23,55 @@
             android:clipToOutline="true"
             android:contentDescription="@string/user_avatar" />
 
-        <TextView
-            android:id="@+id/post_username"
-            android:layout_width="wrap_content"
+        <LinearLayout
+            android:layout_width="0dp"
             android:layout_height="wrap_content"
-            android:layout_marginStart="10dp"
-            android:text="Username"
-            android:textStyle="bold"
-            android:textColor="@color/text"
-            android:textSize="14sp" />
+            android:layout_weight="1"
+            android:orientation="vertical"
+            android:layout_marginStart="10dp">
+
+            <TextView
+                android:id="@+id/post_username"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Username"
+                android:textStyle="bold"
+                android:textColor="@color/text"
+                android:textSize="14sp" />
+
+            <LinearLayout
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal">
+
+                <TextView
+                    android:id="@+id/post_timestamp"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Just now"
+                    android:textColor="@color/muted"
+                    android:textSize="11sp" />
+
+                <TextView
+                    android:id="@+id/post_location"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="8dp"
+                    android:text="Location"
+                    android:textColor="@color/muted"
+                    android:textSize="11sp"
+                    android:visibility="gone" />
+            </LinearLayout>
+        </LinearLayout>
+
+        <ImageView
+            android:id="@+id/post_more_options"
+            android:layout_width="32dp"
+            android:layout_height="32dp"
+            android:padding="4dp"
+            android:src="@drawable/ic_more_horiz"
+            android:background="?attr/selectableItemBackgroundBorderless"
+            android:contentDescription="@string/app_name" />
 
     </LinearLayout>
 
@@ -57,24 +97,29 @@
         android:src="@drawable/bg_nav_item_selected"
         android:contentDescription="@string/post_image" />
 
-    <!-- Like & Comment Count -->
+    <!-- Like & Comment & Share & Bookmark -->
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_marginTop="8dp"
-        android:orientation="horizontal">
+        android:orientation="horizontal"
+        android:gravity="center_vertical">
 
         <LinearLayout
+            android:id="@+id/post_like_container"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:orientation="horizontal"
-            android:gravity="center_vertical">
+            android:gravity="center_vertical"
+            android:padding="4dp"
+            android:background="?attr/selectableItemBackground">
 
             <ImageView
+                android:id="@+id/post_like_icon"
                 android:layout_width="18dp"
                 android:layout_height="18dp"
                 android:src="@drawable/ic_heart"
-                android:contentDescription="@string/like" />
+                android:contentDescription="@string/action_like" />
 
             <TextView
                 android:id="@+id/post_like_count"
@@ -88,13 +133,17 @@
         </LinearLayout>
 
         <LinearLayout
+            android:id="@+id/post_comment_container"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_marginStart="16dp"
+            android:layout_marginStart="12dp"
             android:orientation="horizontal"
-            android:gravity="center_vertical">
+            android:gravity="center_vertical"
+            android:padding="4dp"
+            android:background="?attr/selectableItemBackground">
 
             <ImageView
+                android:id="@+id/post_comment_icon"
                 android:layout_width="18dp"
                 android:layout_height="18dp"
                 android:src="@drawable/ic_comment"
@@ -111,6 +160,55 @@
 
         </LinearLayout>
 
+        <LinearLayout
+            android:id="@+id/post_share_container"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="12dp"
+            android:orientation="horizontal"
+            android:gravity="center_vertical"
+            android:padding="4dp"
+            android:background="?attr/selectableItemBackground">
+
+            <ImageView
+                android:id="@+id/post_share_icon"
+                android:layout_width="18dp"
+                android:layout_height="18dp"
+                android:src="@drawable/ic_share"
+                android:contentDescription="@string/action_share" />
+
+            <TextView
+                android:id="@+id/post_share_count"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="4dp"
+                android:text="0"
+                android:textColor="@color/muted"
+                android:textSize="12sp" />
+
+        </LinearLayout>
+
+        <View
+            android:layout_width="0dp"
+            android:layout_height="0dp"
+            android:layout_weight="1" />
+
+        <ImageView
+            android:id="@+id/post_bookmark_icon"
+            android:layout_width="20dp"
+            android:layout_height="20dp"
+            android:padding="2dp"
+            android:src="@drawable/ic_bookmark"
+            android:background="?attr/selectableItemBackgroundBorderless"
+            android:contentDescription="@string/action_bookmark" />
+
     </LinearLayout>
+
+    <View
+        android:layout_width="match_parent"
+        android:layout_height="1dp"
+        android:layout_marginTop="12dp"
+        android:background="?attr/colorOnSurface"
+        android:alpha="0.1" />
 
 </LinearLayout>

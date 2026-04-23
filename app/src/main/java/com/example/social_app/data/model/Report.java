@@ -21,6 +21,7 @@ public class Report {
     private String targetId;
     private String type; // POST | USER
     private String status; // UNPROCESSED | PROCESSED
+    private String reason;
 
     @ServerTimestamp
     private Date createdAt;
@@ -50,6 +51,9 @@ public class Report {
 
     public String getStatus() { return status; }
     public void setStatus(String status) { this.status = status; }
+
+    public String getReason() { return reason; }
+    public void setReason(String reason) { this.reason = reason; }
 
     public Date getCreatedAt() { return createdAt; }
     public void setCreatedAt(Date createdAt) { this.createdAt = createdAt; }

@@ -11,6 +11,8 @@ import com.google.firebase.firestore.FieldValue;
 import com.google.firebase.firestore.FirebaseFirestore;
 import com.google.firebase.firestore.Query;
 
+import com.example.social_app.data.model.Report;
+import com.google.firebase.firestore.DocumentReference;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
@@ -156,6 +158,28 @@ public class HomeViewModel extends ViewModel {
                         }
                         posts.setValue(currentPosts);
                     }
+                });
+    }
+
+    public void reportPost(Post post, String reason) {
+        String userId = firebaseManager.getAuth().getUid();
+        if (userId == null || post == null) return;
+
+        DocumentReference reportRef = db.collection(FirebaseManager.COLLECTION_REPORTS).document();
+        Report report = new Report();
+        report.setId(reportRef.getId());
+        report.setReporterId(userId);
+        report.setTargetId(post.getId());
+        report.setType("POST");
+        report.setStatus("UNPROCESSED");
+        report.setReason(reason);
+
+        reportRef.set(report)
+                .addOnSuccessListener(aVoid -> {
+                    // Show success or update UI
+                })
+                .addOnFailureListener(e -> {
+                    error.setValue("Lỗi khi gửi báo cáo: " + e.getMessage());
                 });
     }
 

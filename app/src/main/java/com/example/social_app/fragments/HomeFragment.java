@@ -15,6 +15,7 @@ import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
 import com.example.social_app.R;
+import com.example.social_app.firebase.FirebaseManager;
 import androidx.swiperefreshlayout.widget.SwipeRefreshLayout;
 import com.example.social_app.adapters.PostAdapter;
 import com.example.social_app.data.model.Post;
@@ -40,7 +41,6 @@ public class HomeFragment extends Fragment implements PostAdapter.OnPostActionLi
     private NewPostViewModel newPostViewModel;
     private HomeViewModel homeViewModel;
 
-    private List<Post> posts;
     private boolean isLoading = false;
     private boolean hasMorePosts = true;
     private int currentPage = 0;
@@ -108,7 +108,6 @@ public class HomeFragment extends Fragment implements PostAdapter.OnPostActionLi
     private void setupObservers() {
         homeViewModel.getPosts().observe(getViewLifecycleOwner(), postsList -> {
             if (postsList != null) {
-                this.posts = postsList;
                 if (postsList.isEmpty()) {
                     showEmptyState();
                 } else {
@@ -235,6 +234,26 @@ public class HomeFragment extends Fragment implements PostAdapter.OnPostActionLi
     }
 
     @Override
+    public void onUserClicked(String userId) {
+        if (userId == null || userId.isEmpty()) return;
+
+        String currentUserId = FirebaseManager.getInstance().getAuth().getUid();
+        androidx.fragment.app.Fragment fragment;
+
+        if (userId.equals(currentUserId)) {
+            fragment = new ProfileFragment();
+        } else {
+            fragment = OtherProfileFragment.newInstance(userId);
+        }
+
+        requireActivity().getSupportFragmentManager()
+                .beginTransaction()
+                .replace(R.id.nav_host_fragment, fragment)
+                .addToBackStack(null)
+                .commit();
+    }
+
+    @Override
     public void onLikeClicked(Post post, int position) {
         homeViewModel.toggleLike(post);
     }
@@ -336,6 +355,19 @@ public class HomeFragment extends Fragment implements PostAdapter.OnPostActionLi
                 .setMessage("Bạn có chắc chắn muốn xóa bài viết này?")
                 .setPositiveButton("Xóa", (dialog, which) -> {
                     newPostViewModel.deletePost(post.getId());
+                })
+                .setNegativeButton("Hủy", null)
+                .show();
+    }
+
+    @Override
+    public void onReportPostClicked(Post post) {
+        String[] reasons = {"Nội dung không phù hợp", "Spam", "Quấy rối", "Thông tin sai lệch", "Khác"};
+        new androidx.appcompat.app.AlertDialog.Builder(requireContext())
+                .setTitle("Báo cáo bài viết")
+                .setItems(reasons, (dialog, which) -> {
+                    homeViewModel.reportPost(post, reasons[which]);
+                    Toast.makeText(requireContext(), "Cảm ơn bạn đã báo cáo. Chúng tôi sẽ xem xét sớm nhất.", Toast.LENGTH_SHORT).show();
                 })
                 .setNegativeButton("Hủy", null)
                 .show();
