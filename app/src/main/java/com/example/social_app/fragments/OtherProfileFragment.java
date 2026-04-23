@@ -12,10 +12,12 @@ import android.widget.Toast;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
+import androidx.core.content.ContextCompat;
 import androidx.fragment.app.Fragment;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
+import com.example.social_app.MainActivity;
 import com.example.social_app.R;
 import com.example.social_app.adapters.PostSearchAdapter;
 import com.example.social_app.adapters.UserSearchAdapter;
@@ -24,6 +26,7 @@ import com.example.social_app.data.model.Notification;
 import com.example.social_app.data.model.Post;
 import com.example.social_app.data.model.User;
 import com.example.social_app.firebase.FirebaseManager;
+import com.example.social_app.repository.ConversationRepository;
 import com.example.social_app.utils.UserAvatarLoader;
 import com.google.firebase.auth.FirebaseUser;
 
@@ -60,6 +63,7 @@ public class OtherProfileFragment extends Fragment {
     private String selectedTab = "posts";
     private PostSearchAdapter postAdapter;
     private UserSearchAdapter userAdapter;
+    private User profileUser;
 
     public OtherProfileFragment() {
         super(R.layout.fragment_other_profile);
@@ -100,6 +104,9 @@ public class OtherProfileFragment extends Fragment {
         rvPosts = view.findViewById(R.id.rvPosts);
         btnFollow = view.findViewById(R.id.btnFollow);
         btnChat = view.findViewById(R.id.btnChat);
+        btnChat.setBackgroundTintList(null);
+        btnChat.setBackground(ContextCompat.getDrawable(requireContext(), R.drawable.bg_follow_button));
+        btnChat.setTextColor(requireContext().getColor(R.color.white));
 
         setupRecycler();
         setupTabs();
@@ -109,8 +116,7 @@ public class OtherProfileFragment extends Fragment {
         btnBack.setOnClickListener(v -> requireActivity().getSupportFragmentManager().popBackStack());
         imgAvatar.setOnClickListener(v -> openAvatarPreviewOnly());
         btnFollow.setOnClickListener(v -> onFollowButtonClicked());
-        btnChat.setOnClickListener(v ->
-                Toast.makeText(requireContext(), "Chat - Coming soon", Toast.LENGTH_SHORT).show());
+        btnChat.setOnClickListener(v -> openChatWithProfileUser());
     }
 
     private void loadUserProfile() {
@@ -130,6 +136,10 @@ public class OtherProfileFragment extends Fragment {
 
         FirebaseUser currentUser = FirebaseManager.getInstance().getAuth().getCurrentUser();
         currentUserId = currentUser != null ? currentUser.getUid() : null;
+        if (userAdapter != null) {
+            userAdapter.setCurrentUserId(currentUserId);
+            userAdapter.setHideFollowButtonForSelf(true);
+        }
 
         FirebaseManager.getInstance().getFirestore()
                 .collection(FirebaseManager.COLLECTION_USERS)
@@ -159,9 +169,10 @@ public class OtherProfileFragment extends Fragment {
     }
 
     private void bindProfile(User user) {
-        String fullName = safeOrDefault(user.getFullName(), "Nguoi dung");
+        profileUser = user;
+        String fullName = safeOrDefault(user.getFullName(), "User");
         String username = safeOrDefault(user.getUsername(), "username");
-        String bio = safeOrDefault(user.getBio(), "Chua co tieu su");
+        String bio = safeOrDefault(user.getBio(), "No bio yet");
 
         tvName.setText(fullName);
         tvHandle.setText("@" + username.replace("@", ""));
@@ -322,18 +333,78 @@ public class OtherProfileFragment extends Fragment {
     }
 
     private void updateFollowButtonUI() {
+        btnFollow.setBackgroundTintList(null);
         if (TextUtils.isEmpty(currentUserId) || TextUtils.isEmpty(targetUserId)) {
             btnFollow.setText(getString(R.string.follow));
+            btnFollow.setBackgroundResource(R.drawable.bg_follow_button);
+            btnFollow.setTextColor(requireContext().getColor(R.color.white));
             btnFollow.setEnabled(false);
             return;
         }
         if (currentUserId.equals(targetUserId)) {
             btnFollow.setText(getString(R.string.follow_own_profile));
+            btnFollow.setBackgroundResource(R.drawable.bg_following_button);
+            btnFollow.setTextColor(requireContext().getColor(R.color.black));
             btnFollow.setEnabled(false);
             return;
         }
         btnFollow.setEnabled(!isFollowLoading);
         btnFollow.setText(isFollowing ? getString(R.string.following) : getString(R.string.follow));
+        btnFollow.setBackgroundResource(isFollowing
+                ? R.drawable.bg_following_button
+                : R.drawable.bg_follow_button);
+        btnFollow.setTextColor(requireContext().getColor(isFollowing ? R.color.black : R.color.white));
+    }
+
+    private void openChatWithProfileUser() {
+        if (!(getActivity() instanceof MainActivity)) {
+            return;
+        }
+        if (TextUtils.isEmpty(currentUserId) || TextUtils.isEmpty(targetUserId)) {
+            Toast.makeText(requireContext(), getString(R.string.follow_action_failed), Toast.LENGTH_SHORT).show();
+            return;
+        }
+        if (currentUserId.equals(targetUserId)) {
+            return;
+        }
+        btnChat.setEnabled(false);
+        ConversationRepository conversationRepository = new ConversationRepository(requireContext());
+        String peerName = profileUser != null && !TextUtils.isEmpty(profileUser.getFullName())
+                ? profileUser.getFullName()
+                : safeOrDefault(
+                profileUser != null ? profileUser.getUsername() : null,
+                "User"
+        );
+        String peerAvatarUrl = profileUser != null ? profileUser.getAvatarUrl() : null;
+        conversationRepository.findExistingDirectConversationId(currentUserId, targetUserId)
+                .addOnSuccessListener(existingConversationId -> {
+                    if (!isAdded()) {
+                        return;
+                    }
+                    String conversationId = !TextUtils.isEmpty(existingConversationId)
+                            ? existingConversationId
+                            : ConversationRepository.buildDirectConversationId(currentUserId, targetUserId);
+                    ((MainActivity) getActivity()).openChatDetail(
+                            conversationId,
+                            peerName,
+                            peerAvatarUrl,
+                            targetUserId
+                    );
+                    btnChat.setEnabled(true);
+                })
+                .addOnFailureListener(e -> {
+                    if (!isAdded()) {
+                        return;
+                    }
+                    String fallbackConversationId = ConversationRepository.buildDirectConversationId(currentUserId, targetUserId);
+                    ((MainActivity) getActivity()).openChatDetail(
+                            fallbackConversationId,
+                            peerName,
+                            peerAvatarUrl,
+                            targetUserId
+                    );
+                    btnChat.setEnabled(true);
+                });
     }
 
     private String buildFollowDocId(String followerId, String followingId) {
@@ -433,6 +504,14 @@ public class OtherProfileFragment extends Fragment {
                 if (user == null || user.getId() == null || user.getId().isEmpty()) {
                     return;
                 }
+                if (!TextUtils.isEmpty(currentUserId) && currentUserId.equals(user.getId())) {
+                    requireActivity().getSupportFragmentManager()
+                            .beginTransaction()
+                            .replace(R.id.nav_host_fragment, new ProfileFragment())
+                            .addToBackStack(null)
+                            .commit();
+                    return;
+                }
                 requireActivity().getSupportFragmentManager()
                         .beginTransaction()
                         .replace(R.id.nav_host_fragment, OtherProfileFragment.newInstance(user.getId()))
@@ -445,6 +524,7 @@ public class OtherProfileFragment extends Fragment {
                 Toast.makeText(requireContext(), "Follow from list - Coming soon", Toast.LENGTH_SHORT).show();
             }
         });
+        userAdapter.setHideFollowButtonForSelf(true);
         rvPosts.setAdapter(postAdapter);
     }
 

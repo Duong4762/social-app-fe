@@ -5,15 +5,11 @@
     android:orientation="vertical"
     android:padding="16dp">
 
-    <ImageView
-        android:id="@+id/imgAvatarLarge"
-        android:layout_width="386dp"
-        android:layout_height="386dp"
-        android:adjustViewBounds="true"
-        android:background="@drawable/bg_avatar_circle"
-        android:contentDescription="@string/user_avatar"
-        android:scaleType="centerCrop"
-        android:src="@drawable/avatar_placeholder" />
+    <com.example.social_app.widgets.AvatarCropperView
+        android:id="@+id/avatarCropperView"
+        android:layout_width="match_parent"
+        android:layout_height="320dp"
+        android:background="@android:color/transparent" />
 
     <TextView
         android:id="@+id/tvChangeAvatarAction"
@@ -22,7 +18,7 @@
         android:layout_gravity="center_horizontal"
         android:layout_marginTop="12dp"
         android:text="@string/profile_change_avatar"
-        android:textColor="@color/primary_purple"
+        android:textColor="@color/primary_blue"
         android:textStyle="bold" />
 
     <Button
@@ -30,9 +26,9 @@
         android:layout_width="match_parent"
         android:layout_height="44dp"
         android:layout_marginTop="16dp"
-        android:background="@drawable/bg_button_outline"
+        android:backgroundTint="@color/primary_blue"
         android:text="@string/profile_save_avatar"
         android:textAllCaps="false"
-        android:textColor="@color/text" />
+        android:textColor="@color/white" />
 
 </LinearLayout>

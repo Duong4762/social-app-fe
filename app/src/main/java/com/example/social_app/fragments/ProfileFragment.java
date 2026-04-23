@@ -2,7 +2,14 @@ package com.example.social_app.fragments;
 
 import android.Manifest;
 import android.app.AlertDialog;
+import android.app.DatePickerDialog;
 import android.content.pm.PackageManager;
+import android.graphics.Bitmap;
+import android.graphics.Canvas;
+import android.graphics.Color;
+import android.graphics.drawable.BitmapDrawable;
+import android.graphics.drawable.ColorDrawable;
+import android.graphics.drawable.Drawable;
 import android.net.Uri;
 import android.os.Bundle;
 import android.text.TextUtils;
@@ -26,20 +33,27 @@ import androidx.recyclerview.widget.RecyclerView;
 import com.example.social_app.R;
 import com.example.social_app.adapters.PostSearchAdapter;
 import com.example.social_app.adapters.UserSearchAdapter;
+import com.example.social_app.data.model.Follow;
 import com.example.social_app.data.model.Post;
 import com.example.social_app.data.model.User;
 import com.example.social_app.firebase.FirebaseManager;
 import com.example.social_app.utils.UserAvatarLoader;
 import com.example.social_app.utils.CloudinaryUploadUtil;
+import com.example.social_app.widgets.AvatarCropperView;
 import com.google.firebase.auth.FirebaseUser;
 import com.google.firebase.firestore.FirebaseFirestore;
 
 import java.io.File;
+import java.io.FileOutputStream;
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Set;
+import java.util.Calendar;
 
 public class ProfileFragment extends Fragment {
 
@@ -67,7 +81,7 @@ public class ProfileFragment extends Fragment {
     private Uri pendingAvatarUri;
     private Uri cameraOutputUri;
     private AlertDialog avatarDialog;
-    private ImageView avatarLargePreview;
+    private AvatarCropperView avatarCropperView;
     private TextView tvChangeAvatarAction;
     private Button btnSaveAvatar;
     private String currentAvatarUrl;
@@ -75,6 +89,7 @@ public class ProfileFragment extends Fragment {
     private String selectedTab = "posts";
     private PostSearchAdapter postAdapter;
     private UserSearchAdapter userAdapter;
+    private final Set<String> myFollowingUserIds = new HashSet<>();
 
     private final ActivityResultLauncher<String> galleryLauncher =
             registerForActivityResult(new ActivityResultContracts.GetContent(), uri -> {
@@ -82,8 +97,8 @@ public class ProfileFragment extends Fragment {
                     return;
                 }
                 pendingAvatarUri = uri;
-                if (avatarLargePreview != null) {
-                    avatarLargePreview.setImageURI(uri);
+                if (avatarCropperView != null) {
+                    avatarCropperView.setImageUri(uri);
                 }
             });
 
@@ -93,8 +108,8 @@ public class ProfileFragment extends Fragment {
                     return;
                 }
                 pendingAvatarUri = cameraOutputUri;
-                if (avatarLargePreview != null) {
-                    avatarLargePreview.setImageURI(cameraOutputUri);
+                if (avatarCropperView != null) {
+                    avatarCropperView.setImageUri(cameraOutputUri);
                 }
             });
 
@@ -155,10 +170,13 @@ public class ProfileFragment extends Fragment {
         currentAuthUser = authUser;
 
         if (authUser == null) {
-            Toast.makeText(requireContext(), "Phiên đăng nhập đã hết hạn", Toast.LENGTH_SHORT).show();
+            Toast.makeText(requireContext(), "Session has expired", Toast.LENGTH_SHORT).show();
             return;
         }
         currentUserId = authUser.getUid();
+        if (userAdapter != null) {
+            userAdapter.setCurrentUserId(currentUserId);
+        }
 
         FirebaseFirestore db = firebaseManager.getFirestore();
         db.collection(FirebaseManager.COLLECTION_USERS)
@@ -188,7 +206,7 @@ public class ProfileFragment extends Fragment {
                     if (!isAdded()) {
                         return;
                     }
-                    Toast.makeText(requireContext(), "Không tải được hồ sơ người dùng", Toast.LENGTH_SHORT).show();
+                    Toast.makeText(requireContext(), "Failed to load profile", Toast.LENGTH_SHORT).show();
                     bindFallbackProfile(authUser);
                 });
 
@@ -197,9 +215,9 @@ public class ProfileFragment extends Fragment {
     }
 
     private void bindProfile(User user, FirebaseUser authUser) {
-        String fullName = safeOrDefault(user.getFullName(), "Người dùng");
+        String fullName = safeOrDefault(user.getFullName(), "User");
         String username = safeOrDefault(user.getUsername(), authUser.getEmail() != null ? authUser.getEmail() : "username");
-        String bio = safeOrDefault(user.getBio(), "Chưa có tiểu sử");
+        String bio = safeOrDefault(user.getBio(), "No bio yet");
 
         tvName.setText(fullName);
         tvHandle.setText("@" + username.replace("@", ""));
@@ -216,19 +234,19 @@ public class ProfileFragment extends Fragment {
                 ? email.substring(0, email.indexOf("@"))
                 : "username";
 
-        tvName.setText("Người dùng");
+        tvName.setText("User");
         tvHandle.setText("@" + username);
         tvUsernameTop.setText(username);
-        tvBio.setText("Chưa có tiểu sử");
+        tvBio.setText("No bio yet");
         currentAvatarUrl = "";
         loadAvatar("");
 
         User fallbackUser = new User();
         fallbackUser.setId(authUser.getUid());
-        fallbackUser.setFullName("Người dùng");
+        fallbackUser.setFullName("User");
         fallbackUser.setUsername(username);
         fallbackUser.setEmail(email != null ? email : "");
-        fallbackUser.setBio("Chưa có tiểu sử");
+        fallbackUser.setBio("No bio yet");
         fallbackUser.setAvatarUrl("");
         currentUserProfile = fallbackUser;
     }
@@ -245,14 +263,14 @@ public class ProfileFragment extends Fragment {
         View dialogView = LayoutInflater.from(requireContext())
                 .inflate(R.layout.dialog_avatar_preview, null, false);
 
-        avatarLargePreview = dialogView.findViewById(R.id.imgAvatarLarge);
+        avatarCropperView = dialogView.findViewById(R.id.avatarCropperView);
         tvChangeAvatarAction = dialogView.findViewById(R.id.tvChangeAvatarAction);
         btnSaveAvatar = dialogView.findViewById(R.id.btnSaveAvatar);
 
         if (pendingAvatarUri != null) {
-            avatarLargePreview.setImageURI(pendingAvatarUri);
+            avatarCropperView.setImageUri(pendingAvatarUri);
         } else {
-            avatarLargePreview.setImageDrawable(imgAvatar.getDrawable());
+            avatarCropperView.setBitmap(drawableToBitmap(imgAvatar.getDrawable()));
         }
 
         tvChangeAvatarAction.setOnClickListener(v -> showImageSourceChooser());
@@ -264,7 +282,7 @@ public class ProfileFragment extends Fragment {
                 .setNegativeButton(getString(R.string.profile_close), null)
                 .create();
         avatarDialog.setOnDismissListener(dialog -> {
-            avatarLargePreview = null;
+            avatarCropperView = null;
             btnSaveAvatar = null;
             tvChangeAvatarAction = null;
             if (!isAvatarUploading) {
@@ -325,7 +343,7 @@ public class ProfileFragment extends Fragment {
             );
             cameraLauncher.launch(cameraOutputUri);
         } catch (Exception e) {
-            Toast.makeText(requireContext(), "Khong the mo camera", Toast.LENGTH_SHORT).show();
+            Toast.makeText(requireContext(), "Cannot open camera", Toast.LENGTH_SHORT).show();
         }
     }
 
@@ -338,7 +356,17 @@ public class ProfileFragment extends Fragment {
             return;
         }
         if (currentAuthUser == null || TextUtils.isEmpty(currentUserId)) {
-            Toast.makeText(requireContext(), "Phien dang nhap khong hop le", Toast.LENGTH_SHORT).show();
+            Toast.makeText(requireContext(), "Invalid session", Toast.LENGTH_SHORT).show();
+            return;
+        }
+        if (avatarCropperView == null) {
+            Toast.makeText(requireContext(), getString(R.string.profile_avatar_save_empty), Toast.LENGTH_SHORT).show();
+            return;
+        }
+
+        Uri uploadUri = createCroppedAvatarTempUri();
+        if (uploadUri == null) {
+            Toast.makeText(requireContext(), getString(R.string.profile_avatar_save_empty), Toast.LENGTH_SHORT).show();
             return;
         }
 
@@ -354,57 +382,113 @@ public class ProfileFragment extends Fragment {
 
         String cloudName = getString(R.string.cloudinary_cloud_name).trim();
         String uploadPreset = getString(R.string.cloudinary_upload_preset).trim();
-        if (TextUtils.isEmpty(cloudName) || TextUtils.isEmpty(uploadPreset)) {
-            if (btnSaveAvatar != null) {
-                btnSaveAvatar.setEnabled(true);
-                btnSaveAvatar.setText(getString(R.string.profile_save_avatar));
+        CloudinaryUploadUtil.UploadCallback callback = new CloudinaryUploadUtil.UploadCallback() {
+            @Override
+            public void onSuccess(String secureUrl, String publicId) {
+                FirebaseManager.getInstance().getFirestore()
+                        .collection(FirebaseManager.COLLECTION_USERS)
+                        .document(currentUserId)
+                        .update("avatarUrl", secureUrl)
+                        .addOnSuccessListener(unused -> {
+                            if (!isAdded()) {
+                                return;
+                            }
+                            pendingAvatarUri = null;
+                            currentAvatarUrl = secureUrl;
+                            loadAvatar(secureUrl);
+                            isAvatarUploading = false;
+                            if (btnSaveAvatar != null) {
+                                btnSaveAvatar.setEnabled(true);
+                                btnSaveAvatar.setText(getString(R.string.profile_save_avatar));
+                            }
+                            if (tvChangeAvatarAction != null) {
+                                tvChangeAvatarAction.setEnabled(true);
+                                tvChangeAvatarAction.setAlpha(1f);
+                            }
+                            Toast.makeText(requireContext(), getString(R.string.profile_avatar_updated), Toast.LENGTH_SHORT).show();
+                            if (avatarDialog != null) {
+                                avatarDialog.dismiss();
+                            }
+                        })
+                        .addOnFailureListener(e -> onAvatarSaveFailed());
             }
-            Toast.makeText(requireContext(), getString(R.string.cloudinary_config_missing), Toast.LENGTH_LONG).show();
+
+            @Override
+            public void onError(String message, Throwable throwable) {
+                onAvatarSaveFailed(message);
+            }
+        };
+
+        if (!TextUtils.isEmpty(cloudName) && !TextUtils.isEmpty(uploadPreset)) {
+            CloudinaryUploadUtil.uploadImage(
+                    requireContext(),
+                    uploadUri,
+                    cloudName,
+                    uploadPreset,
+                    callback
+            );
             return;
         }
 
-        CloudinaryUploadUtil.uploadMedia(
+        // Fallback: dùng config mặc định trong CloudinaryUploadUtil khi strings chưa cấu hình.
+        CloudinaryUploadUtil.uploadImage(
                 requireContext(),
-                pendingAvatarUri,
-                cloudName,
-                uploadPreset,
-                new CloudinaryUploadUtil.UploadCallback() {
-                    @Override
-                    public void onSuccess(String secureUrl, String publicId) {
-                        FirebaseManager.getInstance().getFirestore()
-                                .collection(FirebaseManager.COLLECTION_USERS)
-                                .document(currentUserId)
-                                .update("avatarUrl", secureUrl)
-                                .addOnSuccessListener(unused -> {
-                                    if (!isAdded()) {
-                                        return;
-                                    }
-                                    pendingAvatarUri = null;
-                                    currentAvatarUrl = secureUrl;
-                                    loadAvatar(secureUrl);
-                                    isAvatarUploading = false;
-                                    if (btnSaveAvatar != null) {
-                                        btnSaveAvatar.setEnabled(true);
-                                        btnSaveAvatar.setText(getString(R.string.profile_save_avatar));
-                                    }
-                                    if (tvChangeAvatarAction != null) {
-                                        tvChangeAvatarAction.setEnabled(true);
-                                        tvChangeAvatarAction.setAlpha(1f);
-                                    }
-                                    Toast.makeText(requireContext(), getString(R.string.profile_avatar_updated), Toast.LENGTH_SHORT).show();
-                                    if (avatarDialog != null) {
-                                        avatarDialog.dismiss();
-                                    }
-                                })
-                                .addOnFailureListener(e -> onAvatarSaveFailed());
-                    }
-
-                    @Override
-                    public void onError(String message, Throwable throwable) {
-                        onAvatarSaveFailed(message);
-                    }
-                }
+                uploadUri,
+                callback
         );
+    }
+
+    @Nullable
+    private Uri createCroppedAvatarTempUri() {
+        if (!isAdded() || avatarCropperView == null) {
+            return null;
+        }
+        Bitmap croppedBitmap = avatarCropperView.getCroppedCircularBitmap(1024);
+        if (croppedBitmap == null) {
+            return null;
+        }
+
+        try {
+            File cacheDir = new File(requireContext().getCacheDir(), "images");
+            if (!cacheDir.exists()) {
+                //noinspection ResultOfMethodCallIgnored
+                cacheDir.mkdirs();
+            }
+            File outputFile = new File(
+                    cacheDir,
+                    String.format(Locale.US, "avatar_crop_%d.png", System.currentTimeMillis())
+            );
+            try (FileOutputStream fos = new FileOutputStream(outputFile)) {
+                croppedBitmap.compress(Bitmap.CompressFormat.PNG, 100, fos);
+                fos.flush();
+            }
+            return FileProvider.getUriForFile(
+                    requireContext(),
+                    requireContext().getPackageName() + ".fileprovider",
+                    outputFile
+            );
+        } catch (IOException e) {
+            return null;
+        } finally {
+            croppedBitmap.recycle();
+        }
+    }
+
+    @Nullable
+    private Bitmap drawableToBitmap(@Nullable Drawable drawable) {
+        if (drawable == null) {
+            return null;
+        }
+        if (drawable instanceof BitmapDrawable) {
+            return ((BitmapDrawable) drawable).getBitmap();
+        }
+        int width = drawable.getIntrinsicWidth() > 0 ? drawable.getIntrinsicWidth() : 512;
+        int height = drawable.getIntrinsicHeight() > 0 ? drawable.getIntrinsicHeight() : 512;
+        Bitmap bitmap = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888);
+        Canvas canvas = new Canvas(bitmap);
+        drawable.setBounds(0, 0, canvas.getWidth(), canvas.getHeight());
+        drawable.draw(canvas);
+        return bitmap;
     }
 
     private void onAvatarSaveFailed() {
@@ -462,6 +546,7 @@ public class ProfileFragment extends Fragment {
         edtBio.setText(safeOrDefault(currentUserProfile.getBio(), ""));
         edtGender.setText(safeOrDefault(currentUserProfile.getGender(), ""));
         edtDateOfBirth.setText(safeOrDefault(currentUserProfile.getDateOfBirth(), ""));
+        setupDateOfBirthPicker(edtDateOfBirth);
 
         AlertDialog editDialog = new AlertDialog.Builder(requireContext())
                 .setTitle(getString(R.string.profile_edit_title))
@@ -493,6 +578,47 @@ public class ProfileFragment extends Fragment {
         });
 
         editDialog.show();
+        if (editDialog.getWindow() != null) {
+            editDialog.getWindow().setBackgroundDrawable(new ColorDrawable(Color.TRANSPARENT));
+        }
+    }
+
+    private void setupDateOfBirthPicker(@NonNull EditText edtDateOfBirth) {
+        View.OnClickListener openDatePicker = v -> {
+            Calendar calendar = Calendar.getInstance();
+            String currentDob = edtDateOfBirth.getText() != null
+                    ? edtDateOfBirth.getText().toString().trim()
+                    : "";
+            if (!TextUtils.isEmpty(currentDob) && currentDob.matches("\\d{4}-\\d{2}-\\d{2}")) {
+                try {
+                    String[] parts = currentDob.split("-");
+                    calendar.set(
+                            Integer.parseInt(parts[0]),
+                            Integer.parseInt(parts[1]) - 1,
+                            Integer.parseInt(parts[2])
+                    );
+                } catch (Exception ignored) {
+                    // Keep current date when parsing fails.
+                }
+            }
+
+            DatePickerDialog picker = new DatePickerDialog(
+                    requireContext(),
+                    (view, year, month, dayOfMonth) -> edtDateOfBirth.setText(
+                            String.format(Locale.US, "%04d-%02d-%02d", year, month + 1, dayOfMonth)
+                    ),
+                    calendar.get(Calendar.YEAR),
+                    calendar.get(Calendar.MONTH),
+                    calendar.get(Calendar.DAY_OF_MONTH)
+            );
+            picker.show();
+        };
+        edtDateOfBirth.setOnClickListener(openDatePicker);
+        edtDateOfBirth.setOnFocusChangeListener((v, hasFocus) -> {
+            if (hasFocus) {
+                openDatePicker.onClick(v);
+            }
+        });
     }
 
     private void saveProfileChanges(
@@ -608,9 +734,10 @@ public class ProfileFragment extends Fragment {
 
             @Override
             public void onFollowClicked(User user, int position) {
-                Toast.makeText(requireContext(), "Follow from list - Coming soon", Toast.LENGTH_SHORT).show();
+                onFollowUserFromList(user);
             }
         });
+        userAdapter.setCurrentUserId(currentUserId);
         rvPosts.setAdapter(postAdapter);
     }
 
@@ -761,6 +888,7 @@ public class ProfileFragment extends Fragment {
                         remaining[0]--;
                         if (remaining[0] == 0 && isAdded()) {
                             userAdapter.setUsers(users);
+                            refreshMyFollowingState();
                             setTabLoading(false);
                             showEmptyIfNeeded(users.isEmpty());
                         }
@@ -769,11 +897,78 @@ public class ProfileFragment extends Fragment {
                         remaining[0]--;
                         if (remaining[0] == 0 && isAdded()) {
                             userAdapter.setUsers(users);
+                            refreshMyFollowingState();
                             setTabLoading(false);
                             showEmptyIfNeeded(users.isEmpty());
                         }
                     });
         }
+    }
+
+    private void refreshMyFollowingState() {
+        if (TextUtils.isEmpty(currentUserId) || userAdapter == null) {
+            return;
+        }
+        FirebaseManager.getInstance().getFirestore()
+                .collection(FirebaseManager.COLLECTION_FOLLOWS)
+                .whereEqualTo("followerId", currentUserId)
+                .get()
+                .addOnSuccessListener(query -> {
+                    myFollowingUserIds.clear();
+                    query.getDocuments().forEach(doc -> {
+                        String followingId = doc.getString("followingId");
+                        if (!TextUtils.isEmpty(followingId)) {
+                            myFollowingUserIds.add(followingId);
+                        }
+                    });
+                    if (isAdded() && userAdapter != null) {
+                        userAdapter.setFollowedUserIds(myFollowingUserIds);
+                    }
+                });
+    }
+
+    private void onFollowUserFromList(@Nullable User user) {
+        if (user == null || TextUtils.isEmpty(user.getId()) || TextUtils.isEmpty(currentUserId)) {
+            return;
+        }
+        String targetUserId = user.getId();
+        if (currentUserId.equals(targetUserId)) {
+            return;
+        }
+        boolean isFollowing = myFollowingUserIds.contains(targetUserId);
+        String followDocId = currentUserId + "_" + targetUserId;
+
+        if (isFollowing) {
+            FirebaseManager.getInstance().getFirestore()
+                    .collection(FirebaseManager.COLLECTION_FOLLOWS)
+                    .document(followDocId)
+                    .delete()
+                    .addOnSuccessListener(unused -> {
+                        myFollowingUserIds.remove(targetUserId);
+                        if (userAdapter != null) {
+                            userAdapter.updateFollowState(targetUserId, false);
+                        }
+                        if ("following".equals(selectedTab)) {
+                            loadTabContent();
+                        }
+                    });
+            return;
+        }
+
+        Follow follow = new Follow(followDocId, currentUserId, targetUserId);
+        FirebaseManager.getInstance().getFirestore()
+                .collection(FirebaseManager.COLLECTION_FOLLOWS)
+                .document(followDocId)
+                .set(follow)
+                .addOnSuccessListener(unused -> {
+                    myFollowingUserIds.add(targetUserId);
+                    if (userAdapter != null) {
+                        userAdapter.updateFollowState(targetUserId, true);
+                    }
+                    if ("following".equals(selectedTab)) {
+                        loadTabContent();
+                    }
+                });
     }
 
     private void setTabLoading(boolean loading) {
