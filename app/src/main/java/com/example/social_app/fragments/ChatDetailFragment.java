@@ -142,6 +142,7 @@ public class ChatDetailFragment extends Fragment {
         headerOnlineDot = view.findViewById(R.id.chat_header_online_dot);
         headerName.setText(peerName);
         UserAvatarLoader.load(headerAvatar, peerAvatar);
+        updateHeaderStatusUi(false);
 
         view.findViewById(R.id.btn_chat_info).setOnClickListener(v ->
                 Toast.makeText(requireContext(), R.string.chat_info, Toast.LENGTH_SHORT).show());
