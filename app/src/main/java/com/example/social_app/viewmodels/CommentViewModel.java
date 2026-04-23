@@ -167,4 +167,21 @@ public class CommentViewModel extends ViewModel {
                 })
                 .addOnFailureListener(e -> error.setValue("Lỗi xóa bình luận: " + e.getMessage()));
     }
+
+    public void reportComment(Comment comment, String reason) {
+        String userId = firebaseManager.getAuth().getUid();
+        if (userId == null || comment == null) return;
+
+        com.google.firebase.firestore.DocumentReference reportRef = db.collection(FirebaseManager.COLLECTION_REPORTS).document();
+        com.example.social_app.data.model.Report report = new com.example.social_app.data.model.Report();
+        report.setId(reportRef.getId());
+        report.setReporterId(userId);
+        report.setTargetId(comment.getId());
+        report.setType("COMMENT");
+        report.setStatus("UNPROCESSED");
+        report.setReason(reason);
+
+        reportRef.set(report)
+                .addOnFailureListener(e -> error.setValue("Lỗi khi gửi báo cáo: " + e.getMessage()));
+    }
 }

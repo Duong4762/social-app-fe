@@ -486,12 +486,7 @@ public class SearchFragment extends Fragment implements PostAdapter.OnPostAction
                 .setTitle(getString(R.string.report_post_title))
                 .setItems(reasons, (dialog, which) -> {
                     String selectedReason = reasons[which];
-                    if (selectedReason.equals(getString(R.string.report_reason_other))) {
-                        showReportDetailDialog(post, selectedReason);
-                    } else {
-                        homeViewModel.reportPost(post, selectedReason);
-                        Toast.makeText(requireContext(), getString(R.string.report_thanks), Toast.LENGTH_SHORT).show();
-                    }
+                    showReportDetailDialog(post, selectedReason);
                 })
                 .setNegativeButton(getString(R.string.cancel_action), null)
                 .show();
