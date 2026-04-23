@@ -191,6 +191,8 @@
     <string name="profile_empty_posts">No posts yet</string>
     <string name="profile_empty_followers">No followers yet</string>
     <string name="profile_empty_following">Not following anyone yet</string>
+    <string name="admin_title">Admin Dashboard</string>
+    <string name="admin_empty">No reported users to review</string>
 
 
     <!-- Messages -->
