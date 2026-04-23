@@ -26,7 +26,8 @@ public class User {
     private String dateOfBirth;   // lưu dạng "yyyy-MM-dd"
     private String role;          // "USER" | "ADMIN"
     private boolean isActive;
-    private boolean isBanned;
+    private boolean isBanned; // false: chưa bị ban(allowed), true: đã bị ban(blocked)
+    private long warningCount; // số lần cảnh báo
 
     @ServerTimestamp
     private Date createdAt;
@@ -102,6 +103,9 @@ public class User {
 
     @PropertyName("isBanned")
     public void setBanned(boolean banned) { isBanned = banned; }
+
+    public long getWarningCount() { return warningCount; }
+    public void setWarningCount(long warningCount) { this.warningCount = warningCount; }
 
     public Date getCreatedAt() { return createdAt; }
     public void setCreatedAt(Date createdAt) { this.createdAt = createdAt; }

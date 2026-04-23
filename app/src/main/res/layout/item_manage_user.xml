@@ -52,6 +52,25 @@
                     android:text="USER"
                     android:textColor="@color/muted"
                     android:textSize="12sp" />
+
+                <TextView
+                    android:id="@+id/tvWarningStatus"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="2dp"
+                    android:text="NO WARNING"
+                    android:textColor="@color/accent_green"
+                    android:textSize="11sp"
+                    android:textStyle="bold" />
+
+                <TextView
+                    android:id="@+id/tvWarningCount"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="2dp"
+                    android:text="Warnings: 0"
+                    android:textColor="@color/muted"
+                    android:textSize="12sp" />
             </LinearLayout>
 
             <TextView
@@ -61,7 +80,7 @@
                 android:backgroundTint="@color/chip_bg"
                 android:paddingHorizontal="8dp"
                 android:paddingVertical="5dp"
-                android:text="ACTIVE"
+                android:text="ALLOWED"
                 android:textColor="@color/accent_green"
                 android:textSize="11sp"
                 android:textStyle="bold" />
@@ -159,6 +178,15 @@
                 android:layout_height="wrap_content"
                 android:layout_marginTop="4dp"
                 android:text="Date of birth: -"
+                android:textColor="@color/text"
+                android:textSize="13sp" />
+
+            <TextView
+                android:id="@+id/tvDetailWarnings"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="4dp"
+                android:text="Warnings: 0"
                 android:textColor="@color/text"
                 android:textSize="13sp" />
 

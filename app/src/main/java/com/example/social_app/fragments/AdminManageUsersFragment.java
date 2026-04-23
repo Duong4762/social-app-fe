@@ -34,6 +34,7 @@ public class AdminManageUsersFragment extends Fragment {
     private MaterialButton chipAll;
     private MaterialButton chipActive;
     private MaterialButton chipBanned;
+    private MaterialButton chipWarned;
     private AdminManageUserAdapter adapter;
     private final List<User> allUsers = new ArrayList<>();
     private int selectedFilter = 0;
@@ -52,6 +53,7 @@ public class AdminManageUsersFragment extends Fragment {
         chipAll = view.findViewById(R.id.chipAll);
         chipActive = view.findViewById(R.id.chipActive);
         chipBanned = view.findViewById(R.id.chipBanned);
+        chipWarned = view.findViewById(R.id.chipWarned);
 
         adapter = new AdminManageUserAdapter(new AdminManageUserAdapter.Listener() {
             @Override
@@ -85,6 +87,11 @@ public class AdminManageUsersFragment extends Fragment {
         });
         chipBanned.setOnClickListener(v -> {
             selectedFilter = 2;
+            updateFilterUI();
+            applyFilters();
+        });
+        chipWarned.setOnClickListener(v -> {
+            selectedFilter = 3;
             updateFilterUI();
             applyFilters();
         });
@@ -134,6 +141,9 @@ public class AdminManageUsersFragment extends Fragment {
             if (selectedFilter == 2 && !user.isBanned()) {
                 continue;
             }
+            if (selectedFilter == 3 && user.getWarningCount() <= 0) {
+                continue;
+            }
             if (!keyword.isEmpty()) {
                 String fullName = user.getFullName() == null ? "" : user.getFullName().toLowerCase(Locale.ROOT);
                 String username = user.getUsername() == null ? "" : user.getUsername().toLowerCase(Locale.ROOT);
@@ -151,6 +161,7 @@ public class AdminManageUsersFragment extends Fragment {
         styleChip(chipAll, selectedFilter == 0);
         styleChip(chipActive, selectedFilter == 1);
         styleChip(chipBanned, selectedFilter == 2);
+        styleChip(chipWarned, selectedFilter == 3);
     }
 
     private void styleChip(MaterialButton button, boolean active) {

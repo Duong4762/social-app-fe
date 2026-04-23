@@ -61,10 +61,13 @@ public class AdminManageUserAdapter extends RecyclerView.Adapter<AdminManageUser
         private final TextView tvUserName;
         private final TextView tvUserRole;
         private final TextView tvStatus;
+        private final TextView tvWarningStatus;
+        private final TextView tvWarningCount;
         private final TextView tvDetailEmail;
         private final TextView tvDetailBio;
         private final TextView tvDetailGender;
         private final TextView tvDetailDob;
+        private final TextView tvDetailWarnings;
         private final MaterialButton btnView;
         private final MaterialButton btnEdit;
         private final MaterialButton btnBan;
@@ -76,10 +79,13 @@ public class AdminManageUserAdapter extends RecyclerView.Adapter<AdminManageUser
             tvUserName = itemView.findViewById(R.id.tvUserName);
             tvUserRole = itemView.findViewById(R.id.tvUserRole);
             tvStatus = itemView.findViewById(R.id.tvStatus);
+            tvWarningStatus = itemView.findViewById(R.id.tvWarningStatus);
+            tvWarningCount = itemView.findViewById(R.id.tvWarningCount);
             tvDetailEmail = itemView.findViewById(R.id.tvDetailEmail);
             tvDetailBio = itemView.findViewById(R.id.tvDetailBio);
             tvDetailGender = itemView.findViewById(R.id.tvDetailGender);
             tvDetailDob = itemView.findViewById(R.id.tvDetailDob);
+            tvDetailWarnings = itemView.findViewById(R.id.tvDetailWarnings);
             btnView = itemView.findViewById(R.id.btnView);
             btnEdit = itemView.findViewById(R.id.btnEdit);
             btnBan = itemView.findViewById(R.id.btnBan);
@@ -92,13 +98,18 @@ public class AdminManageUserAdapter extends RecyclerView.Adapter<AdminManageUser
             boolean expanded = expandedUserIds.contains(userId);
             tvUserName.setText(user.getFullName() == null || user.getFullName().isEmpty() ? "Unknown" : user.getFullName());
             tvUserRole.setText(user.getRole() == null || user.getRole().isEmpty() ? "USER" : user.getRole());
-            tvStatus.setText(user.isBanned() ? "BANNED" : "ACTIVE");
+            tvStatus.setText(user.isBanned() ? "BLOCKED" : "ALLOWED");
             tvStatus.setTextColor(itemView.getContext().getColor(user.isBanned() ? R.color.accent_red : R.color.accent_green));
+            long warnings = Math.max(user.getWarningCount(), 0);
+            tvWarningCount.setText("Warnings: " + warnings);
+            tvWarningStatus.setText(warnings > 0 ? "WARNED" : "NO WARNING");
+            tvWarningStatus.setTextColor(itemView.getContext().getColor(warnings > 0 ? R.color.accent_red : R.color.accent_green));
 
             tvDetailEmail.setText("Email: " + safe(user.getEmail()));
             tvDetailBio.setText("Bio: " + safe(user.getBio()));
             tvDetailGender.setText("Gender: " + safe(user.getGender()));
             tvDetailDob.setText("Date of birth: " + safe(user.getDateOfBirth()));
+            tvDetailWarnings.setText("Warnings: " + warnings);
 
             layoutDetails.setVisibility(expanded ? View.VISIBLE : View.GONE);
             btnEdit.setVisibility(expanded ? View.VISIBLE : View.GONE);
