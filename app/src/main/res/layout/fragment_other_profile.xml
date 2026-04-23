@@ -3,7 +3,7 @@
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="@color/chip_bg">
+    android:background="@color/white">
 
     <TextView
         android:id="@+id/tvUsernameTop"
@@ -37,8 +37,10 @@
         android:layout_height="84dp"
         android:layout_marginTop="16dp"
         android:layout_marginEnd="16dp"
-        android:background="@drawable/bg_avatar_circle"
+        android:background="@drawable/bg_avatar_circle_plain"
+        android:clipToOutline="true"
         android:contentDescription="@string/user_avatar"
+        android:outlineProvider="background"
         android:scaleType="centerCrop"
         android:src="@drawable/avatar_placeholder"
         app:layout_constraintEnd_toEndOf="parent"
@@ -138,10 +140,10 @@
             android:layout_width="0dp"
             android:layout_height="44dp"
             android:layout_weight="1"
-            android:background="@drawable/bg_button_outline"
+            android:background="@drawable/bg_follow_button"
             android:text="@string/follow"
             android:textAllCaps="false"
-            android:textColor="@color/text" />
+            android:textColor="@color/white" />
 
         <Button
             android:id="@+id/btnChat"
@@ -149,10 +151,12 @@
             android:layout_height="44dp"
             android:layout_marginStart="8dp"
             android:layout_weight="1"
-            android:background="@drawable/bg_button_outline"
+            android:background="@drawable/bg_follow_button"
+            android:backgroundTint="@null"
+            app:backgroundTint="@null"
             android:text="@string/profile_chat"
             android:textAllCaps="false"
-            android:textColor="@color/text" />
+            android:textColor="@color/white" />
     </LinearLayout>
 
     <LinearLayout

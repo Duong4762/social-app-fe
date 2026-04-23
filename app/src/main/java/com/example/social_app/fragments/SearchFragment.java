@@ -214,6 +214,9 @@ public class SearchFragment extends Fragment {
                         if (currentUid != null && currentUid.equals(user.getId())) {
                             continue;
                         }
+                        if (isAdminUser(user)) {
+                            continue;
+                        }
                         users.add(user);
                     }
 
@@ -353,5 +356,12 @@ public class SearchFragment extends Fragment {
                 .replace(R.id.nav_host_fragment, OtherProfileFragment.newInstance(user.getId()))
                 .addToBackStack(null)
                 .commit();
+    }
+
+    private boolean isAdminUser(@Nullable User user) {
+        if (user == null || user.getRole() == null) {
+            return false;
+        }
+        return "ADMIN".equalsIgnoreCase(user.getRole().trim());
     }
 }
