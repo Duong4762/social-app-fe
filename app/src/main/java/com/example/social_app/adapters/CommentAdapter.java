@@ -12,6 +12,7 @@ import android.widget.TextView;
 import androidx.annotation.NonNull;
 import androidx.recyclerview.widget.RecyclerView;
 
+import com.bumptech.glide.Glide;
 import com.example.social_app.R;
 import com.example.social_app.data.model.Comment;
 import com.example.social_app.data.model.User;
@@ -160,6 +161,9 @@ public class CommentAdapter extends RecyclerView.Adapter<CommentAdapter.CommentV
         private ImageButton likeButton;
         private ImageButton replyButton;
         private TextView viewMoreReplies;
+        private View mediaContainer;
+        private ImageView mediaImage;
+        private ImageView gifIndicator;
 
         public CommentViewHolder(@NonNull View itemView) {
             super(itemView);
@@ -172,6 +176,11 @@ public class CommentAdapter extends RecyclerView.Adapter<CommentAdapter.CommentV
             // Optional views
             verifiedBadge = itemView.findViewById(R.id.verified_badge);
             location = itemView.findViewById(R.id.comment_location);
+
+            // Media views
+            mediaContainer = itemView.findViewById(R.id.comment_media_container);
+            mediaImage = itemView.findViewById(R.id.comment_media_image);
+            gifIndicator = itemView.findViewById(R.id.comment_gif_indicator);
 
             // Interaction views
             likeCount = itemView.findViewById(R.id.comment_like_count);
@@ -202,6 +211,9 @@ public class CommentAdapter extends RecyclerView.Adapter<CommentAdapter.CommentV
 
             bindCommentText(text);
             android.util.Log.d("CommentAdapter", "│ ✅ bindCommentText done");
+
+            bindCommentMedia(comment);
+            android.util.Log.d("CommentAdapter", "│ ✅ bindCommentMedia done");
 
             bindUserAvatar(comment, userName);
             android.util.Log.d("CommentAdapter", "│ ✅ bindUserAvatar done");
@@ -244,8 +256,31 @@ public class CommentAdapter extends RecyclerView.Adapter<CommentAdapter.CommentV
 
         private void bindCommentText(String text) {
             if (commentText != null) {
-                commentText.setText(text);
-                commentText.setVisibility(View.VISIBLE);
+                if (text == null || text.isEmpty()) {
+                    commentText.setVisibility(View.GONE);
+                } else {
+                    commentText.setText(text);
+                    commentText.setVisibility(View.VISIBLE);
+                }
+            }
+        }
+
+        private void bindCommentMedia(Comment comment) {
+            if (mediaContainer == null || mediaImage == null) return;
+
+            String mediaUrl = comment.getMediaUrl();
+            if (mediaUrl != null && !mediaUrl.isEmpty()) {
+                mediaContainer.setVisibility(View.VISIBLE);
+                Glide.with(context)
+                        .load(mediaUrl)
+                        .centerCrop()
+                        .into(mediaImage);
+
+                if (gifIndicator != null) {
+                    gifIndicator.setVisibility("gif".equals(comment.getMediaType()) ? View.VISIBLE : View.GONE);
+                }
+            } else {
+                mediaContainer.setVisibility(View.GONE);
             }
         }
 

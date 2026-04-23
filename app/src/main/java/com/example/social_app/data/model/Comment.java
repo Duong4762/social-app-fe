@@ -20,6 +20,8 @@ public class Comment {
     private String userId;
     private String parentId;   // null = bình luận gốc; non-null = reply
     private String content;
+    private String mediaUrl;
+    private String mediaType; // "image" or "video" or "gif"
     private long likeCount;
 
     @ServerTimestamp
@@ -55,6 +57,12 @@ public class Comment {
 
     public String getContent() { return content; }
     public void setContent(String content) { this.content = content; }
+
+    public String getMediaUrl() { return mediaUrl; }
+    public void setMediaUrl(String mediaUrl) { this.mediaUrl = mediaUrl; }
+
+    public String getMediaType() { return mediaType; }
+    public void setMediaType(String mediaType) { this.mediaType = mediaType; }
 
     public long getLikeCount() { return likeCount; }
     public void setLikeCount(long likeCount) { this.likeCount = likeCount; }
