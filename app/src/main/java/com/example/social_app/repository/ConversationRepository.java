@@ -15,6 +15,7 @@ import com.example.social_app.data.model.User;
 import com.example.social_app.firebase.FirebaseManager;
 import com.google.android.gms.tasks.Task;
 import com.google.android.gms.tasks.Tasks;
+import com.google.firebase.firestore.FieldValue;
 import com.google.firebase.firestore.DocumentSnapshot;
 import com.google.firebase.firestore.FirebaseFirestore;
 import com.google.firebase.firestore.ListenerRegistration;
@@ -22,14 +23,17 @@ import com.google.firebase.firestore.Query;
 import com.google.firebase.firestore.QueryDocumentSnapshot;
 import com.google.firebase.firestore.QuerySnapshot;
 import com.google.firebase.firestore.SetOptions;
+import com.google.firebase.firestore.WriteBatch;
 
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.Date;
 import java.util.HashSet;
+import java.util.HashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 
 /**
@@ -258,6 +262,7 @@ public class ConversationRepository {
     public Task<Void> sendTextMessage(
             @NonNull String conversationId,
             @NonNull String senderId,
+            @NonNull String peerUserId,
             @NonNull String content) {
         Message msg = new Message();
         msg.setConversationId(conversationId);
@@ -265,14 +270,14 @@ public class ConversationRepository {
         msg.setRepliedMessageId(null);
         msg.setContent(content);
         msg.setMessageType("TEXT");
-        return db.collection(FirebaseManager.COLLECTION_MESSAGES)
-                .add(msg)
+        return ensureDirectConversationExists(conversationId, senderId, peerUserId)
+                .continueWithTask(task -> db.collection(FirebaseManager.COLLECTION_MESSAGES).add(msg))
                 .continueWithTask(task -> {
                     if (!task.isSuccessful()) {
                         Exception ex = task.getException();
                         return Tasks.forException(ex != null ? ex : new Exception("send failed"));
                     }
-                    return Tasks.forResult(null);
+                    return touchConversationUpdatedAt(conversationId);
                 });
     }
 
@@ -283,6 +288,7 @@ public class ConversationRepository {
     public Task<Void> sendImageMessage(
             @NonNull String conversationId,
             @NonNull String senderId,
+            @NonNull String peerUserId,
             @NonNull String imageUrl) {
         Message msg = new Message();
         msg.setConversationId(conversationId);
@@ -290,15 +296,159 @@ public class ConversationRepository {
         msg.setRepliedMessageId(null);
         msg.setContent(imageUrl);
         msg.setMessageType("IMAGE");
-        return db.collection(FirebaseManager.COLLECTION_MESSAGES)
-                .add(msg)
+        return ensureDirectConversationExists(conversationId, senderId, peerUserId)
+                .continueWithTask(task -> db.collection(FirebaseManager.COLLECTION_MESSAGES).add(msg))
                 .continueWithTask(task -> {
                     if (!task.isSuccessful()) {
                         Exception ex = task.getException();
                         return Tasks.forException(ex != null ? ex : new Exception("send failed"));
                     }
-                    return Tasks.forResult(null);
+                    return touchConversationUpdatedAt(conversationId);
                 });
+    }
+
+    @NonNull
+    public static String buildDirectConversationId(@NonNull String userAId, @NonNull String userBId) {
+        return userAId.compareTo(userBId) <= 0
+                ? userAId + "_" + userBId
+                : userBId + "_" + userAId;
+    }
+
+    @NonNull
+    public Task<String> findExistingDirectConversationId(
+            @NonNull String userAId,
+            @NonNull String userBId
+    ) {
+        Task<QuerySnapshot> userAMembersTask = db.collection(FirebaseManager.COLLECTION_CONVERSATION_MEMBERS)
+                .whereEqualTo("userId", userAId)
+                .get();
+        Task<QuerySnapshot> userBMembersTask = db.collection(FirebaseManager.COLLECTION_CONVERSATION_MEMBERS)
+                .whereEqualTo("userId", userBId)
+                .get();
+
+        return Tasks.whenAllSuccess(userAMembersTask, userBMembersTask)
+                .continueWithTask(task -> {
+                    QuerySnapshot userASnapshot = userAMembersTask.getResult();
+                    QuerySnapshot userBSnapshot = userBMembersTask.getResult();
+                    if (userASnapshot == null || userBSnapshot == null) {
+                        return Tasks.forResult(null);
+                    }
+
+                    Set<String> userAConversationIds = new HashSet<>();
+                    for (QueryDocumentSnapshot doc : userASnapshot) {
+                        String cid = doc.getString("conversationId");
+                        if (cid != null && !cid.trim().isEmpty()) {
+                            userAConversationIds.add(cid);
+                        }
+                    }
+                    Set<String> sharedConversationIds = new HashSet<>();
+                    for (QueryDocumentSnapshot doc : userBSnapshot) {
+                        String cid = doc.getString("conversationId");
+                        if (cid != null && userAConversationIds.contains(cid)) {
+                            sharedConversationIds.add(cid);
+                        }
+                    }
+                    if (sharedConversationIds.isEmpty()) {
+                        return Tasks.forResult(null);
+                    }
+
+                    List<Task<DocumentSnapshot>> conversationTasks = new ArrayList<>();
+                    for (String cid : sharedConversationIds) {
+                        conversationTasks.add(
+                                db.collection(FirebaseManager.COLLECTION_CONVERSATIONS)
+                                        .document(cid)
+                                        .get()
+                        );
+                    }
+
+                    return Tasks.whenAllComplete(conversationTasks)
+                            .continueWith(innerTask -> {
+                                String bestConversationId = null;
+                                long bestUpdatedAt = Long.MIN_VALUE;
+                                for (Task<DocumentSnapshot> conversationTask : conversationTasks) {
+                                    if (!conversationTask.isSuccessful() || conversationTask.getResult() == null) {
+                                        continue;
+                                    }
+                                    DocumentSnapshot snapshot = conversationTask.getResult();
+                                    if (!snapshot.exists()) {
+                                        continue;
+                                    }
+                                    Conversation conversation = snapshot.toObject(Conversation.class);
+                                    if (conversation == null || conversation.isGroup()) {
+                                        continue;
+                                    }
+                                    Date updatedAt = conversation.getUpdatedAt() != null
+                                            ? conversation.getUpdatedAt()
+                                            : conversation.getCreatedAt();
+                                    long ts = updatedAt != null ? updatedAt.getTime() : 0L;
+                                    if (bestConversationId == null || ts > bestUpdatedAt) {
+                                        bestConversationId = snapshot.getId();
+                                        bestUpdatedAt = ts;
+                                    }
+                                }
+                                return bestConversationId;
+                            });
+                });
+    }
+
+    @NonNull
+    private Task<Void> ensureDirectConversationExists(
+            @NonNull String conversationId,
+            @NonNull String userAId,
+            @NonNull String userBId
+    ) {
+        WriteBatch batch = db.batch();
+
+        Map<String, Object> conversationPayload = new HashMap<>();
+        conversationPayload.put("id", conversationId);
+        conversationPayload.put("name", null);
+        conversationPayload.put("isGroup", false);
+        conversationPayload.put("createdBy", userAId);
+        conversationPayload.put("createdAt", FieldValue.serverTimestamp());
+        conversationPayload.put("updatedAt", FieldValue.serverTimestamp());
+        batch.set(
+                db.collection(FirebaseManager.COLLECTION_CONVERSATIONS).document(conversationId),
+                conversationPayload,
+                SetOptions.merge()
+        );
+
+        batch.set(
+                db.collection(FirebaseManager.COLLECTION_CONVERSATION_MEMBERS)
+                        .document(conversationId + "_" + userAId),
+                buildConversationMemberPayload(conversationId, userAId),
+                SetOptions.merge()
+        );
+        batch.set(
+                db.collection(FirebaseManager.COLLECTION_CONVERSATION_MEMBERS)
+                        .document(conversationId + "_" + userBId),
+                buildConversationMemberPayload(conversationId, userBId),
+                SetOptions.merge()
+        );
+
+        return batch.commit();
+    }
+
+    @NonNull
+    private Task<Void> touchConversationUpdatedAt(@NonNull String conversationId) {
+        Map<String, Object> payload = new HashMap<>();
+        payload.put("updatedAt", FieldValue.serverTimestamp());
+        return db.collection(FirebaseManager.COLLECTION_CONVERSATIONS)
+                .document(conversationId)
+                .set(payload, SetOptions.merge());
+    }
+
+    @NonNull
+    private Map<String, Object> buildConversationMemberPayload(
+            @NonNull String conversationId,
+            @NonNull String userId
+    ) {
+        Map<String, Object> payload = new HashMap<>();
+        payload.put("id", conversationId + "_" + userId);
+        payload.put("conversationId", conversationId);
+        payload.put("userId", userId);
+        payload.put("role", "MEMBER");
+        payload.put("joinedAt", FieldValue.serverTimestamp());
+        return payload;
     }
 
     /**
