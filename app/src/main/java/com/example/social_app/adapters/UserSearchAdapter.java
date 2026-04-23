@@ -1,6 +1,7 @@
 package com.example.social_app.adapters;
 
 import android.content.Context;
+import android.graphics.drawable.Drawable;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -15,13 +16,18 @@ import com.example.social_app.data.model.User;
 import com.example.social_app.utils.UserAvatarLoader;
 
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
 public class UserSearchAdapter extends RecyclerView.Adapter<UserSearchAdapter.UserViewHolder> {
 
-    private Context context;
+    private final Context context;
     private List<User> users;
-    private OnUserActionListener actionListener;
+    private final OnUserActionListener actionListener;
+    private final Set<String> followedUserIds = new HashSet<>();
+    private String currentUserId;
+    private boolean hideFollowButtonForSelf = false;
 
     public interface OnUserActionListener {
         void onUserClicked(User user);
@@ -36,6 +42,34 @@ public class UserSearchAdapter extends RecyclerView.Adapter<UserSearchAdapter.Us
 
     public void setUsers(List<User> users) {
         this.users = users != null ? users : new ArrayList<>();
+        notifyDataSetChanged();
+    }
+
+    public void setCurrentUserId(String currentUserId) {
+        this.currentUserId = currentUserId;
+    }
+
+    public void setHideFollowButtonForSelf(boolean hideFollowButtonForSelf) {
+        this.hideFollowButtonForSelf = hideFollowButtonForSelf;
+    }
+
+    public void setFollowedUserIds(Set<String> ids) {
+        followedUserIds.clear();
+        if (ids != null) {
+            followedUserIds.addAll(ids);
+        }
+        notifyDataSetChanged();
+    }
+
+    public void updateFollowState(String userId, boolean isFollowing) {
+        if (userId == null || userId.trim().isEmpty()) {
+            return;
+        }
+        if (isFollowing) {
+            followedUserIds.add(userId);
+        } else {
+            followedUserIds.remove(userId);
+        }
         notifyDataSetChanged();
     }
 
@@ -81,7 +115,24 @@ public class UserSearchAdapter extends RecyclerView.Adapter<UserSearchAdapter.Us
             username.setText(displayName);
             fullName.setText(userHandle);
             UserAvatarLoader.load(avatar, user.getAvatarUrl());
-            followButton.setText("Follow");
+            String userId = user.getId();
+            boolean isSelf = userId != null && userId.equals(currentUserId);
+            boolean isFollowing = userId != null && followedUserIds.contains(userId);
+            followButton.setText(isFollowing
+                    ? context.getString(R.string.following)
+                    : context.getString(R.string.follow));
+            Drawable bg = context.getDrawable(isFollowing
+                    ? R.drawable.bg_following_button
+                    : R.drawable.bg_follow_button);
+            followButton.setBackground(bg);
+            followButton.setTextColor(context.getColor(isFollowing ? R.color.black : R.color.white));
+            if (isSelf && hideFollowButtonForSelf) {
+                followButton.setVisibility(View.GONE);
+            } else {
+                followButton.setVisibility(View.VISIBLE);
+            }
+            followButton.setEnabled(!isSelf);
+            followButton.setAlpha(isSelf ? 0.5f : 1f);
             followButton.setOnClickListener(v -> {
                 if (actionListener != null) actionListener.onFollowClicked(user, position);
             });

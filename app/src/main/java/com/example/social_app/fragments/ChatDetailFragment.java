@@ -181,7 +181,7 @@ public class ChatDetailFragment extends Fragment {
                 return;
             }
             input.setText("");
-            repository.sendTextMessage(mConversationId, mMyUid, text)
+            repository.sendTextMessage(mConversationId, mMyUid, mPeerUid, text)
                     .addOnFailureListener(e -> Toast.makeText(
                             requireContext(),
                             R.string.chat_send_failed,
@@ -389,7 +389,7 @@ public class ChatDetailFragment extends Fragment {
         CloudinaryUploadUtil.uploadMedia(requireContext(), selectedImageUri, new CloudinaryUploadUtil.UploadCallback() {
             @Override
             public void onSuccess(String secureUrl, String publicId) {
-                repository.sendImageMessage(mConversationId, mMyUid, secureUrl)
+                repository.sendImageMessage(mConversationId, mMyUid, mPeerUid, secureUrl)
                         .addOnCompleteListener(task -> {
                             isUploadingImage = false;
                             if (task.isSuccessful()) {

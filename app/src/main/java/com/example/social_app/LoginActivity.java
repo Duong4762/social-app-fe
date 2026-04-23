@@ -21,6 +21,7 @@ import androidx.core.view.ViewCompat;
 import androidx.core.view.WindowInsetsCompat;
 
 import com.example.social_app.R;
+import com.example.social_app.firebase.AdminUserInitializer;
 import com.example.social_app.firebase.FirebaseManager;
 import com.google.firebase.auth.FirebaseUser;
 
@@ -50,6 +51,7 @@ public class LoginActivity extends AppCompatActivity {
 
         initViews();
         setupListeners();
+        initializeDefaultAdminUser();
 
         // Nếu đã đăng nhập rồi, bỏ qua màn hình login
         if (firebaseManager.getAuth().getCurrentUser() != null) {
@@ -131,5 +133,9 @@ public class LoginActivity extends AppCompatActivity {
     private void setLoading(boolean loading) {
         progressBar.setVisibility(loading ? View.VISIBLE : View.GONE);
         btnLogin.setEnabled(!loading);
+    }
+
+    private void initializeDefaultAdminUser() {
+        new AdminUserInitializer(firebaseManager.getFirestore()).ensureAdminUserExists();
     }
 }

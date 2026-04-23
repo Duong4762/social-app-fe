@@ -5,15 +5,11 @@
     android:orientation="vertical"
     android:padding="16dp">
 
-    <ImageView
-        android:id="@+id/imgAvatarLarge"
-        android:layout_width="386dp"
-        android:layout_height="386dp"
-        android:adjustViewBounds="true"
-        android:background="@drawable/bg_avatar_circle"
-        android:contentDescription="@string/user_avatar"
-        android:scaleType="centerCrop"
-        android:src="@drawable/avatar_placeholder" />
+    <com.example.social_app.widgets.AvatarCropperView
+        android:id="@+id/avatarCropperView"
+        android:layout_width="match_parent"
+        android:layout_height="320dp"
+        android:background="@android:color/transparent" />
 
     <TextView
         android:id="@+id/tvChangeAvatarAction"
