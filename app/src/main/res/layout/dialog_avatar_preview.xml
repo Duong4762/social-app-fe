@@ -22,7 +22,7 @@
         android:layout_gravity="center_horizontal"
         android:layout_marginTop="12dp"
         android:text="@string/profile_change_avatar"
-        android:textColor="@color/primary_purple"
+        android:textColor="@color/primary_blue"
         android:textStyle="bold" />
 
     <Button
@@ -30,9 +30,9 @@
         android:layout_width="match_parent"
         android:layout_height="44dp"
         android:layout_marginTop="16dp"
-        android:background="@drawable/bg_button_outline"
+        android:backgroundTint="@color/primary_blue"
         android:text="@string/profile_save_avatar"
         android:textAllCaps="false"
-        android:textColor="@color/text" />
+        android:textColor="@color/white" />
 
 </LinearLayout>
