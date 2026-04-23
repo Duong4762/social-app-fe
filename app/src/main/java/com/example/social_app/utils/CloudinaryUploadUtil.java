@@ -30,8 +30,8 @@ public final class CloudinaryUploadUtil {
 
     private static final OkHttpClient HTTP_CLIENT = new OkHttpClient();
     private static final Handler MAIN_HANDLER = new Handler(Looper.getMainLooper());
-    private static String cloudName = "da7xnxfyd";
-    private static String uploadPreset = "unsignedPreset";
+    private static String cloudName = "dt52s8jxo";
+    private static String uploadPreset = "ml_default";
 
     private CloudinaryUploadUtil() {
         // Utility class

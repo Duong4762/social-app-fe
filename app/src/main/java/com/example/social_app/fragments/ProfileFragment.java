@@ -363,7 +363,7 @@ public class ProfileFragment extends Fragment {
             return;
         }
 
-        CloudinaryUploadUtil.uploadImage(
+        CloudinaryUploadUtil.uploadMedia(
                 requireContext(),
                 pendingAvatarUri,
                 cloudName,

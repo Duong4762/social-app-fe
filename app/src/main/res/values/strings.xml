@@ -99,6 +99,9 @@
     <string name="discard_post_question">Discard Post?</string>
     <string name="discard_post_confirm">Are you sure you want to discard this post?</string>
     <string name="discard">Discard</string>
+    <string name="update">Update</string>
+    <string name="update_post_success">Post updated successfully!</string>
+    <string name="update_post_failed">Failed to update post</string>
 
 
     <!-- ============================================

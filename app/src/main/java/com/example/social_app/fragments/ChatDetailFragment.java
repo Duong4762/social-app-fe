@@ -385,7 +385,7 @@ public class ChatDetailFragment extends Fragment {
         }
         isUploadingImage = true;
         updateSendImageFabState();
-        CloudinaryUploadUtil.uploadImage(requireContext(), selectedImageUri, new CloudinaryUploadUtil.UploadCallback() {
+        CloudinaryUploadUtil.uploadMedia(requireContext(), selectedImageUri, new CloudinaryUploadUtil.UploadCallback() {
             @Override
             public void onSuccess(String secureUrl, String publicId) {
                 repository.sendImageMessage(mConversationId, mMyUid, secureUrl)

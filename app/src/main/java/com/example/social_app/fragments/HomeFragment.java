@@ -253,8 +253,12 @@ public class HomeFragment extends Fragment implements PostAdapter.OnPostActionLi
 
     @Override
     public void onShareClicked(Post post) {
-        Toast.makeText(requireContext(), "Share post: " + post.getId(), Toast.LENGTH_SHORT).show();
-        // TODO: Implement share functionality
+        android.content.Intent shareIntent = new android.content.Intent(android.content.Intent.ACTION_SEND);
+        shareIntent.setType("text/plain");
+        String shareBody = post.getCaption() != null ? post.getCaption() : "Xem bài viết thú vị này trên Social App!";
+        shareIntent.putExtra(android.content.Intent.EXTRA_SUBJECT, "Social App Post");
+        shareIntent.putExtra(android.content.Intent.EXTRA_TEXT, shareBody);
+        startActivity(android.content.Intent.createChooser(shareIntent, "Chia sẻ bài viết qua"));
     }
 
     @Override
@@ -264,8 +268,14 @@ public class HomeFragment extends Fragment implements PostAdapter.OnPostActionLi
 
     @Override
     public void onComposerPostClicked(String content) {
-        Toast.makeText(requireContext(), "Post created: " + content, Toast.LENGTH_SHORT).show();
-        // TODO: Implement post creation
+        if (content.trim().isEmpty()) {
+            Toast.makeText(requireContext(), "Vui lòng nhập nội dung", Toast.LENGTH_SHORT).show();
+            return;
+        }
+        
+        // Gọi ViewModel để tạo bài viết nhanh (chỉ text)
+        // Lưu ý: Privacy mặc định là PUBLIC, không có ảnh và không có location/tags
+        newPostViewModel.createPost(content, new java.util.ArrayList<>(), "PUBLIC", null, null);
     }
 
     @Override
@@ -279,8 +289,16 @@ public class HomeFragment extends Fragment implements PostAdapter.OnPostActionLi
                 .replace(R.id.nav_host_fragment, newPostFragment)
                 .addToBackStack(null)
                 .commit();
+    }
 
-        android.util.Log.d("HomeFragment", "NewPostFragment opened from composer");
+    @Override
+    public void onComposerImageClicked() {
+        NewPostFragment newPostFragment = NewPostFragment.newInstanceWithImage();
+        requireActivity().getSupportFragmentManager()
+                .beginTransaction()
+                .replace(R.id.nav_host_fragment, newPostFragment)
+                .addToBackStack(null)
+                .commit();
     }
 
     @Override

@@ -39,8 +39,8 @@ public class NewPostViewModel extends AndroidViewModel {
     private final FirebaseManager firebaseManager;
 
     // Cloudinary Config (IMPORTANT: Ensure 'social_app_preset' is set to UNSIGNED in Cloudinary Console)
-    private static final String CLOUD_NAME = "";
-    private static final String UPLOAD_PRESET = "";
+    private static final String CLOUD_NAME = "dtz6u6v6v";
+    private static final String UPLOAD_PRESET = "social_app_preset";
 
     public NewPostViewModel(@NonNull Application application) {
         super(application);

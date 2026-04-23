@@ -3,7 +3,7 @@
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="?attr/colorSurface">
+    android:background="@color/bg">
 
     <!-- AppBar -->
     <LinearLayout
@@ -16,7 +16,7 @@
         android:paddingEnd="16dp"
         android:paddingTop="18dp"
         android:paddingBottom="14dp"
-        android:background="?attr/colorSurface"
+        android:background="@color/white"
         app:layout_constraintTop_toTopOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent">
@@ -27,7 +27,7 @@
             android:background="?attr/selectableItemBackgroundBorderless"
             android:src="@drawable/ic_close"
             android:contentDescription="@string/cancel"
-            app:tint="?attr/colorOnSurfaceVariant"
+            app:tint="@color/text_primary"
             android:padding="6dp"/>
         <TextView
             android:id="@+id/new_post_title"
@@ -36,7 +36,7 @@
             android:layout_weight="1"
             android:gravity="center"
             android:text="@string/new_post"
-            android:textColor="?attr/colorOnSurface"
+            android:textColor="@color/text_primary"
             android:textStyle="bold"
             android:textSize="18sp" />
     </LinearLayout>
@@ -44,7 +44,7 @@
     <View
         android:layout_width="0dp"
         android:layout_height="1dp"
-        android:background="?attr/colorOutlineVariant"
+        android:background="@color/divider"
         app:layout_constraintTop_toBottomOf="@id/appbar"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintEnd_toEndOf="parent"/>
@@ -82,21 +82,21 @@
                     android:scaleType="centerCrop"
                     android:src="@drawable/avatar_placeholder"
                     app:shapeAppearanceOverlay="@style/ShapeAppearanceOverlay.SocialApp.Circle" />
-                <EditText
-                    android:id="@+id/post_input"
-                    android:layout_width="0dp"
-                    android:layout_height="wrap_content"
-                    android:layout_weight="1"
-                    android:minHeight="40dp"
-                    android:background="@android:color/transparent"
-                    android:hint="@string/write_something"
-                    android:textColor="?attr/colorOnSurface"
-                    android:textColorHint="?attr/colorOnSurfaceVariant"
-                    android:textSize="16sp"
-                    android:paddingStart="14dp"
-                    android:paddingEnd="5dp"
-                    android:inputType="textMultiLine"
-                    android:maxLines="3"/>
+                    <EditText
+                        android:id="@+id/post_input"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:minHeight="40dp"
+                        android:background="@android:color/transparent"
+                        android:hint="@string/write_something"
+                        android:textColor="@color/text_primary"
+                        android:textColorHint="@color/muted"
+                        android:textSize="16sp"
+                        android:paddingStart="14dp"
+                        android:paddingEnd="5dp"
+                        android:inputType="textMultiLine"
+                        android:maxLines="3"/>
             </LinearLayout>
 
             <!-- Photo Section -->
@@ -105,7 +105,7 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:text="Hình ảnh"
-                android:textColor="?attr/colorPrimary"
+                android:textColor="@color/primary"
                 android:textStyle="bold"
                 android:textSize="14sp"
                 android:layout_marginBottom="8dp"
@@ -133,7 +133,7 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:text="Videos"
-                android:textColor="?attr/colorPrimary"
+                android:textColor="@color/primary"
                 android:textStyle="bold"
                 android:textSize="14sp"
                 android:layout_marginBottom="8dp"
@@ -161,7 +161,7 @@
                 android:layout_height="wrap_content"
                 android:text="@string/media_upload"
                 android:textAllCaps="true"
-                android:textColor="?attr/colorPrimary"
+                android:textColor="@color/primary"
                 android:textStyle="bold"
                 android:textSize="13sp"
                 android:layout_marginBottom="8dp"/>
@@ -178,9 +178,9 @@
                     android:layout_width="0dp"
                     android:layout_height="45dp"
                     android:layout_weight="1"
-                    android:backgroundTint="?attr/colorPrimary"
+                    android:backgroundTint="@color/primary"
                     android:text="@string/upload_image"
-                    android:textColor="?attr/colorOnPrimary"
+                    android:textColor="@color/white"
                     android:drawableStart="@drawable/ic_composer_image"
                     android:textAllCaps="false"
                     android:drawablePadding="7dp"/>
@@ -192,9 +192,9 @@
                     android:layout_width="0dp"
                     android:layout_height="45dp"
                     android:layout_weight="1"
-                    android:backgroundTint="?attr/colorPrimary"
+                    android:backgroundTint="@color/primary"
                     android:text="@string/upload_video"
-                    android:textColor="?attr/colorOnPrimary"
+                    android:textColor="@color/white"
                     android:drawableStart="@drawable/ic_composer_video"
                     android:textAllCaps="false"
                     android:drawablePadding="7dp"/>
@@ -230,13 +230,13 @@
                         android:layout_width="24dp"
                         android:layout_height="24dp"
                         android:src="@drawable/ic_audience"
-                        app:tint="?attr/colorPrimary"/>
+                        app:tint="@color/primary"/>
                     <TextView
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:paddingStart="13dp"
                         android:text="@string/audience"
-                        android:textColor="?attr/colorOnSurface"
+                        android:textColor="@color/text_primary"
                         android:textSize="15sp" />
                     <Spinner
                         android:id="@+id/privacy_spinner"
@@ -262,7 +262,7 @@
         android:orientation="horizontal"
         android:padding="18dp"
         android:gravity="center_vertical"
-        android:background="?attr/colorSurface"
+        android:background="@color/white"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintEnd_toEndOf="parent">
@@ -272,8 +272,9 @@
             android:layout_width="48dp"
             android:layout_height="48dp"
             android:background="@drawable/bg_fab_button"
-            android:src="@drawable/ic_composer_emoji"
-            android:contentDescription="@string/camera"/>
+            android:src="@drawable/ic_camera"
+            android:contentDescription="@string/camera"
+            app:tint="@color/white"/>
         <View
             android:layout_width="0dp"
             android:layout_weight="1"
@@ -282,9 +283,9 @@
             android:id="@+id/post_button"
             android:layout_width="90dp"
             android:layout_height="48dp"
-            android:backgroundTint="?attr/colorPrimary"
+            android:backgroundTint="@color/primary"
             android:text="@string/post"
             android:textAllCaps="false"
-            android:textColor="?attr/colorOnPrimary"/>
+            android:textColor="@color/white"/>
     </LinearLayout>
 </androidx.constraintlayout.widget.ConstraintLayout>

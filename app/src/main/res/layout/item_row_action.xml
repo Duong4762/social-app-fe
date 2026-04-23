@@ -17,7 +17,7 @@
         android:layout_weight="1"
         android:paddingStart="13dp"
         android:text="@string/add_location"
-        android:textColor="@color/white"
+        android:textColor="@color/text_primary"
         android:textSize="15sp"/>
     <ImageView
         android:layout_width="18dp"

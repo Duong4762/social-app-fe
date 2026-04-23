@@ -11,12 +11,16 @@ import android.widget.TextView;
 
 import androidx.annotation.NonNull;
 import androidx.recyclerview.widget.RecyclerView;
+import androidx.viewpager2.widget.ViewPager2;
 
 import com.example.social_app.R;
+import com.example.social_app.data.model.PostMedia;
 import com.example.social_app.data.model.User;
 import com.example.social_app.data.model.Post;
+import com.example.social_app.firebase.FirebaseManager;
 import com.example.social_app.utils.MockDataGenerator;
 import com.example.social_app.utils.UserAvatarLoader;
+import com.google.firebase.firestore.FirebaseFirestore;
 
 import java.util.ArrayList;
 import java.util.HashSet;
@@ -45,6 +49,9 @@ public class PostAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
         void onBookmarkClicked(Post post);
         void onComposerPostClicked(String content);
         void onComposerClicked();  // NEW: Handle composer clicks to open new post creation
+        void onComposerImageClicked(); // NEW: Handle image button clicks to pick image
+        void onEditPostClicked(Post post);
+        void onDeletePostClicked(Post post);
     }
 
     public PostAdapter(Context context, OnPostActionListener actionListener) {
@@ -68,6 +75,16 @@ public class PostAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
         int previousSize = posts.size();
         posts.addAll(newPosts);
         notifyItemRangeInserted(previousSize, newPosts.size());
+    }
+
+    public void setEngagementData(Set<String> likedIds, Set<String> bookmarkedIds) {
+        this.likedPostIds.clear();
+        if (likedIds != null) this.likedPostIds.addAll(likedIds);
+        
+        this.bookmarkedPostIds.clear();
+        if (bookmarkedIds != null) this.bookmarkedPostIds.addAll(bookmarkedIds);
+        
+        notifyDataSetChanged();
     }
 
     public boolean toggleLiked(String postId) {
@@ -150,7 +167,7 @@ public class PostAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
             composerImageBtn.setOnClickListener(v -> {
                 android.util.Log.d("PostAdapter", "Composer image button clicked - switching to NewPostFragment");
                 if (actionListener != null) {
-                    actionListener.onComposerClicked();
+                    actionListener.onComposerImageClicked();
                 }
             });
         }
@@ -180,6 +197,8 @@ public class PostAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
         private LinearLayout likeContainer;
         private LinearLayout commentContainer;
         private LinearLayout shareContainer;
+        private ViewPager2 postViewPager;
+        private TextView mediaIndicator;
 
         PostViewHolder(@NonNull View itemView) {
             super(itemView);
@@ -188,7 +207,6 @@ public class PostAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
             timestamp = itemView.findViewById(R.id.post_timestamp);
             location = itemView.findViewById(R.id.post_location);
             postContent = itemView.findViewById(R.id.post_content);
-            postImage = itemView.findViewById(R.id.post_image);
             likeIcon = itemView.findViewById(R.id.post_like_icon);
             likeCount = itemView.findViewById(R.id.post_like_count);
             commentIcon = itemView.findViewById(R.id.post_comment_icon);
@@ -199,6 +217,8 @@ public class PostAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
             likeContainer = itemView.findViewById(R.id.post_like_container);
             commentContainer = itemView.findViewById(R.id.post_comment_container);
             shareContainer = itemView.findViewById(R.id.post_share_container);
+            postViewPager = itemView.findViewById(R.id.post_view_pager);
+            mediaIndicator = itemView.findViewById(R.id.media_indicator);
         }
 
         void bind(Post post, int position) {
@@ -213,16 +233,20 @@ public class PostAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
             timestamp.setText(MockDataGenerator.getTimeDifferenceString(createdAt));
 
             // Set location
-            location.setVisibility(View.GONE);
+            if (post.getLocation() != null && !post.getLocation().isEmpty()) {
+                location.setVisibility(View.VISIBLE);
+                location.setText(post.getLocation());
+            } else {
+                location.setVisibility(View.GONE);
+            }
 
             // Set post content
             postContent.setText(post.getCaption());
 
             UserAvatarLoader.load(userAvatar, postUser != null ? postUser.getAvatarUrl() : null);
 
-            // Set post image (in a real app, use Glide/Picasso for image loading)
-            // For now, use a placeholder
-            postImage.setImageResource(R.drawable.bg_nav_item_selected);
+            // Load media from Firestore
+            loadPostMedia(post.getId());
 
             // Set engagement counts
             likeCount.setText(String.valueOf(post.getLikeCount()));
@@ -234,6 +258,31 @@ public class PostAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
 
             // Update bookmark icon based on bookmark state
             updateBookmarkIcon(post);
+
+            // Setup more options click listener
+            ImageView moreOptions = itemView.findViewById(R.id.post_more_options);
+            String currentUserId = FirebaseManager.getInstance().getAuth().getUid();
+            
+            // Chỉ hiển thị dấu ba chấm hoặc chỉ cho phép sửa/xóa nếu là bài viết của mình
+            if (currentUserId != null && currentUserId.equals(post.getUserId())) {
+                moreOptions.setVisibility(View.VISIBLE);
+                moreOptions.setOnClickListener(v -> {
+                    android.widget.PopupMenu popup = new android.widget.PopupMenu(context, v);
+                    popup.getMenu().add("Chỉnh sửa");
+                    popup.getMenu().add("Xóa");
+                    popup.setOnMenuItemClickListener(item -> {
+                        if (item.getTitle().equals("Chỉnh sửa")) {
+                            if (actionListener != null) actionListener.onEditPostClicked(post);
+                        } else if (item.getTitle().equals("Xóa")) {
+                            if (actionListener != null) actionListener.onDeletePostClicked(post);
+                        }
+                        return true;
+                    });
+                    popup.show();
+                });
+            } else {
+                moreOptions.setVisibility(View.GONE);
+            }
 
             // Set up click listeners - ONLY ONCE
             likeContainer.setOnClickListener(v -> {
@@ -272,6 +321,46 @@ public class PostAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
                 // Update this item only
                 notifyItemChanged(position + 1); // +1 because composer is at position 0
             });
+        }
+
+        private void loadPostMedia(String postId) {
+            if (postId == null) return;
+            
+            FirebaseFirestore.getInstance().collection(FirebaseManager.COLLECTION_POST_MEDIA)
+                    .whereEqualTo("postId", postId)
+                    .get()
+                    .addOnSuccessListener(queryDocumentSnapshots -> {
+                        List<PostMedia> mediaList = queryDocumentSnapshots.toObjects(PostMedia.class);
+                        // Sắp xếp thủ công theo field 'order'
+                        mediaList.sort((m1, m2) -> Integer.compare(m1.getOrder(), m2.getOrder()));
+                        
+                        if (!mediaList.isEmpty()) {
+                            postViewPager.setVisibility(View.VISIBLE);
+                            PostMediaAdapter mediaAdapter = new PostMediaAdapter(mediaList);
+                            postViewPager.setAdapter(mediaAdapter);
+                            
+                            if (mediaList.size() > 1) {
+                                mediaIndicator.setVisibility(View.VISIBLE);
+                                mediaIndicator.setText("1/" + mediaList.size());
+                                postViewPager.registerOnPageChangeCallback(new ViewPager2.OnPageChangeCallback() {
+                                    @Override
+                                    public void onPageSelected(int position) {
+                                        mediaIndicator.setText((position + 1) + "/" + mediaList.size());
+                                    }
+                                });
+                            } else {
+                                mediaIndicator.setVisibility(View.GONE);
+                            }
+                        } else {
+                            postViewPager.setVisibility(View.GONE);
+                            mediaIndicator.setVisibility(View.GONE);
+                        }
+                    })
+                    .addOnFailureListener(e -> {
+                        android.util.Log.e("PostAdapter", "Error loading media for post " + postId, e);
+                        postViewPager.setVisibility(View.GONE);
+                        mediaIndicator.setVisibility(View.GONE);
+                    });
         }
 
         /**
