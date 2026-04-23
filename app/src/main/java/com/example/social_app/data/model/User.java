@@ -26,6 +26,8 @@ public class User {
     private String dateOfBirth;   // lưu dạng "yyyy-MM-dd"
     private String role;          // "USER" | "ADMIN"
     private boolean isActive;
+    private boolean isBanned; // false: chưa bị ban(allowed), true: đã bị ban(blocked)
+    private long warningCount; // số lần cảnh báo
 
     @ServerTimestamp
     private Date createdAt;
@@ -41,6 +43,12 @@ public class User {
     public User(String id, String username, String email, String fullName,
                 String avatarUrl, String bio, String gender,
                 String dateOfBirth, String role, boolean isActive) {
+        this(id, username, email, fullName, avatarUrl, bio, gender, dateOfBirth, role, isActive, false);
+    }
+
+    public User(String id, String username, String email, String fullName,
+                String avatarUrl, String bio, String gender,
+                String dateOfBirth, String role, boolean isActive, boolean isBanned) {
         this.id = id;
         this.username = username;
         this.email = email;
@@ -51,6 +59,7 @@ public class User {
         this.dateOfBirth = dateOfBirth;
         this.role = role;
         this.isActive = isActive;
+        this.isBanned = isBanned;
     }
 
     // -------------------------------------------------------
@@ -88,6 +97,15 @@ public class User {
 
     @PropertyName("isActive")
     public void setActive(boolean active) { isActive = active; }
+
+    @PropertyName("isBanned")
+    public boolean isBanned() { return isBanned; }
+
+    @PropertyName("isBanned")
+    public void setBanned(boolean banned) { isBanned = banned; }
+
+    public long getWarningCount() { return warningCount; }
+    public void setWarningCount(long warningCount) { this.warningCount = warningCount; }
 
     public Date getCreatedAt() { return createdAt; }
     public void setCreatedAt(Date createdAt) { this.createdAt = createdAt; }
