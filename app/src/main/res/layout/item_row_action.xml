@@ -11,12 +11,13 @@
         android:src="@drawable/ic_composer_location"
         app:tint="@color/accent_purple"/>
     <TextView
+        android:id="@+id/action_text"
         android:layout_width="0dp"
         android:layout_height="wrap_content"
         android:layout_weight="1"
         android:paddingStart="13dp"
         android:text="@string/add_location"
-        android:textColor="@color/white"
+        android:textColor="@color/text_primary"
         android:textSize="15sp"/>
     <ImageView
         android:layout_width="18dp"

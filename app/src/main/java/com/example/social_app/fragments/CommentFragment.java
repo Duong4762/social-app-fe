@@ -7,7 +7,6 @@ import android.content.Intent;
 import android.os.Bundle;
 import android.text.Editable;
 import android.text.TextWatcher;
-import android.util.Log;
 import android.view.GestureDetector;
 import android.view.LayoutInflater;
 import android.view.MotionEvent;
@@ -92,28 +91,30 @@ public class CommentFragment extends Fragment implements CommentAdapter.OnCommen
         initializeViews(view);
         setupAdapters();
         setupScrollListener(commentsRecyclerView);
-
-        // ===== Chú ý: Block code test dữ liệu cứng, xoá bỏ nếu dùng API thực =====
-        List<Comment> fakeComments = new ArrayList<>();
-        for (int i = 1; i <= 10; i++) {
-            Comment comment = new Comment();
-            comment.setId(String.valueOf(i));
-            comment.setContent("Comment test số " + i);
-            User user = new User();
-            user.setId("user_" + i);
-            user.setFullName("User " + i);
-            comment.setUserId(user.getId());
-            comment.setLikeCount(i * 10);
-            fakeComments.add(comment);
-        }
-        commentAdapter.setComments(fakeComments);
-        // ========== hết test =========
-
         setupListeners();
         setupGestureDetector(view);
-//        setupObservers(); // Bỏ comment nếu chỉ test giao diện
-//        loadComments();
+        setupObservers();
+        loadComments();
         return view;
+    }
+
+    private void setupObservers() {
+        commentViewModel.getComments().observe(getViewLifecycleOwner(), comments -> {
+            commentAdapter.setComments(comments);
+            swipeRefresh.setRefreshing(false);
+            isLoadingMore = false;
+        });
+
+        commentViewModel.getError().observe(getViewLifecycleOwner(), error -> {
+            if (error != null) {
+                Toast.makeText(getContext(), error, Toast.LENGTH_SHORT).show();
+                swipeRefresh.setRefreshing(false);
+            }
+        });
+
+        commentViewModel.getIsLoading().observe(getViewLifecycleOwner(), loading -> {
+            if (loading != null) swipeRefresh.setRefreshing(loading);
+        });
     }
 
     private void initializeViews(View view) {

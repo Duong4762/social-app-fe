@@ -12,17 +12,15 @@
     android:paddingBottom="8dp">
 
     <!-- User Avatar -->
-    <com.google.android.material.imageview.ShapeableImageView
+    <ImageView
         android:id="@+id/comment_avatar"
         android:layout_width="40dp"
         android:layout_height="40dp"
-        android:background="@color/avatar_background"
         android:contentDescription="@string/user_avatar"
         android:scaleType="centerCrop"
         android:src="@drawable/avatar_placeholder"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toTopOf="parent"
-        app:shapeAppearanceOverlay="@style/ShapeAppearanceOverlay.SocialApp.Circle" />
+        app:layout_constraintTop_toTopOf="parent" />
 
     <!-- User Info Section -->
     <LinearLayout

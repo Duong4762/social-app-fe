@@ -30,8 +30,8 @@ public final class CloudinaryUploadUtil {
 
     private static final OkHttpClient HTTP_CLIENT = new OkHttpClient();
     private static final Handler MAIN_HANDLER = new Handler(Looper.getMainLooper());
-    private static String cloudName = "da7xnxfyd";
-    private static String uploadPreset = "unsignedPreset";
+    private static String cloudName = "dt52s8jxo";
+    private static String uploadPreset = "ml_default";
 
     private CloudinaryUploadUtil() {
         // Utility class
@@ -47,17 +47,17 @@ public final class CloudinaryUploadUtil {
         uploadPreset = uploadPresetValue != null ? uploadPresetValue.trim() : "";
     }
 
-    public static void uploadImage(
+    public static void uploadMedia(
             @NonNull Context context,
-            @NonNull Uri imageUri,
+            @NonNull Uri mediaUri,
             @NonNull UploadCallback callback
     ) {
-        uploadImage(context, imageUri, cloudName, uploadPreset, callback);
+        uploadMedia(context, mediaUri, cloudName, uploadPreset, callback);
     }
 
-    public static void uploadImage(
+    public static void uploadMedia(
             @NonNull Context context,
-            @NonNull Uri imageUri,
+            @NonNull Uri mediaUri,
             @NonNull String cloudName,
             @NonNull String uploadPreset,
             @NonNull UploadCallback callback
@@ -70,10 +70,17 @@ public final class CloudinaryUploadUtil {
         }
 
         try {
-            byte[] imageBytes = readUriBytes(context, imageUri);
-            String mimeType = getMimeType(context.getContentResolver(), imageUri);
+            byte[] mediaBytes = readUriBytes(context, mediaUri);
+            String mimeType = getMimeType(context.getContentResolver(), mediaUri);
+            
+            // Determine resource type (image or video)
+            String resourceType = "image";
+            if (mimeType != null && mimeType.startsWith("video/")) {
+                resourceType = "video";
+            }
+
             MediaType mediaType = MediaType.parse(mimeType != null ? mimeType : "image/*");
-            RequestBody fileBody = RequestBody.create(imageBytes, mediaType);
+            RequestBody fileBody = RequestBody.create(mediaBytes, mediaType);
             String fileName = "upload." + getExtensionFromMime(mimeType);
 
             MultipartBody requestBody = new MultipartBody.Builder()
@@ -84,8 +91,9 @@ public final class CloudinaryUploadUtil {
 
             String endpoint = String.format(
                     Locale.US,
-                    "https://api.cloudinary.com/v1_1/%s/image/upload",
-                    resolvedCloudName
+                    "https://api.cloudinary.com/v1_1/%s/%s/upload",
+                    resolvedCloudName,
+                    resourceType
             );
 
             Request request = new Request.Builder()
@@ -96,18 +104,18 @@ public final class CloudinaryUploadUtil {
             HTTP_CLIENT.newCall(request).enqueue(new Callback() {
                 @Override
                 public void onFailure(@NonNull Call call, @NonNull IOException e) {
-                    postError(callback, "Upload failed", e);
+                    postError(callback, "Upload failed: " + e.getMessage(), e);
                 }
 
                 @Override
                 public void onResponse(@NonNull Call call, @NonNull Response response) {
                     try (ResponseBody body = response.body()) {
-                        if (!response.isSuccessful() || body == null) {
-                            postError(callback, "Cloudinary response error: " + response.code(), null);
+                        String bodyText = body != null ? body.string() : "";
+                        if (!response.isSuccessful() || bodyText.isEmpty()) {
+                            postError(callback, "Cloudinary response error: " + response.code() + " - " + bodyText, null);
                             return;
                         }
 
-                        String bodyText = body.string();
                         JSONObject json = new JSONObject(bodyText);
                         String secureUrl = json.optString("secure_url");
                         String publicId = json.optString("public_id");
@@ -124,7 +132,7 @@ public final class CloudinaryUploadUtil {
                 }
             });
         } catch (IOException e) {
-            postError(callback, "Failed to read image from Uri", e);
+            postError(callback, "Failed to read media from Uri", e);
         }
     }
 
