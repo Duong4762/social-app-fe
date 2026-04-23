@@ -31,6 +31,7 @@ import androidx.recyclerview.widget.RecyclerView;
 import androidx.swiperefreshlayout.widget.SwipeRefreshLayout;
 
 import com.example.social_app.R;
+import com.example.social_app.utils.UserAvatarLoader;
 import com.example.social_app.adapters.CommentAdapter;
 import com.example.social_app.data.model.Comment;
 import com.example.social_app.data.model.User;
@@ -130,7 +131,7 @@ public class CommentFragment extends Fragment implements CommentAdapter.OnCommen
         sendButton = view.findViewById(R.id.compose_send_button);
 
         if (composeAvatar != null) {
-            composeAvatar.setImageResource(R.drawable.avatar_placeholder);
+            UserAvatarLoader.load(composeAvatar, null);
         }
         updateCharacterCount(0);
 

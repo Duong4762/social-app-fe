@@ -53,6 +53,7 @@ dependencies {
     implementation(libs.fragment)
     implementation(libs.navigation.fragment)
     implementation(libs.navigation.ui)
+    implementation(libs.glide)
 
     // SwipeRefreshLayout for pull-to-refresh functionality
     implementation("androidx.swiperefreshlayout:swiperefreshlayout:1.1.0")
@@ -78,8 +79,6 @@ dependencies {
     implementation(libs.firebase.auth)
     implementation(libs.firebase.firestore)
     implementation(libs.firebase.storage)
-
-    // HTTP client for Cloudinary upload API
     implementation("com.squareup.okhttp3:okhttp:4.12.0")
 
     // Retrofit for Backend API

@@ -6,6 +6,8 @@ import android.view.animation.TranslateAnimation;
 import android.widget.ImageButton;
 
 import androidx.activity.EdgeToEdge;
+import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.graphics.Insets;
 import androidx.core.view.ViewCompat;
@@ -14,9 +16,21 @@ import androidx.fragment.app.Fragment;
 import androidx.fragment.app.FragmentManager;
 import androidx.recyclerview.widget.RecyclerView;
 
+import com.example.social_app.firebase.FirebaseManager;
+import com.example.social_app.fragments.ChatDetailFragment;
 import com.example.social_app.fragments.SearchFragment;
 import com.example.social_app.fragments.HomeFragment;
+import com.example.social_app.fragments.NotificationFragment;
+import com.example.social_app.fragments.ProfileFragment;
+import com.example.social_app.fragments.SearchFragment;
+import com.example.social_app.fragments.MessagesFragment;
 import com.example.social_app.fragments.SettingsFragment;
+import com.google.firebase.auth.FirebaseAuth;
+import com.google.firebase.auth.FirebaseUser;
+import com.google.firebase.firestore.SetOptions;
+
+import java.util.HashMap;
+import java.util.Map;
 
 public class MainActivity extends AppCompatActivity {
 
@@ -26,6 +40,18 @@ public class MainActivity extends AppCompatActivity {
     private FragmentManager fragmentManager;
     private boolean isBottomNavVisible = true;
     private int currentSelectedNav = R.id.nav_btn_home;
+
+    @Override
+    protected void onStart() {
+        super.onStart();
+        updateCurrentUserActiveStatus(true);
+    }
+
+    @Override
+    protected void onStop() {
+        updateCurrentUserActiveStatus(false);
+        super.onStop();
+    }
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -38,11 +64,13 @@ public class MainActivity extends AppCompatActivity {
             v.setPadding(systemBars.left, systemBars.top, systemBars.right, systemBars.bottom);
             return insets;
         });
-      
-      // Initialize views
+
+        // Initialize views
         fragmentManager = getSupportFragmentManager();
         customBottomNav = findViewById(R.id.custom_bottom_nav);
         initializeNavigationButtons();
+
+        fragmentManager.addOnBackStackChangedListener(this::syncChatOverlayVisibility);
 
         // Load home fragment by default
         if (savedInstanceState == null) {
@@ -68,7 +96,7 @@ public class MainActivity extends AppCompatActivity {
         navBtnSettings = customBottomNav.findViewById(R.id.nav_btn_settings);
         notificationBadge = customBottomNav.findViewById(R.id.notification_badge);
 
-        // Set click listeners
+        // ==================== HOME ====================
         navBtnHome.setOnClickListener(v -> {
             selectNavButton(navBtnHome);
             HomeFragment homeFragment = new HomeFragment();
@@ -83,18 +111,18 @@ public class MainActivity extends AppCompatActivity {
 
         navBtnMessage.setOnClickListener(v -> {
             selectNavButton(navBtnMessage);
-            showToast("Messages not yet implemented");
+            loadFragment(new MessagesFragment());
         });
 
         navBtnNotifications.setOnClickListener(v -> {
             selectNavButton(navBtnNotifications);
             removeNotificationBadge();
-            showToast("Notifications not yet implemented");
+            loadFragment(new NotificationFragment());  // ✅ Đã sửa
         });
 
         navBtnProfile.setOnClickListener(v -> {
             selectNavButton(navBtnProfile);
-            showToast("Profile not yet implemented");
+            loadFragment(new ProfileFragment());
         });
 
         navBtnSettings.setOnClickListener(v -> {
@@ -121,7 +149,7 @@ public class MainActivity extends AppCompatActivity {
     }
 
     /**
-     * Shows a notification badge on the message navigation button.
+     * Shows a notification badge on the notification navigation button.
      */
     public void showNotificationBadge() {
         if (notificationBadge != null) {
@@ -130,7 +158,7 @@ public class MainActivity extends AppCompatActivity {
     }
 
     /**
-     * Removes the notification badge from the message navigation button.
+     * Removes the notification badge from the notification navigation button.
      */
     public void removeNotificationBadge() {
         if (notificationBadge != null) {
@@ -190,6 +218,37 @@ public class MainActivity extends AppCompatActivity {
     }
 
     /**
+     * Mở chat toàn màn hình chồng lên nội dung + bottom nav; bấm back trên hệ thống để đóng.
+     */
+    public void openChatDetail(
+            @NonNull String conversationId,
+            @NonNull String peerName,
+            @Nullable String peerAvatarUrl,
+            @NonNull String peerUserId) {
+        View overlay = findViewById(R.id.full_screen_chat_overlay);
+        if (overlay != null) {
+            overlay.setVisibility(View.VISIBLE);
+        }
+        ChatDetailFragment chat = ChatDetailFragment.newInstance(
+                conversationId, peerName, peerAvatarUrl, peerUserId);
+        fragmentManager.beginTransaction()
+                .replace(R.id.full_screen_chat_overlay, chat)
+                .addToBackStack("chat_detail")
+                .commit();
+        fragmentManager.executePendingTransactions();
+        syncChatOverlayVisibility();
+    }
+
+    private void syncChatOverlayVisibility() {
+        View overlay = findViewById(R.id.full_screen_chat_overlay);
+        if (overlay == null) {
+            return;
+        }
+        Fragment f = fragmentManager.findFragmentById(R.id.full_screen_chat_overlay);
+        overlay.setVisibility(f != null ? View.VISIBLE : View.GONE);
+    }
+
+    /**
      * Loads the specified fragment into the fragment container.
      *
      * @param fragment The fragment to load
@@ -207,6 +266,22 @@ public class MainActivity extends AppCompatActivity {
      */
     private void showToast(String message) {
         android.widget.Toast.makeText(this, message, android.widget.Toast.LENGTH_SHORT).show();
+    }
+
+    private void updateCurrentUserActiveStatus(boolean isActive) {
+        FirebaseUser currentUser = FirebaseAuth.getInstance().getCurrentUser();
+        if (currentUser == null) {
+            return;
+        }
+        Map<String, Object> payload = new HashMap<>();
+        payload.put("isActive", isActive);
+        payload.put("updatedAt", com.google.firebase.firestore.FieldValue.serverTimestamp());
+
+        FirebaseManager.getInstance()
+                .getFirestore()
+                .collection(FirebaseManager.COLLECTION_USERS)
+                .document(currentUser.getUid())
+                .set(payload, SetOptions.merge());
     }
 
 }

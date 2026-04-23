@@ -73,14 +73,15 @@
                 android:layout_marginBottom="12dp"
                 android:gravity="center_vertical">
 
-                <ImageView
+                <com.google.android.material.imageview.ShapeableImageView
                     android:id="@+id/user_avatar"
                     android:layout_width="38dp"
                     android:layout_height="38dp"
-                    android:src="@drawable/avatar_placeholder"
-                    android:background="@drawable/bg_circle"
+                    android:background="@color/avatar_background"
+                    android:contentDescription="@string/user_avatar"
                     android:scaleType="centerCrop"
-                    android:contentDescription="@string/user_avatar"/>
+                    android:src="@drawable/avatar_placeholder"
+                    app:shapeAppearanceOverlay="@style/ShapeAppearanceOverlay.SocialApp.Circle" />
                 <EditText
                     android:id="@+id/post_input"
                     android:layout_width="0dp"

@@ -1,182 +1,194 @@
 <?xml version="1.0" encoding="utf-8"?>
-<LinearLayout
+<androidx.constraintlayout.widget.ConstraintLayout
     xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
-    android:orientation="vertical"
+    android:background="?attr/colorSurface"
     android:paddingStart="12dp"
     android:paddingEnd="12dp"
     android:paddingTop="8dp"
     android:paddingBottom="8dp">
 
-    <!-- Main comment layout: Avatar + Content -->
+    <!-- User Avatar -->
+    <ImageView
+        android:id="@+id/comment_avatar"
+        android:layout_width="40dp"
+        android:layout_height="40dp"
+        android:contentDescription="@string/user_avatar"
+        android:scaleType="centerCrop"
+        android:src="@drawable/avatar_placeholder"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent" />
+
+    <!-- User Info Section -->
     <LinearLayout
-        android:layout_width="match_parent"
+        android:id="@+id/user_info_section"
+        android:layout_width="0dp"
         android:layout_height="wrap_content"
+        android:layout_marginStart="12dp"
         android:orientation="horizontal"
-        android:gravity="top">
+        app:layout_constraintStart_toEndOf="@id/comment_avatar"
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintEnd_toEndOf="parent">
 
-        <!-- Avatar -->
-        <ImageView
-            android:id="@+id/comment_avatar"
-            android:layout_width="36dp"
-            android:layout_height="36dp"
-            android:layout_marginEnd="8dp"
-            android:contentDescription="@string/user_avatar"
-            android:src="@drawable/avatar_placeholder"
-            android:scaleType="centerCrop" />
-
-        <!-- Content Card -->
-        <LinearLayout
-            android:layout_width="0dp"
+        <TextView
+            android:id="@+id/comment_username"
+            android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_weight="1"
-            android:orientation="vertical"
-            android:background="@drawable/rounded_comment_card"
-            android:paddingStart="10dp"
-            android:paddingEnd="10dp"
-            android:paddingTop="8dp"
-            android:paddingBottom="8dp">
+            android:textColor="?attr/colorOnSurface"
+            android:textSize="14sp"
+            android:textStyle="bold"
+            android:fontFamily="@font/inter_bold"
+            tools:text="John Doe" />
 
-            <!-- Username + Badge + Location -->
-            <LinearLayout
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:orientation="horizontal"
-                android:gravity="center_vertical"
-                android:layout_marginBottom="4dp">
+        <ImageView
+            android:id="@+id/verified_badge"
+            android:layout_width="16dp"
+            android:layout_height="16dp"
+            android:layout_marginStart="4dp"
+            android:contentDescription="@string/verified"
+            android:scaleType="fitCenter"
+            android:src="@drawable/ic_verified"
+            android:visibility="gone" />
 
-                <TextView
-                    android:id="@+id/comment_username"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:textStyle="bold"
-                    android:textSize="13sp"
-                    android:textColor="?attr/colorOnSurface" />
+        <Space
+            android:layout_width="8dp"
+            android:layout_height="1dp" />
 
-                <ImageView
-                    android:id="@+id/verified_badge"
-                    android:layout_width="14dp"
-                    android:layout_height="14dp"
-                    android:layout_marginStart="4dp"
-                    android:contentDescription="@string/verified"
-                    android:visibility="gone"
-                    app:tint="?attr/colorOnSurfaceVariant" />
-
-                <TextView
-                    android:id="@+id/comment_location"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:layout_marginStart="8dp"
-                    android:textSize="11sp"
-                    android:textColor="?attr/colorOnSurfaceVariant"
-                    android:visibility="gone" />
-            </LinearLayout>
-
-            <!-- Comment text -->
-            <TextView
-                android:id="@+id/comment_text"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:textSize="13sp"
-                android:textColor="?attr/colorOnSurface"
-                android:layout_marginBottom="6dp" />
-
-            <!-- Timestamp -->
-            <TextView
-                android:id="@+id/comment_timestamp"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:textSize="11sp"
-                android:textColor="?attr/colorOnSurfaceVariant" />
-        </LinearLayout>
+        <TextView
+            android:id="@+id/comment_timestamp"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:textColor="?attr/colorOnSurfaceVariant"
+            android:textSize="12sp"
+            android:fontFamily="@font/inter_regular"
+            tools:text="2 HOURS AGO" />
     </LinearLayout>
 
-    <!-- Action Buttons -->
+    <!-- Location Section -->
     <LinearLayout
-        android:layout_width="match_parent"
+        android:id="@+id/location_section"
+        android:layout_width="0dp"
         android:layout_height="wrap_content"
+        android:layout_marginStart="12dp"
+        android:layout_marginTop="2dp"
         android:orientation="horizontal"
-        android:layout_marginStart="44dp"
-        android:layout_marginTop="4dp">
+        android:visibility="gone"
+        app:layout_constraintStart_toEndOf="@id/comment_avatar"
+        app:layout_constraintTop_toBottomOf="@id/user_info_section"
+        app:layout_constraintEnd_toEndOf="parent">
 
-        <!-- Like -->
-        <LinearLayout
+        <ImageView
+            android:layout_width="12dp"
+            android:layout_height="12dp"
+            android:contentDescription="@string/location"
+            android:scaleType="fitCenter"
+            android:src="@drawable/ic_location"
+            app:tint="?attr/colorOnSurfaceVariant" />
+
+        <TextView
+            android:id="@+id/comment_location"
             android:layout_width="wrap_content"
-            android:layout_height="32dp"
-            android:orientation="horizontal"
-            android:gravity="center_vertical"
-            android:paddingStart="4dp"
-            android:paddingEnd="12dp"
-            android:background="?android:attr/selectableItemBackground">
-
-            <ImageButton
-                android:id="@+id/comment_like_button"
-                android:layout_width="20dp"
-                android:layout_height="20dp"
-                android:background="@android:color/transparent"
-                android:contentDescription="@string/like"
-                android:padding="0dp"
-                android:scaleType="centerInside"
-                android:src="@drawable/ic_heart"
-                app:tint="?attr/colorOnSurfaceVariant" />
-
-            <TextView
-                android:id="@+id/comment_like_count"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:textSize="11sp"
-                android:textColor="?attr/colorOnSurfaceVariant"
-                android:layout_marginStart="4dp" />
-        </LinearLayout>
-
-        <!-- Reply -->
-        <LinearLayout
-            android:layout_width="wrap_content"
-            android:layout_height="32dp"
-            android:orientation="horizontal"
-            android:gravity="center_vertical"
-            android:paddingStart="4dp"
-            android:paddingEnd="12dp"
-            android:background="?android:attr/selectableItemBackground">
-
-            <ImageButton
-                android:id="@+id/comment_reply_button"
-                android:layout_width="20dp"
-                android:layout_height="20dp"
-                android:background="@android:color/transparent"
-                android:contentDescription="@string/reply"
-                android:padding="0dp"
-                android:scaleType="centerInside"
-                android:src="@drawable/ic_comment"
-                app:tint="?attr/colorOnSurfaceVariant" />
-
-            <TextView
-                android:id="@+id/comment_reply_count"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:textSize="11sp"
-                android:textColor="?attr/colorOnSurfaceVariant"
-                android:layout_marginStart="4dp"
-                android:visibility="gone" />
-        </LinearLayout>
+            android:layout_height="wrap_content"
+            android:layout_marginStart="4dp"
+            android:textColor="?attr/colorOnSurfaceVariant"
+            android:textSize="11sp"
+            android:fontFamily="@font/inter_regular"
+            tools:text="KYOTO, JAPAN" />
     </LinearLayout>
 
-    <!-- View more replies button -->
+    <!-- Comment Text -->
+    <TextView
+        android:id="@+id/comment_text"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="12dp"
+        android:layout_marginTop="8dp"
+        android:textColor="?attr/colorOnSurface"
+        android:textSize="14sp"
+        android:fontFamily="@font/inter_regular"
+        app:layout_constraintStart_toEndOf="@id/comment_avatar"
+        app:layout_constraintTop_toBottomOf="@id/location_section"
+        app:layout_constraintEnd_toEndOf="parent"
+        tools:text="This is a great post! I really enjoyed reading it." />
+
+    <!-- Action Buttons Section -->
+    <LinearLayout
+        android:id="@+id/action_buttons"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="12dp"
+        android:layout_marginTop="12dp"
+        android:orientation="horizontal"
+        android:gravity="center_vertical"
+        app:layout_constraintStart_toEndOf="@id/comment_avatar"
+        app:layout_constraintTop_toBottomOf="@id/comment_text"
+        app:layout_constraintEnd_toEndOf="parent">
+
+        <!-- Like Button -->
+        <ImageButton
+            android:id="@+id/comment_like_button"
+            android:layout_width="24dp"
+            android:layout_height="24dp"
+            android:layout_marginEnd="8dp"
+            android:background="?attr/selectableItemBackgroundBorderless"
+            android:contentDescription="@string/like"
+            android:scaleType="centerInside"
+            android:src="@drawable/ic_heart"
+            app:tint="?attr/colorOnSurfaceVariant" />
+
+        <!-- Like Count -->
+        <TextView
+            android:id="@+id/comment_like_count"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginEnd="16dp"
+            android:textColor="?attr/colorOnSurfaceVariant"
+            android:textSize="12sp"
+            android:fontFamily="@font/inter_regular"
+            tools:text="42" />
+
+        <!-- Reply Button -->
+        <ImageButton
+            android:id="@+id/comment_reply_button"
+            android:layout_width="24dp"
+            android:layout_height="24dp"
+            android:layout_marginEnd="8dp"
+            android:background="?attr/selectableItemBackgroundBorderless"
+            android:contentDescription="@string/reply"
+            android:scaleType="centerInside"
+            android:src="@drawable/ic_comment"
+            app:tint="?attr/colorOnSurfaceVariant" />
+
+        <!-- Reply Count -->
+        <TextView
+            android:id="@+id/comment_reply_count"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginEnd="16dp"
+            android:textColor="?attr/colorOnSurfaceVariant"
+            android:textSize="12sp"
+            android:fontFamily="@font/inter_regular"
+            android:visibility="gone"
+            tools:text="5" />
+    </LinearLayout>
+
+    <!-- View More Replies Link -->
     <TextView
         android:id="@+id/view_more_replies"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_marginStart="44dp"
-        android:layout_marginTop="4dp"
+        android:layout_marginStart="12dp"
+        android:layout_marginTop="8dp"
+        android:textColor="?attr/colorPrimary"
         android:textSize="12sp"
-        android:textColor="@color/primary_purple"
-        android:paddingStart="4dp"
-        android:paddingEnd="4dp"
-        android:paddingTop="4dp"
-        android:paddingBottom="4dp"
+        android:fontFamily="@font/inter_medium"
         android:visibility="gone"
-        android:background="?android:attr/selectableItemBackground" />
-</LinearLayout>
+        app:layout_constraintStart_toEndOf="@id/comment_avatar"
+        app:layout_constraintTop_toBottomOf="@id/action_buttons"
+        tools:text="View 5 replies" />
+
+</androidx.constraintlayout.widget.ConstraintLayout>
 

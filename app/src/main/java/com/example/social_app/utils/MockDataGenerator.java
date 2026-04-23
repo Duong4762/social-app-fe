@@ -121,7 +121,7 @@ public class MockDataGenerator {
                 "user" + index,
                 "user" + index + "@mock.dev",
                 name,
-                "drawable/avatar_placeholder",
+                null,
                 bio,
                 "OTHER",
                 "2000-01-01",

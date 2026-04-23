@@ -48,4 +48,36 @@
     <color name="drag_handle_color">#64748B</color>
     <color name="gray">#64748B</color>
     <color name="purple">#C813EC</color>
+
+    <!-- Avatar circle: no stroke, gray fill behind image -->
+    <color name="avatar_background">#E5E7EB</color>
+    <color name="avatar_background_on_dark">#475569</color>
+
+    <!-- ========== BỔ SUNG CHO SEARCH VÀ NOTIFICATION ========== -->
+
+    <!-- Text Colors -->
+    <color name="text_primary">#111827</color>
+    <color name="text_secondary">#64748B</color>
+    <color name="text_tertiary">#94A3B8</color>
+
+    <!-- Background Colors -->
+    <color name="background">#F6F7FB</color>
+    <color name="search_bar_background">#F1F5F9</color>
+
+    <!-- Chip Colors -->
+    <color name="chip_background">#EEF2FF</color>
+
+    <!-- Gray Variants -->
+    <color name="gray_light">#E2E8F0</color>
+    <color name="gray_dark">#475569</color>
+
+    <!-- Primary Blue (Instagram style) -->
+    <color name="primary_blue">#0095F6</color>
+    <color name="primary_blue_dark">#1877F2</color>
+
+    <!-- Red Color -->
+    <color name="red">#EF4444</color>
+
+    <!-- Transparent -->
+    <color name="transparent">#00000000</color>
 </resources>

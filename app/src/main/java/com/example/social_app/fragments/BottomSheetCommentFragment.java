@@ -21,6 +21,7 @@ import androidx.recyclerview.widget.RecyclerView;
 import androidx.swiperefreshlayout.widget.SwipeRefreshLayout;
 
 import com.example.social_app.R;
+import com.example.social_app.utils.UserAvatarLoader;
 import com.example.social_app.adapters.CommentAdapter;
 import com.example.social_app.data.model.Comment;
 import com.example.social_app.utils.MockDataGenerator;
@@ -100,7 +101,7 @@ public class BottomSheetCommentFragment extends BottomSheetDialogFragment implem
         sendButton = view.findViewById(R.id.compose_send_button);
 
         if (composeAvatar != null) {
-            composeAvatar.setImageResource(R.drawable.avatar_placeholder);
+            UserAvatarLoader.load(composeAvatar, null);
         }
         if (charCountText != null) {
             updateCharacterCount(0);
