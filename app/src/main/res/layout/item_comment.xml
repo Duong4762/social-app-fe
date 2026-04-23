@@ -114,6 +114,41 @@
         app:layout_constraintEnd_toEndOf="parent"
         tools:text="This is a great post! I really enjoyed reading it." />
 
+    <!-- Comment Media -->
+    <com.google.android.material.card.MaterialCardView
+        android:id="@+id/comment_media_container"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="12dp"
+        android:layout_marginTop="8dp"
+        android:visibility="gone"
+        app:cardCornerRadius="8dp"
+        app:cardElevation="0dp"
+        app:strokeWidth="0dp"
+        app:layout_constraintStart_toEndOf="@id/comment_avatar"
+        app:layout_constraintTop_toBottomOf="@id/comment_text"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintWidth_percent="0.7">
+
+        <ImageView
+            android:id="@+id/comment_media_image"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:adjustViewBounds="true"
+            android:scaleType="fitCenter"
+            android:maxHeight="200dp"
+            tools:src="@drawable/post_image_1" />
+
+        <ImageView
+            android:id="@+id/comment_gif_indicator"
+            android:layout_width="32dp"
+            android:layout_height="32dp"
+            android:layout_gravity="center"
+            android:src="@drawable/ic_play"
+            android:visibility="gone"
+            app:tint="@android:color/white" />
+    </com.google.android.material.card.MaterialCardView>
+
     <!-- Action Buttons Section -->
     <LinearLayout
         android:id="@+id/action_buttons"
@@ -124,7 +159,7 @@
         android:orientation="horizontal"
         android:gravity="center_vertical"
         app:layout_constraintStart_toEndOf="@id/comment_avatar"
-        app:layout_constraintTop_toBottomOf="@id/comment_text"
+        app:layout_constraintTop_toBottomOf="@id/comment_media_container"
         app:layout_constraintEnd_toEndOf="parent">
 
         <!-- Like Button -->

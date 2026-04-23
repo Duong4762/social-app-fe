@@ -7,6 +7,7 @@ import androidx.lifecycle.ViewModel;
 import com.example.social_app.data.model.Post;
 import com.example.social_app.firebase.FirebaseManager;
 import com.google.firebase.firestore.DocumentSnapshot;
+import com.google.firebase.firestore.FieldValue;
 import com.google.firebase.firestore.FirebaseFirestore;
 import com.google.firebase.firestore.Query;
 
@@ -99,7 +100,7 @@ public class HomeViewModel extends ViewModel {
             java.util.Map<String, Object> likeData = new java.util.HashMap<>();
             likeData.put("postId", postId);
             likeData.put("userId", userId);
-            likeData.put("createdAt", com.google.firebase.firestore.FieldValue.serverTimestamp());
+            likeData.put("createdAt", FieldValue.serverTimestamp());
             db.collection(FirebaseManager.COLLECTION_POST_LIKES).document(postId + "_" + userId).set(likeData);
         } else {
             likedPostIds.remove(postId);
@@ -112,7 +113,7 @@ public class HomeViewModel extends ViewModel {
 
         // Update Firestore
         db.collection(FirebaseManager.COLLECTION_POSTS).document(postId)
-                .update("likeCount", com.google.firebase.firestore.FieldValue.increment(isLiking ? 1 : -1));
+                .update("likeCount", FieldValue.increment(isLiking ? 1 : -1));
     }
 
     public void toggleBookmark(Post post) {
@@ -128,13 +129,34 @@ public class HomeViewModel extends ViewModel {
             java.util.Map<String, Object> bookmarkData = new java.util.HashMap<>();
             bookmarkData.put("postId", postId);
             bookmarkData.put("userId", userId);
-            bookmarkData.put("createdAt", com.google.firebase.firestore.FieldValue.serverTimestamp());
+            bookmarkData.put("createdAt", FieldValue.serverTimestamp());
             db.collection("bookmarks").document(postId + "_" + userId).set(bookmarkData);
         } else {
             bookmarkedPostIds.remove(postId);
             db.collection("bookmarks").document(postId + "_" + userId).delete();
         }
         posts.setValue(posts.getValue()); // Notify UI
+    }
+
+    public void incrementShareCount(Post post) {
+        if (post == null || post.getId() == null) return;
+        
+        String postId = post.getId();
+        db.collection(FirebaseManager.COLLECTION_POSTS).document(postId)
+                .update("shareCount", FieldValue.increment(1))
+                .addOnSuccessListener(aVoid -> {
+                    // Update local list to refresh UI
+                    List<Post> currentPosts = posts.getValue();
+                    if (currentPosts != null) {
+                        for (Post p : currentPosts) {
+                            if (p.getId().equals(postId)) {
+                                p.setShareCount(p.getShareCount() + 1);
+                                break;
+                            }
+                        }
+                        posts.setValue(currentPosts);
+                    }
+                });
     }
 
     private void loadUserEngagement() {

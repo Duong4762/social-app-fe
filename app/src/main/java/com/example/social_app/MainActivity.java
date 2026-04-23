@@ -195,26 +195,32 @@ public class MainActivity extends AppCompatActivity {
      * Hides the bottom navigation bar with animation.
      */
     private void hideBottomNavigation() {
+        if (!isBottomNavVisible) return;
         isBottomNavVisible = false;
-        int height = customBottomNav.getHeight();
-        TranslateAnimation slideDown = new TranslateAnimation(0, 0, 0, height);
-        slideDown.setDuration(300);
-        slideDown.setFillAfter(true);
-        customBottomNav.startAnimation(slideDown);
-        customBottomNav.setVisibility(View.GONE);
+        
+        customBottomNav.animate()
+                .translationY(customBottomNav.getHeight())
+                .setDuration(300)
+                .withEndAction(() -> {
+                    customBottomNav.setVisibility(View.GONE);
+                    customBottomNav.setClickable(false);
+                })
+                .start();
     }
 
     /**
      * Shows the bottom navigation bar with animation.
      */
     private void showBottomNavigation() {
+        if (isBottomNavVisible) return;
         isBottomNavVisible = true;
+        
         customBottomNav.setVisibility(View.VISIBLE);
-        int height = customBottomNav.getHeight();
-        TranslateAnimation slideUp = new TranslateAnimation(0, 0, height, 0);
-        slideUp.setDuration(300);
-        slideUp.setFillAfter(true);
-        customBottomNav.startAnimation(slideUp);
+        customBottomNav.setClickable(true);
+        customBottomNav.animate()
+                .translationY(0)
+                .setDuration(300)
+                .start();
     }
 
     /**

@@ -104,7 +104,7 @@
                 android:id="@+id/photo_section_title"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="Hình ảnh"
+                android:text="Images"
                 android:textColor="@color/primary"
                 android:textStyle="bold"
                 android:textSize="14sp"
@@ -217,6 +217,19 @@
                 <include
                     android:id="@+id/tag_people_row"
                     layout="@layout/item_row_tag"/>
+
+                <!-- Tagged Users Chips Container -->
+                <com.google.android.material.chip.ChipGroup
+                    android:id="@+id/tagged_users_chip_group"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="4dp"
+                    android:layout_marginBottom="8dp"
+                    android:paddingStart="40dp"
+                    app:chipSpacingHorizontal="8dp"
+                    app:chipSpacingVertical="4dp"
+                    android:visibility="gone" />
+
                 <View android:layout_height="1dp" android:layout_width="match_parent" android:background="?attr/colorOutlineVariant" />
 
                 <!-- Audience -->

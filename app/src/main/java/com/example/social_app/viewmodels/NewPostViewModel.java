@@ -38,15 +38,11 @@ public class NewPostViewModel extends AndroidViewModel {
     private final FirebaseFirestore db;
     private final FirebaseManager firebaseManager;
 
-    // Cloudinary Config (IMPORTANT: Ensure 'social_app_preset' is set to UNSIGNED in Cloudinary Console)
-    private static final String CLOUD_NAME = "dtz6u6v6v";
-    private static final String UPLOAD_PRESET = "social_app_preset";
-
     public NewPostViewModel(@NonNull Application application) {
         super(application);
         firebaseManager = FirebaseManager.getInstance();
         db = firebaseManager.getFirestore();
-        CloudinaryUploadUtil.setCloudinaryConfig(CLOUD_NAME, UPLOAD_PRESET);
+        CloudinaryUploadUtil.setCloudinaryConfig(CloudinaryUploadUtil.CLOUD_NAME, CloudinaryUploadUtil.UPLOAD_PRESET);
     }
 
     public LiveData<Boolean> getIsPosting() { return isPosting; }

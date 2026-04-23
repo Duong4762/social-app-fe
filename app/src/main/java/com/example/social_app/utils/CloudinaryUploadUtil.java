@@ -30,8 +30,11 @@ public final class CloudinaryUploadUtil {
 
     private static final OkHttpClient HTTP_CLIENT = new OkHttpClient();
     private static final Handler MAIN_HANDLER = new Handler(Looper.getMainLooper());
-    private static String cloudName = "dt52s8jxo";
-    private static String uploadPreset = "ml_default";
+    public static final String CLOUD_NAME = "dt52s8jxo";
+    public static final String UPLOAD_PRESET = "social_app_preset";
+
+    private static String cloudName = CLOUD_NAME;
+    private static String uploadPreset = UPLOAD_PRESET;
 
     private CloudinaryUploadUtil() {
         // Utility class
@@ -71,7 +74,7 @@ public final class CloudinaryUploadUtil {
 
         try {
             byte[] mediaBytes = readUriBytes(context, mediaUri);
-            String mimeType = getMimeType(context.getContentResolver(), mediaUri);
+            String mimeType = getMimeType(context, mediaUri);
             
             // Determine resource type (image or video)
             String resourceType = "image";
@@ -153,8 +156,19 @@ public final class CloudinaryUploadUtil {
         }
     }
 
-    private static String getMimeType(ContentResolver contentResolver, Uri uri) {
-        String mimeType = contentResolver.getType(uri);
+    private static String getMimeType(Context context, Uri uri) {
+        String mimeType = null;
+        if (ContentResolver.SCHEME_CONTENT.equals(uri.getScheme())) {
+            mimeType = context.getContentResolver().getType(uri);
+        }
+        
+        if (mimeType == null) {
+            String extension = MimeTypeMap.getFileExtensionFromUrl(uri.toString());
+            if (extension != null && !extension.isEmpty()) {
+                mimeType = MimeTypeMap.getSingleton().getMimeTypeFromExtension(extension.toLowerCase());
+            }
+        }
+
         return mimeType != null ? mimeType : "image/jpeg";
     }
 

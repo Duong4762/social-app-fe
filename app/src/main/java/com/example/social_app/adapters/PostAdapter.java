@@ -199,6 +199,7 @@ public class PostAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
         private LinearLayout shareContainer;
         private ViewPager2 postViewPager;
         private TextView mediaIndicator;
+        private View postMediaContainer;
 
         PostViewHolder(@NonNull View itemView) {
             super(itemView);
@@ -219,12 +220,37 @@ public class PostAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
             shareContainer = itemView.findViewById(R.id.post_share_container);
             postViewPager = itemView.findViewById(R.id.post_view_pager);
             mediaIndicator = itemView.findViewById(R.id.media_indicator);
+            postMediaContainer = itemView.findViewById(R.id.post_media_container);
         }
 
         void bind(Post post, int position) {
             // Set user info
             User postUser = MockDataGenerator.getUserById(post.getUserId());
-            username.setText(postUser != null ? postUser.getFullName() : "Unknown user");
+            if (postUser != null) {
+                username.setText(postUser.getFullName());
+                UserAvatarLoader.load(userAvatar, postUser.getAvatarUrl());
+            } else {
+                // Nếu không có trong Mock, thử lấy từ Firebase
+                username.setText("Loading...");
+                FirebaseFirestore.getInstance().collection(FirebaseManager.COLLECTION_USERS)
+                        .document(post.getUserId())
+                        .get()
+                        .addOnSuccessListener(documentSnapshot -> {
+                            if (documentSnapshot.exists()) {
+                                String name = documentSnapshot.getString("fullName");
+                                String avatar = documentSnapshot.getString("avatarUrl");
+                                username.setText(name != null ? name : "Unknown User");
+                                UserAvatarLoader.load(userAvatar, avatar);
+                            } else {
+                                username.setText("Unknown User");
+                                UserAvatarLoader.load(userAvatar, null);
+                            }
+                        })
+                        .addOnFailureListener(e -> {
+                            username.setText("Unknown User");
+                            UserAvatarLoader.load(userAvatar, null);
+                        });
+            }
 
             // Set timestamp
             long createdAt = post.getCreatedAt() != null
@@ -251,7 +277,7 @@ public class PostAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
             // Set engagement counts
             likeCount.setText(String.valueOf(post.getLikeCount()));
             commentCount.setText(String.valueOf(post.getCommentCount()));
-            shareCount.setText("0");
+            shareCount.setText(String.valueOf(post.getShareCount()));
 
             // Update like icon based on liked state
             updateLikeIcon(post);
@@ -308,7 +334,7 @@ public class PostAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
                 if (actionListener != null) {
                     actionListener.onBookmarkClicked(post);
                 }
-                // Toggle bookmark state
+                // Toggle bookmark state locally for immediate feedback
                 String postId = post.getId();
                 if (postId != null) {
                     if (bookmarkedPostIds.contains(postId)) {
@@ -318,24 +344,42 @@ public class PostAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
                     }
                 }
                 updateBookmarkIcon(post);
-                // Update this item only
-                notifyItemChanged(position + 1); // +1 because composer is at position 0
             });
         }
 
         private void loadPostMedia(String postId) {
-            if (postId == null) return;
+            if (postId == null) {
+                postMediaContainer.setVisibility(View.GONE);
+                return;
+            }
             
+            // Đặt tag để kiểm tra xem dữ liệu nạp về có đúng cho item này không (tránh lỗi tái sử dụng View của RecyclerView)
+            postMediaContainer.setTag(postId);
+
             FirebaseFirestore.getInstance().collection(FirebaseManager.COLLECTION_POST_MEDIA)
                     .whereEqualTo("postId", postId)
                     .get()
                     .addOnSuccessListener(queryDocumentSnapshots -> {
+                        // Kiểm tra nếu tag vẫn khớp với postId hiện tại của ViewHolder
+                        if (!postId.equals(postMediaContainer.getTag())) return;
+
                         List<PostMedia> mediaList = queryDocumentSnapshots.toObjects(PostMedia.class);
-                        // Sắp xếp thủ công theo field 'order'
-                        mediaList.sort((m1, m2) -> Integer.compare(m1.getOrder(), m2.getOrder()));
                         
                         if (!mediaList.isEmpty()) {
+                            // Sắp xếp: IMAGE trước, VIDEO sau, sau đó theo field 'order'
+                            mediaList.sort((m1, m2) -> {
+                                boolean isM1Video = "VIDEO".equalsIgnoreCase(m1.getMediaType());
+                                boolean isM2Video = "VIDEO".equalsIgnoreCase(m2.getMediaType());
+                                
+                                if (isM1Video != isM2Video) {
+                                    return isM1Video ? 1 : -1;
+                                }
+                                return Integer.compare(m1.getOrder(), m2.getOrder());
+                            });
+
+                            postMediaContainer.setVisibility(View.VISIBLE);
                             postViewPager.setVisibility(View.VISIBLE);
+                            
                             PostMediaAdapter mediaAdapter = new PostMediaAdapter(mediaList);
                             postViewPager.setAdapter(mediaAdapter);
                             
@@ -352,14 +396,13 @@ public class PostAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
                                 mediaIndicator.setVisibility(View.GONE);
                             }
                         } else {
-                            postViewPager.setVisibility(View.GONE);
-                            mediaIndicator.setVisibility(View.GONE);
+                            postMediaContainer.setVisibility(View.GONE);
                         }
                     })
                     .addOnFailureListener(e -> {
-                        android.util.Log.e("PostAdapter", "Error loading media for post " + postId, e);
-                        postViewPager.setVisibility(View.GONE);
-                        mediaIndicator.setVisibility(View.GONE);
+                        if (postId.equals(postMediaContainer.getTag())) {
+                            postMediaContainer.setVisibility(View.GONE);
+                        }
                     });
         }
 
