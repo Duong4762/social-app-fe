@@ -396,19 +396,19 @@ public class PostAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
                     
                     if (currentUserId != null && currentUserId.equals(post.getUserId())) {
                         // Bài viết của mình: Hiện Chỉnh sửa và Xóa
-                        popup.getMenu().add("Chỉnh sửa");
-                        popup.getMenu().add("Xóa");
+                        popup.getMenu().add(context.getString(R.string.menu_edit));
+                        popup.getMenu().add(context.getString(R.string.delete));
                     } else {
                         // Bài viết của người khác: Hiện Báo cáo
-                        popup.getMenu().add("Báo cáo");
+                        popup.getMenu().add(context.getString(R.string.menu_report));
                     }
                     
                     popup.setOnMenuItemClickListener(item -> {
-                        if (item.getTitle().equals("Chỉnh sửa")) {
+                        if (item.getTitle().equals(context.getString(R.string.menu_edit))) {
                             if (actionListener != null) actionListener.onEditPostClicked(post);
-                        } else if (item.getTitle().equals("Xóa")) {
+                        } else if (item.getTitle().equals(context.getString(R.string.delete))) {
                             if (actionListener != null) actionListener.onDeletePostClicked(post);
-                        } else if (item.getTitle().equals("Báo cáo")) {
+                        } else if (item.getTitle().equals(context.getString(R.string.menu_report))) {
                             if (actionListener != null) actionListener.onReportPostClicked(post);
                         }
                         return true;

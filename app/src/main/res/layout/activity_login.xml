@@ -28,14 +28,14 @@
             android:textColor="?attr/colorOnSurface"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="Welcome Back" />
+            android:text="@string/login_title" />
 
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_marginTop="4dp"
             android:textColor="?attr/colorOnSurfaceVariant"
-            android:text="Log in to stay connected"/>
+            android:text="@string/login_subtitle"/>
 
         <LinearLayout
             android:layout_width="match_parent"
@@ -97,7 +97,7 @@
             android:layout_width="match_parent"
             android:layout_height="56dp"
             android:textColor="?attr/colorSurface"
-            android:text="Login"
+            android:text="@string/login_button"
             android:layout_marginTop="40dp"
             app:backgroundTint="@null"
             android:textStyle="bold"
@@ -110,7 +110,7 @@
             android:visibility="gone" />
 
         <TextView
-            android:text="OR"
+            android:text="@string/login_or"
             android:textColor="@color/gray"
             android:layout_marginTop="24dp"
             android:layout_width="wrap_content"
@@ -126,14 +126,14 @@
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="Don't have an account? "
+                android:text="@string/login_footer"
                 android:textColor="?attr/colorOnSurfaceVariant"/>
 
             <TextView
                 android:id="@+id/btnGoToRegister"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="Sign up"
+                android:text="@string/sign_up"
                 android:textColor="@color/purple"/>
         </LinearLayout>
     </LinearLayout>

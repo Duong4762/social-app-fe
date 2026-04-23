@@ -67,7 +67,7 @@ public class NotificationFragment extends Fragment {
             public void onMarkAsRead(Notification notification, int position) {
                 notification.setRead(true);
                 notificationAdapter.notifyItemChanged(position);
-                Toast.makeText(requireContext(), "Marked as read", Toast.LENGTH_SHORT).show();
+                Toast.makeText(requireContext(), R.string.marked_as_read, Toast.LENGTH_SHORT).show();
             }
         });
         notificationRecyclerView.setAdapter(notificationAdapter);
@@ -77,23 +77,23 @@ public class NotificationFragment extends Fragment {
         String type = notification.getType();
 
         if (type == null) {
-            Toast.makeText(requireContext(), "Notification clicked", Toast.LENGTH_SHORT).show();
+            Toast.makeText(requireContext(), R.string.notification_clicked, Toast.LENGTH_SHORT).show();
             return;
         }
 
         switch (type.toUpperCase()) {
             case "LIKE":
             case "COMMENT":
-                Toast.makeText(requireContext(), "Open post: " + notification.getReferenceId(), Toast.LENGTH_SHORT).show();
+                Toast.makeText(requireContext(), getString(R.string.open_post_id, notification.getReferenceId()), Toast.LENGTH_SHORT).show();
                 break;
             case "FOLLOW":
-                Toast.makeText(requireContext(), "Open profile: " + notification.getUserId(), Toast.LENGTH_SHORT).show();
+                Toast.makeText(requireContext(), getString(R.string.open_profile_id, notification.getUserId()), Toast.LENGTH_SHORT).show();
                 break;
             case "MESSAGE":
-                Toast.makeText(requireContext(), "Open chat", Toast.LENGTH_SHORT).show();
+                Toast.makeText(requireContext(), R.string.open_chat, Toast.LENGTH_SHORT).show();
                 break;
             default:
-                Toast.makeText(requireContext(), "Notification clicked", Toast.LENGTH_SHORT).show();
+                Toast.makeText(requireContext(), R.string.notification_clicked, Toast.LENGTH_SHORT).show();
                 break;
         }
     }

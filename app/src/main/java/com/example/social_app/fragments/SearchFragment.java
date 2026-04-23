@@ -100,8 +100,8 @@ public class SearchFragment extends Fragment implements PostAdapter.OnPostAction
         searchEmptyStateText = view.findViewById(R.id.searchEmptyStateText);
 
         // Khởi tạo tab
-        tabLayout.addTab(tabLayout.newTab().setText("People"));
-        tabLayout.addTab(tabLayout.newTab().setText("Posts"));
+        tabLayout.addTab(tabLayout.newTab().setText(getString(R.string.tab_users)));
+        tabLayout.addTab(tabLayout.newTab().setText(getString(R.string.tab_posts)));
     }
 
     private void setupRecyclerViews() {
@@ -115,7 +115,7 @@ public class SearchFragment extends Fragment implements PostAdapter.OnPostAction
 
             @Override
             public void onFollowClicked(User user, int position) {
-                Toast.makeText(requireContext(), "Follow: " + user.getFullName(), Toast.LENGTH_SHORT).show();
+                Toast.makeText(requireContext(), getString(R.string.follow_user, user.getFullName()), Toast.LENGTH_SHORT).show();
             }
         });
         suggestedUsersRecycler.setAdapter(suggestedAdapter);
@@ -130,7 +130,7 @@ public class SearchFragment extends Fragment implements PostAdapter.OnPostAction
 
             @Override
             public void onFollowClicked(User user, int position) {
-                Toast.makeText(requireContext(), "Follow: " + user.getFullName(), Toast.LENGTH_SHORT).show();
+                Toast.makeText(requireContext(), getString(R.string.follow_user, user.getFullName()), Toast.LENGTH_SHORT).show();
             }
         });
         usersRecyclerView.setAdapter(userSearchAdapter);
@@ -384,7 +384,7 @@ public class SearchFragment extends Fragment implements PostAdapter.OnPostAction
     @Override
     public void onUserClicked(String userId) {
         if (userId == null || userId.trim().isEmpty()) {
-            Toast.makeText(requireContext(), "Không tìm thấy người dùng", Toast.LENGTH_SHORT).show();
+            Toast.makeText(requireContext(), R.string.user_not_found, Toast.LENGTH_SHORT).show();
             return;
         }
 
@@ -464,25 +464,57 @@ public class SearchFragment extends Fragment implements PostAdapter.OnPostAction
     @Override
     public void onDeletePostClicked(Post post) {
         new androidx.appcompat.app.AlertDialog.Builder(requireContext())
-                .setTitle("Xóa bài viết")
-                .setMessage("Bạn có chắc chắn muốn xóa bài viết này?")
-                .setPositiveButton("Xóa", (dialog, which) -> {
+                .setTitle(getString(R.string.delete_post_title))
+                .setMessage(getString(R.string.delete_post_confirm))
+                .setPositiveButton(getString(R.string.delete), (dialog, which) -> {
                     newPostViewModel.deletePost(post.getId());
                 })
-                .setNegativeButton("Hủy", null)
+                .setNegativeButton(getString(R.string.cancel_action), null)
                 .show();
     }
 
     @Override
     public void onReportPostClicked(Post post) {
-        String[] reasons = {"Nội dung không phù hợp", "Spam", "Quấy rối", "Thông tin sai lệch", "Khác"};
+        String[] reasons = {
+                getString(R.string.report_reason_inappropriate),
+                getString(R.string.report_reason_spam),
+                getString(R.string.report_reason_harassment),
+                getString(R.string.report_reason_false_info),
+                getString(R.string.report_reason_other)
+        };
         new androidx.appcompat.app.AlertDialog.Builder(requireContext())
-                .setTitle("Báo cáo bài viết")
+                .setTitle(getString(R.string.report_post_title))
                 .setItems(reasons, (dialog, which) -> {
-                    homeViewModel.reportPost(post, reasons[which]);
-                    Toast.makeText(requireContext(), "Cảm ơn bạn đã báo cáo.", Toast.LENGTH_SHORT).show();
+                    String selectedReason = reasons[which];
+                    if (selectedReason.equals(getString(R.string.report_reason_other))) {
+                        showReportDetailDialog(post, selectedReason);
+                    } else {
+                        homeViewModel.reportPost(post, selectedReason);
+                        Toast.makeText(requireContext(), getString(R.string.report_thanks), Toast.LENGTH_SHORT).show();
+                    }
                 })
-                .setNegativeButton("Hủy", null)
+                .setNegativeButton(getString(R.string.cancel_action), null)
+                .show();
+    }
+
+    private void showReportDetailDialog(Post post, String baseReason) {
+        android.widget.EditText input = new android.widget.EditText(requireContext());
+        input.setHint(R.string.report_reason_hint);
+        int padding = (int) (16 * getResources().getDisplayMetrics().density);
+        android.widget.FrameLayout container = new android.widget.FrameLayout(requireContext());
+        container.addView(input);
+        input.setPadding(padding, padding, padding, padding);
+
+        new androidx.appcompat.app.AlertDialog.Builder(requireContext())
+                .setTitle(R.string.report_reason_title)
+                .setView(container)
+                .setPositiveButton(R.string.report_submit, (dialog, which) -> {
+                    String detail = input.getText().toString().trim();
+                    String finalReason = detail.isEmpty() ? baseReason : baseReason + ": " + detail;
+                    homeViewModel.reportPost(post, finalReason);
+                    Toast.makeText(requireContext(), getString(R.string.report_thanks), Toast.LENGTH_SHORT).show();
+                })
+                .setNegativeButton(R.string.cancel_action, null)
                 .show();
     }
 }

@@ -121,7 +121,7 @@
                 android:id="@+id/photo_section_title"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="Images"
+                android:text="@string/icon_image"
                 android:textColor="@color/primary"
                 android:textStyle="bold"
                 android:textSize="14sp"
@@ -149,7 +149,7 @@
                 android:id="@+id/video_section_title"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="Videos"
+                android:text="@string/icon_video"
                 android:textColor="@color/primary"
                 android:textStyle="bold"
                 android:textSize="14sp"
@@ -173,15 +173,29 @@
             </HorizontalScrollView>
 
             <!-- MEDIA UPLOAD -->
-            <TextView
-                android:layout_width="wrap_content"
+            <LinearLayout
+                android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:text="@string/media_upload"
-                android:textAllCaps="true"
-                android:textColor="@color/primary"
-                android:textStyle="bold"
-                android:textSize="13sp"
-                android:layout_marginBottom="8dp"/>
+                android:orientation="vertical"
+                android:layout_marginBottom="8dp">
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="@string/media_upload"
+                    android:textAllCaps="true"
+                    android:textColor="@color/primary"
+                    android:textStyle="bold"
+                    android:textSize="13sp" />
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="2dp"
+                    android:text="@string/media_limit_hint"
+                    android:textColor="?attr/colorOnSurfaceVariant"
+                    android:textSize="11sp" />
+            </LinearLayout>
 
             <!-- Upload Buttons -->
             <LinearLayout

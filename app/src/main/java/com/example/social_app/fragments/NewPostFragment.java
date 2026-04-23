@@ -234,7 +234,7 @@ public class NewPostFragment extends Fragment {
             postButton.setEnabled(!isPosting);
             String buttonText;
             if (isPosting) {
-                buttonText = "Saving...";
+                buttonText = getString(R.string.loading_generic);
             } else {
                 buttonText = (mEditPostId != null) ? getString(R.string.save) : getString(R.string.post);
             }
@@ -244,7 +244,7 @@ public class NewPostFragment extends Fragment {
 
         newPostViewModel.getPostSuccess().observe(getViewLifecycleOwner(), success -> {
             if (success) {
-                Toast.makeText(getContext(), mEditPostId != null ? "Cập nhật thành công!" : getString(R.string.post_created), Toast.LENGTH_SHORT).show();
+                Toast.makeText(getContext(), mEditPostId != null ? getString(R.string.update_post_success) : getString(R.string.post_created), Toast.LENGTH_SHORT).show();
                 returnToHome();
             }
         });
@@ -293,7 +293,7 @@ public class NewPostFragment extends Fragment {
             }
             photoFile = java.io.File.createTempFile(imageFileName, ".jpg", storageDir);
         } catch (java.io.IOException ex) {
-            Toast.makeText(getContext(), "Error creating file: " + ex.getMessage(), Toast.LENGTH_SHORT).show();
+            Toast.makeText(getContext(), getString(R.string.error_creating_file, ex.getMessage()), Toast.LENGTH_SHORT).show();
         }
 
         if (photoFile != null) {
@@ -312,7 +312,7 @@ public class NewPostFragment extends Fragment {
             if (grantResults.length > 0 && grantResults[0] == android.content.pm.PackageManager.PERMISSION_GRANTED) {
                 openCamera();
             } else {
-                Toast.makeText(getContext(), "Bạn cần cấp quyền Camera để chụp ảnh", Toast.LENGTH_SHORT).show();
+                Toast.makeText(getContext(), R.string.profile_camera_permission_denied, Toast.LENGTH_SHORT).show();
             }
         }
     }
@@ -323,7 +323,7 @@ public class NewPostFragment extends Fragment {
         if (existingUrls == null) existingUrls = new ArrayList<>();
 
         if (content.isEmpty() && selectedMedias.isEmpty() && existingUrls.isEmpty()) {
-            Toast.makeText(getContext(), "Post content cannot be empty", Toast.LENGTH_SHORT).show();
+            Toast.makeText(getContext(), getString(R.string.comment_empty_error), Toast.LENGTH_SHORT).show();
             return;
         }
         
@@ -381,7 +381,7 @@ public class NewPostFragment extends Fragment {
                 if (cameraImageUri != null) {
                     long size = getFileSize(cameraImageUri);
                     if (size > MAX_IMAGE_SIZE) {
-                        Toast.makeText(getContext(), "Ảnh chụp quá lớn (>10MB). Hãy thử giảm độ phân giải camera.", Toast.LENGTH_LONG).show();
+                        Toast.makeText(getContext(), getString(R.string.error_image_too_large), Toast.LENGTH_LONG).show();
                     } else if (!selectedMedias.contains(cameraImageUri)) {
                         selectedMedias.add(cameraImageUri);
                     }
@@ -413,10 +413,10 @@ public class NewPostFragment extends Fragment {
             int count = data.getClipData().getItemCount();
             for (int i = 0; i < count; i++) {
                 Uri uri = data.getClipData().getItemAt(i).getUri();
-                validateAndAddMedia(uri, MAX_IMAGE_SIZE, "Ảnh quá lớn (>10MB)");
+                validateAndAddMedia(uri, MAX_IMAGE_SIZE, getString(R.string.error_image_too_large));
             }
         } else if (data.getData() != null) {
-            validateAndAddMedia(data.getData(), MAX_IMAGE_SIZE, "Ảnh quá lớn (>10MB)");
+            validateAndAddMedia(data.getData(), MAX_IMAGE_SIZE, getString(R.string.error_image_too_large));
         }
     }
 
@@ -425,10 +425,10 @@ public class NewPostFragment extends Fragment {
             int count = data.getClipData().getItemCount();
             for (int i = 0; i < count; i++) {
                 Uri uri = data.getClipData().getItemAt(i).getUri();
-                validateAndAddMedia(uri, MAX_VIDEO_SIZE, "Video quá lớn (>15MB)");
+                validateAndAddMedia(uri, MAX_VIDEO_SIZE, getString(R.string.error_video_too_large));
             }
         } else if (data.getData() != null) {
-            validateAndAddMedia(data.getData(), MAX_VIDEO_SIZE, "Video quá lớn (>15MB)");
+            validateAndAddMedia(data.getData(), MAX_VIDEO_SIZE, getString(R.string.error_video_too_large));
         }
     }
 

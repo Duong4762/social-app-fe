@@ -127,20 +127,20 @@ public class NotificationAdapter extends RecyclerView.Adapter<NotificationAdapte
 
         private String buildNotificationContent(String actorName, String type) {
             if (type == null) {
-                return actorName + " sent you a notification";
+                return actorName + " " + context.getString(R.string.notification_message);
             }
 
             switch (type.toUpperCase()) {
                 case "LIKE":
-                    return actorName + " liked your post";
+                    return actorName + " " + context.getString(R.string.notification_like);
                 case "COMMENT":
-                    return actorName + " commented on your post";
+                    return actorName + " " + context.getString(R.string.notification_comment);
                 case "FOLLOW":
-                    return actorName + " started following you";
+                    return actorName + " " + context.getString(R.string.notification_follow);
                 case "MESSAGE":
-                    return actorName + " sent you a message";
+                    return actorName + " " + context.getString(R.string.notification_message);
                 default:
-                    return actorName + " sent you a notification";
+                    return actorName + " " + context.getString(R.string.notification_message);
             }
         }
 
@@ -175,7 +175,7 @@ public class NotificationAdapter extends RecyclerView.Adapter<NotificationAdapte
 
         private String formatTime(Date date) {
             if (date == null) {
-                return "Just now";
+                return context.getString(R.string.just_now);
             }
 
             long now = System.currentTimeMillis();
@@ -187,13 +187,13 @@ public class NotificationAdapter extends RecyclerView.Adapter<NotificationAdapte
             long days = hours / 24;
 
             if (days > 0) {
-                return days + "d ago";
+                return context.getString(R.string.days_ago, (int) days);
             } else if (hours > 0) {
-                return hours + "h ago";
+                return context.getString(R.string.hours_ago, (int) hours);
             } else if (minutes > 0) {
-                return minutes + "m ago";
+                return context.getString(R.string.minutes_ago, (int) minutes);
             } else {
-                return "Just now";
+                return context.getString(R.string.just_now);
             }
         }
     }

@@ -13,7 +13,7 @@
         android:layout_marginTop="12dp"
         android:layout_marginEnd="16dp"
         android:layout_marginBottom="8dp"
-        android:text="Search"
+        android:text="@string/search_title"
         android:textColor="?attr/colorOnSurface"
         android:textSize="24sp"
         android:textStyle="bold" />
@@ -32,7 +32,7 @@
             android:layout_width="match_parent"
             android:layout_height="48dp"
             android:background="@android:color/transparent"
-            android:hint="Search"
+            android:hint="@string/nav_search"
             android:paddingStart="16dp"
             android:paddingEnd="16dp"
             android:drawableStart="@drawable/ic_search"
@@ -54,7 +54,7 @@
         android:layout_marginStart="16dp"
         android:layout_marginTop="8dp"
         android:layout_marginBottom="8dp"
-        android:text="Suggested for you"
+        android:text="@string/suggested_for_you"
         android:textColor="?attr/colorOnSurface"
         android:textSize="16sp"
         android:textStyle="bold" />
@@ -127,7 +127,7 @@
                     android:layout_width="match_parent"
                     android:layout_height="match_parent"
                     android:gravity="center"
-                    android:text="No results found"
+                    android:text="@string/no_results_found"
                     android:textColor="?attr/colorOnSurfaceVariant"
                     android:textSize="16sp"
                     android:visibility="gone" />

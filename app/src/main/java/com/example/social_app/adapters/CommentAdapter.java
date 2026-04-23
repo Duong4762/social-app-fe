@@ -317,7 +317,7 @@ public class CommentAdapter extends RecyclerView.Adapter<CommentAdapter.CommentV
             boolean isLiked = likedCommentIds.contains(comment.getId());
             
             if (likeButtonText != null) {
-                likeButtonText.setText(isLiked ? "Liked" : "Like");
+                likeButtonText.setText(isLiked ? context.getString(R.string.liked) : context.getString(R.string.like));
                 likeButtonText.setTextColor(context.getResources().getColor(
                         isLiked ? R.color.primary_purple : R.color.text_secondary
                 ));
@@ -343,10 +343,10 @@ public class CommentAdapter extends RecyclerView.Adapter<CommentAdapter.CommentV
 
         private String formatTimestamp(Context context, long timestamp) {
             long diff = System.currentTimeMillis() - timestamp;
-            if (diff < 60000) return "Just now";
-            if (diff < 3600000) return (diff / 60000) + "m";
-            if (diff < 86400000) return (diff / 3600000) + "h";
-            return (diff / 86400000) + "d";
+            if (diff < 60000) return context.getString(R.string.just_now);
+            if (diff < 3600000) return context.getString(R.string.minutes_ago, (int) (diff / 60000));
+            if (diff < 86400000) return context.getString(R.string.hours_ago, (int) (diff / 3600000));
+            return context.getString(R.string.days_ago, (int) (diff / 86400000));
         }
     }
 }

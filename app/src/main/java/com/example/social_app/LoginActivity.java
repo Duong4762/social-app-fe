@@ -119,7 +119,7 @@ public class LoginActivity extends BaseActivity {
                 .addOnFailureListener(e -> {
                     Log.e(TAG, "Login failed", e);
                     setLoading(false);
-                    Toast.makeText(this, "Đăng nhập thất bại: " + e.getMessage(), Toast.LENGTH_LONG).show();
+                    Toast.makeText(this, getString(R.string.login_failed, e.getMessage()), Toast.LENGTH_LONG).show();
                 });
     }
 

@@ -70,7 +70,7 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 style="@style/TextAppearance.Feed.Time"
-                android:text="2 HOURS AGO" />
+                android:text="@string/just_now" />
 
             <TextView
                 android:id="@+id/post_location"
@@ -163,7 +163,7 @@
                     android:layout_height="wrap_content"
                     android:layout_marginStart="8dp"
                     style="@style/TextAppearance.Feed.ActionCount"
-                    android:text="245" />
+                    android:text="0" />
 
             </LinearLayout>
 
@@ -193,7 +193,7 @@
                     android:layout_height="wrap_content"
                     android:layout_marginStart="8dp"
                     style="@style/TextAppearance.Feed.ActionCount"
-                    android:text="42" />
+                    android:text="0" />
 
             </LinearLayout>
 
@@ -223,7 +223,7 @@
                     android:layout_height="wrap_content"
                     android:layout_marginStart="8dp"
                     style="@style/TextAppearance.Feed.ActionCount"
-                    android:text="18" />
+                    android:text="0" />
 
             </LinearLayout>
 

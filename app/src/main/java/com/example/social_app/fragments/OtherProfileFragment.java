@@ -137,7 +137,7 @@ public class OtherProfileFragment extends Fragment implements PostAdapter.OnPost
         }
 
         if (TextUtils.isEmpty(userId)) {
-            Toast.makeText(requireContext(), "Khong tim thay nguoi dung", Toast.LENGTH_SHORT).show();
+            Toast.makeText(requireContext(), getString(R.string.user_not_found), Toast.LENGTH_SHORT).show();
             return;
         }
         targetUserId = userId;
@@ -159,7 +159,7 @@ public class OtherProfileFragment extends Fragment implements PostAdapter.OnPost
                     }
                     User user = snapshot.toObject(User.class);
                     if (user == null) {
-                        Toast.makeText(requireContext(), "Khong tim thay thong tin nguoi dung", Toast.LENGTH_SHORT).show();
+                        Toast.makeText(requireContext(), getString(R.string.user_info_not_found), Toast.LENGTH_SHORT).show();
                         return;
                     }
                     bindProfile(user);
@@ -168,7 +168,7 @@ public class OtherProfileFragment extends Fragment implements PostAdapter.OnPost
                     if (!isAdded()) {
                         return;
                     }
-                    Toast.makeText(requireContext(), "Khong tai duoc thong tin nguoi dung", Toast.LENGTH_SHORT).show();
+                    Toast.makeText(requireContext(), getString(R.string.user_load_failed), Toast.LENGTH_SHORT).show();
                 });
 
         refreshFollowState();
@@ -178,9 +178,9 @@ public class OtherProfileFragment extends Fragment implements PostAdapter.OnPost
 
     private void bindProfile(User user) {
         profileUser = user;
-        String fullName = safeOrDefault(user.getFullName(), "User");
-        String username = safeOrDefault(user.getUsername(), "username");
-        String bio = safeOrDefault(user.getBio(), "No bio yet");
+        String fullName = safeOrDefault(user.getFullName(), getString(R.string.default_user_name));
+        String username = safeOrDefault(user.getUsername(), getString(R.string.default_username));
+        String bio = safeOrDefault(user.getBio(), getString(R.string.default_bio));
 
         tvName.setText(fullName);
         tvHandle.setText("@" + username.replace("@", ""));
@@ -473,7 +473,7 @@ public class OtherProfileFragment extends Fragment implements PostAdapter.OnPost
                         return;
                     }
                     int followerCount = query.size();
-                    tvFollowed.setText(followerCount + " Followers");
+                    tvFollowed.setText(getString(R.string.followers_count_label, String.valueOf(followerCount)));
                 });
 
         // following = users target follows (followerId == targetUserId)
@@ -486,7 +486,7 @@ public class OtherProfileFragment extends Fragment implements PostAdapter.OnPost
                         return;
                     }
                     int followingCount = query.size();
-                    tvFollower.setText(followingCount + " Following");
+                    tvFollower.setText(getString(R.string.following_count_label, String.valueOf(followingCount)));
                 });
 
         // posts count of target user
@@ -498,7 +498,7 @@ public class OtherProfileFragment extends Fragment implements PostAdapter.OnPost
                     if (!isAdded()) {
                         return;
                     }
-                    tvBlog.setText(query.size() + " Posts");
+                    tvBlog.setText(getString(R.string.posts_count_label, String.valueOf(query.size())));
                 });
     }
 
@@ -529,7 +529,7 @@ public class OtherProfileFragment extends Fragment implements PostAdapter.OnPost
 
             @Override
             public void onFollowClicked(User user, int position) {
-                Toast.makeText(requireContext(), "Follow from list - Coming soon", Toast.LENGTH_SHORT).show();
+                Toast.makeText(requireContext(), getString(R.string.coming_soon), Toast.LENGTH_SHORT).show();
             }
         });
         userAdapter.setHideFollowButtonForSelf(true);
@@ -556,17 +556,15 @@ public class OtherProfileFragment extends Fragment implements PostAdapter.OnPost
     }
 
     private void updateTabUI() {
-        tabThreads.setTextColor(requireContext().getColor(R.color.text));
-        tabReplies.setTextColor(requireContext().getColor(R.color.muted));
-        tabReposts.setTextColor(requireContext().getColor(R.color.muted));
+        tabThreads.setSelected("posts".equals(selectedTab));
+        tabReplies.setSelected("followers".equals(selectedTab));
+        tabReposts.setSelected("following".equals(selectedTab));
 
         TextView selectedView = tabThreads;
         if ("followers".equals(selectedTab)) {
             selectedView = tabReplies;
-            tabReplies.setTextColor(requireContext().getColor(R.color.text));
         } else if ("following".equals(selectedTab)) {
             selectedView = tabReposts;
-            tabReposts.setTextColor(requireContext().getColor(R.color.text));
         }
 
         final TextView finalSelectedView = selectedView;
@@ -748,7 +746,7 @@ public class OtherProfileFragment extends Fragment implements PostAdapter.OnPost
         android.content.Intent shareIntent = new android.content.Intent(android.content.Intent.ACTION_SEND);
         shareIntent.setType("text/plain");
         shareIntent.putExtra(android.content.Intent.EXTRA_TEXT, post.getCaption());
-        startActivity(android.content.Intent.createChooser(shareIntent, "Share post"));
+        startActivity(android.content.Intent.createChooser(shareIntent, getString(R.string.share)));
     }
 
     @Override
@@ -778,26 +776,58 @@ public class OtherProfileFragment extends Fragment implements PostAdapter.OnPost
     @Override
     public void onDeletePostClicked(Post post) {
         new androidx.appcompat.app.AlertDialog.Builder(requireContext())
-                .setTitle("Xóa bài viết")
-                .setMessage("Bạn có chắc chắn muốn xóa bài viết này?")
-                .setPositiveButton("Xóa", (dialog, which) -> {
+                .setTitle(getString(R.string.delete_post_title))
+                .setMessage(getString(R.string.delete_post_confirm))
+                .setPositiveButton(getString(R.string.delete), (dialog, which) -> {
                     newPostViewModel.deletePost(post.getId());
                     loadTabContent();
                 })
-                .setNegativeButton("Hủy", null)
+                .setNegativeButton(getString(R.string.cancel), null)
                 .show();
     }
 
     @Override
     public void onReportPostClicked(Post post) {
-        String[] reasons = {"Nội dung không phù hợp", "Spam", "Quấy rối", "Thông tin sai lệch", "Khác"};
+        String[] reasons = {
+                getString(R.string.report_reason_inappropriate),
+                getString(R.string.report_reason_spam),
+                getString(R.string.report_reason_harassment),
+                getString(R.string.report_reason_false_info),
+                getString(R.string.report_reason_other)
+        };
         new androidx.appcompat.app.AlertDialog.Builder(requireContext())
-                .setTitle("Báo cáo bài viết")
+                .setTitle(getString(R.string.report_post_title))
                 .setItems(reasons, (dialog, which) -> {
-                    homeViewModel.reportPost(post, reasons[which]);
-                    Toast.makeText(requireContext(), "Cảm ơn bạn đã báo cáo.", Toast.LENGTH_SHORT).show();
+                    String selectedReason = reasons[which];
+                    if (selectedReason.equals(getString(R.string.report_reason_other))) {
+                        showReportDetailDialog(post, selectedReason);
+                    } else {
+                        homeViewModel.reportPost(post, selectedReason);
+                        Toast.makeText(requireContext(), getString(R.string.report_thanks), Toast.LENGTH_SHORT).show();
+                    }
                 })
-                .setNegativeButton("Hủy", null)
+                .setNegativeButton(getString(R.string.cancel_action), null)
+                .show();
+    }
+
+    private void showReportDetailDialog(Post post, String baseReason) {
+        android.widget.EditText input = new android.widget.EditText(requireContext());
+        input.setHint(R.string.report_reason_hint);
+        int padding = (int) (16 * getResources().getDisplayMetrics().density);
+        android.widget.FrameLayout container = new android.widget.FrameLayout(requireContext());
+        container.addView(input);
+        input.setPadding(padding, padding, padding, padding);
+
+        new androidx.appcompat.app.AlertDialog.Builder(requireContext())
+                .setTitle(R.string.report_reason_title)
+                .setView(container)
+                .setPositiveButton(R.string.report_submit, (dialog, which) -> {
+                    String detail = input.getText().toString().trim();
+                    String finalReason = detail.isEmpty() ? baseReason : baseReason + ": " + detail;
+                    homeViewModel.reportPost(post, finalReason);
+                    Toast.makeText(requireContext(), getString(R.string.report_thanks), Toast.LENGTH_SHORT).show();
+                })
+                .setNegativeButton(R.string.cancel_action, null)
                 .show();
     }
 }

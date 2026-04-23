@@ -26,7 +26,7 @@
             android:textColor="?attr/colorOnSurface"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="Create Account" />
+            android:text="@string/register_title" />
 
         <TextView
             android:layout_width="wrap_content"
@@ -172,7 +172,7 @@
                 />
         </LinearLayout>
         <TextView
-            android:text="Date of birth"
+            android:text="@string/register_dob"
             android:layout_marginTop="32dp"
             android:layout_marginLeft="4dp"
             android:textColor="?attr/colorOnSurfaceVariant"
@@ -190,7 +190,7 @@
                 android:layout_width="0dp"
                 android:layout_height="56dp"
                 android:layout_weight="1"
-                android:text="Day"
+                android:text="@string/register_day"
                 android:gravity="center"
                 android:textSize="16sp"
                 android:textColor="?attr/colorOnSurfaceVariant"
@@ -208,7 +208,7 @@
                 android:layout_width="0dp"
                 android:layout_weight="1"
                 android:layout_height="56dp"
-                android:text="Month"
+                android:text="@string/register_month"
                 android:gravity="center"
                 android:textColor="?attr/colorOnSurfaceVariant"
                 android:textSize="16sp"
@@ -225,7 +225,7 @@
                 android:layout_width="0dp"
                 android:layout_height="56dp"
                 android:layout_weight="1"
-                android:text="Year"
+                android:text="@string/register_year"
                 android:gravity="center"
                 android:textSize="16sp"
                 android:textColor="?attr/colorOnSurfaceVariant"
@@ -237,7 +237,7 @@
         </LinearLayout>
         <TextView
             android:id="@+id/tvGenderLabel"
-            android:text="Gender"
+            android:text="@string/register_gender"
             android:layout_marginTop="24dp"
             android:layout_marginLeft="4dp"
             android:textColor="?attr/colorOnSurfaceVariant"
@@ -278,7 +278,7 @@
             android:layout_width="match_parent"
             android:layout_height="56dp"
             android:textColor="?attr/colorSurface"
-            android:text="Sign Up"
+            android:text="@string/register_button"
             android:layout_marginTop="28dp"
             android:textStyle="bold"
             app:backgroundTint="@null"
@@ -291,7 +291,7 @@
             android:visibility="gone" />
 
         <TextView
-            android:text="OR"
+            android:text="@string/login_or"
             android:textColor="?attr/colorOnSurfaceVariant"
             android:layout_marginTop="24dp"
             android:layout_width="wrap_content"
@@ -307,14 +307,14 @@
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="Already have an account? "
+                android:text="@string/register_footer"
                 android:textColor="?attr/colorOnSurfaceVariant"/>
 
             <TextView
                 android:id="@+id/btnGoToLogin"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="Login"
+                android:text="@string/login_button"
                 android:textColor="@color/purple"/>
         </LinearLayout>
     </LinearLayout>

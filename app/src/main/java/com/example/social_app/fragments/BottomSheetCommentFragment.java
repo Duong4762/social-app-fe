@@ -259,7 +259,7 @@ public class BottomSheetCommentFragment extends BottomSheetDialogFragment implem
             if (swipeRefresh != null) swipeRefresh.setRefreshing(true);
             commentViewModel.loadComments(postId);
         } else {
-            Toast.makeText(getContext(), "Error: Post ID not found", Toast.LENGTH_SHORT).show();
+            Toast.makeText(getContext(), R.string.error_post_id_not_found, Toast.LENGTH_SHORT).show();
         }
     }
 
@@ -269,7 +269,7 @@ public class BottomSheetCommentFragment extends BottomSheetDialogFragment implem
 
     private void sendComment() {
         if (commentInput == null) {
-            Toast.makeText(getContext(), "Error: Comment input not available", Toast.LENGTH_SHORT).show();
+            Toast.makeText(getContext(), R.string.error_comment_input_not_available, Toast.LENGTH_SHORT).show();
             return;
         }
 
@@ -293,7 +293,7 @@ public class BottomSheetCommentFragment extends BottomSheetDialogFragment implem
     private void uploadMediaAndSendComment(String text) {
         if (selectedMediaUri == null) return;
 
-        Toast.makeText(getContext(), "Uploading media...", Toast.LENGTH_SHORT).show();
+        Toast.makeText(getContext(), R.string.uploading_media, Toast.LENGTH_SHORT).show();
         com.example.social_app.utils.CloudinaryUploadUtil.uploadMedia(
                 requireContext(),
                 selectedMediaUri,
@@ -317,7 +317,7 @@ public class BottomSheetCommentFragment extends BottomSheetDialogFragment implem
 
                     @Override
                     public void onError(String message, Throwable throwable) {
-                        Toast.makeText(getContext(), "Upload failed: " + message, Toast.LENGTH_SHORT).show();
+                        Toast.makeText(getContext(), getString(R.string.upload_failed, message), Toast.LENGTH_SHORT).show();
                     }
                 }
         );
@@ -386,7 +386,7 @@ public class BottomSheetCommentFragment extends BottomSheetDialogFragment implem
         selectedMediaUri = android.net.Uri.parse("https://media.giphy.com/media/v1.Y2lkPTc5MGI3NjExNHJidmZ3Z3R3Z3R3Z3R3Z3R3Z3R3Z3R3Z3R3Z3R3Z3R3JlcD1ndm1fYnlfaWQmY3Q9Zw/3o7TKMGpxP5OqP6V9u/giphy.gif");
         selectedMediaType = "gif";
         updateSendButtonState();
-        Toast.makeText(getContext(), "GIF selected", Toast.LENGTH_SHORT).show();
+        Toast.makeText(getContext(), R.string.gif_selected, Toast.LENGTH_SHORT).show();
     }
 
     private void openFileChooser() {
@@ -402,7 +402,7 @@ public class BottomSheetCommentFragment extends BottomSheetDialogFragment implem
                             selectedMediaUri = result.getData().getData();
                             selectedMediaType = "image";
                             updateSendButtonState();
-                            Toast.makeText(getContext(), "Image selected", Toast.LENGTH_SHORT).show();
+                            Toast.makeText(getContext(), R.string.image_selected, Toast.LENGTH_SHORT).show();
                         }
                     });
 
@@ -421,7 +421,7 @@ public class BottomSheetCommentFragment extends BottomSheetDialogFragment implem
     @Override
     public void onReplyClicked(Comment comment, String userName) {
         if (comment == null) {
-            Toast.makeText(getContext(), "Error: Cannot reply to this comment", Toast.LENGTH_SHORT).show();
+            Toast.makeText(getContext(), R.string.error_cannot_reply, Toast.LENGTH_SHORT).show();
             return;
         }
         replyingToUserId = userName;
@@ -453,18 +453,18 @@ public class BottomSheetCommentFragment extends BottomSheetDialogFragment implem
 
     private void showCommentOptionsMenu(Comment comment, int position) {
         android.app.AlertDialog.Builder builder = new android.app.AlertDialog.Builder(requireContext());
-        builder.setTitle("Comment options");
+        builder.setTitle(R.string.report_reason_title);
 
         boolean isOwnComment = isOwnedByCurrentUser(comment);
         java.util.List<String> options = new java.util.ArrayList<>();
         if (isOwnComment) {
-            options.add("Edit");
-            options.add("Delete");
+            options.add(getString(R.string.menu_edit));
+            options.add(getString(R.string.delete));
         }
-        options.add("Report");
-        options.add("Share");
-        options.add("Copy");
-        options.add("Cancel");
+        options.add(getString(R.string.menu_report));
+        options.add(getString(R.string.action_share));
+        options.add(getString(R.string.copy_action)); // Assuming we'll add copy_action
+        options.add(getString(R.string.cancel_action));
 
         builder.setItems(options.toArray(new String[0]), (dialog, which) -> {
             if (which == 0 && isOwnComment) {
@@ -507,18 +507,18 @@ public class BottomSheetCommentFragment extends BottomSheetDialogFragment implem
     }
     private void deleteComment(Comment comment, int position) {
         new android.app.AlertDialog.Builder(requireContext())
-                .setTitle("Delete comment?")
-                .setMessage("This action cannot be undone.")
-                .setPositiveButton("Delete", (dialog, which) -> {
+                .setTitle(R.string.delete_post_title)
+                .setMessage(R.string.delete_post_confirm)
+                .setPositiveButton(R.string.delete, (dialog, which) -> {
                     commentViewModel.deleteComment(comment.getId());
                     commentAdapter.removeComment(position);
-                    Toast.makeText(getContext(), "Comment deleted", Toast.LENGTH_SHORT).show();
+                    Toast.makeText(getContext(), R.string.comment_deleted, Toast.LENGTH_SHORT).show();
                 })
-                .setNegativeButton("Cancel", null)
+                .setNegativeButton(R.string.cancel_action, null)
                 .show();
     }
     private void reportComment(Comment comment) {
-        Toast.makeText(getContext(), "Comment reported", Toast.LENGTH_SHORT).show();
+        Toast.makeText(getContext(), R.string.comment_reported, Toast.LENGTH_SHORT).show();
     }
     private void shareComment(Comment comment) {
         android.content.Intent sendIntent = new android.content.Intent();
@@ -532,7 +532,7 @@ public class BottomSheetCommentFragment extends BottomSheetDialogFragment implem
                 (android.content.ClipboardManager) requireContext().getSystemService(android.content.Context.CLIPBOARD_SERVICE);
         android.content.ClipData clip = android.content.ClipData.newPlainText("comment", comment.getContent());
         clipboard.setPrimaryClip(clip);
-        Toast.makeText(getContext(), "Comment copied to clipboard", Toast.LENGTH_SHORT).show();
+        Toast.makeText(getContext(), R.string.comment_copied, Toast.LENGTH_SHORT).show();
     }
     @Override
     public void onStart() {

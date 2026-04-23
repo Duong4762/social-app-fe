@@ -117,7 +117,7 @@
             android:background="@drawable/bg_input_rounded_outline"
             android:clickable="true"
             android:focusable="false"
-            android:hint="yyyy-MM-dd"
+            android:hint="@string/profile_edit_dob_hint"
             android:inputType="none"
             android:maxLines="1" />
 
