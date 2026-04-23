@@ -420,7 +420,7 @@ public class ProfileFragment extends Fragment {
         };
 
         if (!TextUtils.isEmpty(cloudName) && !TextUtils.isEmpty(uploadPreset)) {
-            CloudinaryUploadUtil.uploadImage(
+            CloudinaryUploadUtil.uploadMedia(
                     requireContext(),
                     uploadUri,
                     cloudName,
@@ -431,7 +431,7 @@ public class ProfileFragment extends Fragment {
         }
 
         // Fallback: dùng config mặc định trong CloudinaryUploadUtil khi strings chưa cấu hình.
-        CloudinaryUploadUtil.uploadImage(
+        CloudinaryUploadUtil.uploadMedia(
                 requireContext(),
                 uploadUri,
                 callback

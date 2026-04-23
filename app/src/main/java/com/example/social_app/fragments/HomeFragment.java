@@ -273,9 +273,15 @@ public class HomeFragment extends Fragment implements PostAdapter.OnPostActionLi
             return;
         }
         
-        // Gọi ViewModel để tạo bài viết nhanh (chỉ text)
-        // Lưu ý: Privacy mặc định là PUBLIC, không có ảnh và không có location/tags
-        newPostViewModel.createPost(content, new java.util.ArrayList<>(), "PUBLIC", null, null);
+        // Tạo bài viết nhanh (text-only) với privacy mặc định PUBLIC.
+        // Signature: createPost(content, mediaUris, location, taggedPeople, privacyLevel)
+        newPostViewModel.createPost(
+                content,
+                new java.util.ArrayList<>(),
+                null,
+                new java.util.ArrayList<>(),
+                "PUBLIC"
+        );
     }
 
     @Override
