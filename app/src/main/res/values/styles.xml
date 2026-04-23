@@ -11,7 +11,7 @@
         <item name="android:fontFamily">@font/inter</item>
         <item name="android:textSize">32sp</item>
         <item name="android:textStyle">bold</item>
-        <item name="android:textColor">?android:attr/textColorPrimary</item>
+        <item name="android:textColor">?attr/colorOnSurface</item>
     </style>
 
     <!-- Large Title (28sp) -->
@@ -19,7 +19,7 @@
         <item name="android:fontFamily">@font/inter</item>
         <item name="android:textSize">28sp</item>
         <item name="android:textStyle">bold</item>
-        <item name="android:textColor">?android:attr/textColorPrimary</item>
+        <item name="android:textColor">?attr/colorOnSurface</item>
     </style>
 
     <!-- Medium Title (24sp) -->
@@ -27,7 +27,7 @@
         <item name="android:fontFamily">@font/inter</item>
         <item name="android:textSize">24sp</item>
         <item name="android:textStyle">bold</item>
-        <item name="android:textColor">?android:attr/textColorPrimary</item>
+        <item name="android:textColor">?attr/colorOnSurface</item>
     </style>
 
     <!-- Small Title (20sp) -->
@@ -35,7 +35,7 @@
         <item name="android:fontFamily">@font/inter</item>
         <item name="android:textSize">20sp</item>
         <item name="android:textStyle">bold</item>
-        <item name="android:textColor">?android:attr/textColorPrimary</item>
+        <item name="android:textColor">?attr/colorOnSurface</item>
     </style>
 
     <!-- Username Style (16sp - Bold) -->
@@ -43,7 +43,7 @@
         <item name="android:fontFamily">@font/inter</item>
         <item name="android:textSize">16sp</item>
         <item name="android:textStyle">bold</item>
-        <item name="android:textColor">?android:attr/textColorPrimary</item>
+        <item name="android:textColor">?attr/colorOnSurface</item>
     </style>
 
     <!-- Subtitle/Secondary Heading (18sp - Bold) -->
@@ -51,7 +51,7 @@
         <item name="android:fontFamily">@font/inter</item>
         <item name="android:textSize">18sp</item>
         <item name="android:textStyle">bold</item>
-        <item name="android:textColor">?android:attr/textColorPrimary</item>
+        <item name="android:textColor">?attr/colorOnSurface</item>
     </style>
 
     <!-- Heading 3 (16sp - Bold) -->
@@ -59,7 +59,7 @@
         <item name="android:fontFamily">@font/inter</item>
         <item name="android:textSize">16sp</item>
         <item name="android:textStyle">bold</item>
-        <item name="android:textColor">?android:attr/textColorPrimary</item>
+        <item name="android:textColor">?attr/colorOnSurface</item>
     </style>
 
     <!-- ============================================
@@ -70,49 +70,49 @@
     <style name="TextAppearance.Body.Large" parent="TextAppearance.Material3.BodyLarge">
         <item name="android:fontFamily">@font/inter</item>
         <item name="android:textSize">18sp</item>
-        <item name="android:textColor">?android:attr/textColorPrimary</item>
+        <item name="android:textColor">?attr/colorOnSurface</item>
     </style>
 
     <!-- Medium Body Text (16sp - Regular) - Default for post content -->
     <style name="TextAppearance.Body.Medium" parent="TextAppearance.Material3.BodyMedium">
         <item name="android:fontFamily">@font/inter</item>
         <item name="android:textSize">16sp</item>
-        <item name="android:textColor">?android:attr/textColorPrimary</item>
+        <item name="android:textColor">?attr/colorOnSurface</item>
     </style>
 
     <!-- Small Body Text (14sp - Regular) -->
     <style name="TextAppearance.Body.Small" parent="TextAppearance.Material3.BodySmall">
         <item name="android:fontFamily">@font/inter</item>
         <item name="android:textSize">14sp</item>
-        <item name="android:textColor">?android:attr/textColorSecondary</item>
+        <item name="android:textColor">?attr/colorOnSurfaceVariant</item>
     </style>
 
     <!-- Extra Small Body Text (12sp - Regular) -->
     <style name="TextAppearance.Body.ExtraSmall" parent="TextAppearance.Material3.LabelSmall">
         <item name="android:fontFamily">@font/inter</item>
         <item name="android:textSize">12sp</item>
-        <item name="android:textColor">?android:attr/textColorSecondary</item>
+        <item name="android:textColor">?attr/colorOnSurfaceVariant</item>
     </style>
 
     <!-- Caption/Label (13sp - Regular) -->
     <style name="TextAppearance.Caption" parent="TextAppearance.Material3.LabelSmall">
         <item name="android:fontFamily">@font/inter</item>
         <item name="android:textSize">13sp</item>
-        <item name="android:textColor">?android:attr/textColorSecondary</item>
+        <item name="android:textColor">?attr/colorOnSurfaceVariant</item>
     </style>
 
     <!-- Post Time/Timestamp (11sp - Regular) -->
     <style name="TextAppearance.PostTime" parent="TextAppearance.Material3.LabelSmall">
         <item name="android:fontFamily">@font/inter</item>
         <item name="android:textSize">11sp</item>
-        <item name="android:textColor">?android:attr/textColorTertiary</item>
+        <item name="android:textColor">?attr/colorOnSurfaceVariant</item>
     </style>
 
     <!-- Location Text (13sp - Regular) -->
     <style name="TextAppearance.Location" parent="TextAppearance.Material3.LabelSmall">
         <item name="android:fontFamily">@font/inter</item>
         <item name="android:textSize">13sp</item>
-        <item name="android:textColor">?android:attr/textColorSecondary</item>
+        <item name="android:textColor">?attr/colorOnSurfaceVariant</item>
     </style>
 
     <!-- ============================================
@@ -132,7 +132,7 @@
         <item name="android:fontFamily">@font/inter</item>
         <item name="android:textSize">14sp</item>
         <item name="android:textStyle">bold</item>
-        <item name="android:textColor">?android:attr/textColorPrimary</item>
+        <item name="android:textColor">?attr/colorOnSurface</item>
     </style>
 
     <!-- Dialog Title Style -->
@@ -140,14 +140,14 @@
         <item name="android:fontFamily">@font/inter</item>
         <item name="android:textSize">24sp</item>
         <item name="android:textStyle">bold</item>
-        <item name="android:textColor">?android:attr/textColorPrimary</item>
+        <item name="android:textColor">?attr/colorOnSurface</item>
     </style>
 
     <!-- Dialog Body Style -->
     <style name="TextAppearance.Dialog.Body" parent="TextAppearance.Material3.BodyMedium">
         <item name="android:fontFamily">@font/inter</item>
         <item name="android:textSize">16sp</item>
-        <item name="android:textColor">?android:attr/textColorPrimary</item>
+        <item name="android:textColor">?attr/colorOnSurface</item>
     </style>
 
     <!-- ============================================
@@ -159,14 +159,14 @@
         <item name="android:fontFamily">@font/inter</item>
         <item name="android:textSize">14sp</item>
         <item name="android:textStyle">bold</item>
-        <item name="android:textColor">?android:attr/textColorPrimary</item>
+        <item name="android:textColor">?attr/colorOnSurface</item>
     </style>
 
     <!-- Comment Content (Regular) -->
     <style name="TextAppearance.Comment.Content" parent="TextAppearance.Material3.BodySmall">
         <item name="android:fontFamily">@font/inter</item>
         <item name="android:textSize">14sp</item>
-        <item name="android:textColor">?android:attr/textColorPrimary</item>
+        <item name="android:textColor">?attr/colorOnSurface</item>
     </style>
 
     <!-- Post Feed Item Title/Username -->
@@ -174,28 +174,28 @@
         <item name="android:fontFamily">@font/inter</item>
         <item name="android:textSize">15sp</item>
         <item name="android:textStyle">bold</item>
-        <item name="android:textColor">?android:attr/textColorPrimary</item>
+        <item name="android:textColor">?attr/colorOnSurface</item>
     </style>
 
     <!-- Post Feed Item Time -->
     <style name="TextAppearance.Feed.Time" parent="TextAppearance.Material3.LabelSmall">
         <item name="android:fontFamily">@font/inter</item>
         <item name="android:textSize">12sp</item>
-        <item name="android:textColor">?android:attr/textColorSecondary</item>
+        <item name="android:textColor">?attr/colorOnSurfaceVariant</item>
     </style>
 
     <!-- Post Feed Item Content/Description -->
     <style name="TextAppearance.Feed.Content" parent="TextAppearance.Material3.BodyMedium">
         <item name="android:fontFamily">@font/inter</item>
         <item name="android:textSize">15sp</item>
-        <item name="android:textColor">?android:attr/textColorPrimary</item>
+        <item name="android:textColor">?attr/colorOnSurface</item>
     </style>
 
     <!-- Post Action Count (Like/Comment/Share counts) -->
     <style name="TextAppearance.Feed.ActionCount" parent="TextAppearance.Material3.LabelSmall">
         <item name="android:fontFamily">@font/inter</item>
         <item name="android:textSize">13sp</item>
-        <item name="android:textColor">?android:attr/textColorSecondary</item>
+        <item name="android:textColor">?attr/colorOnSurfaceVariant</item>
     </style>
 
     <!-- ShapeableImageView: full circle (avatar clipping); gray fill in layout. -->

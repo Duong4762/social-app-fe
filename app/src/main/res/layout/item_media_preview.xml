@@ -18,7 +18,7 @@
         android:layout_margin="6dp"
         android:background="@drawable/bg_circle_semi"
         android:src="@drawable/ic_close"
-        app:tint="@color/white"
+        app:tint="?attr/colorSurface"
         android:layout_gravity="top|end"/>
     <!-- Icon play nếu là video -->
     <ImageView
@@ -28,5 +28,5 @@
         android:layout_gravity="center"
         android:src="@drawable/ic_play"
         android:visibility="gone"
-        app:tint="@color/white" />
+        app:tint="?attr/colorSurface" />
 </FrameLayout>

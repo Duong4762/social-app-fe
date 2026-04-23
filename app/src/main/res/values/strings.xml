@@ -47,6 +47,11 @@
     <string name="nav_profile">Profile</string>
     <string name="nav_settings">Settings</string>
     <string name="logout">Log out</string>
+    <string name="theme">Theme</string>
+    <string name="dark_mode">Dark Mode</string>
+    <string name="language">Language</string>
+    <string name="english">English</string>
+    <string name="vietnamese">Vietnamese</string>
 
     <!-- Loading States -->
     <string name="loading">Loading posts...</string>
@@ -64,12 +69,15 @@
     <string name="gif">GIF</string>
     <string name="send">Send</string>
     <string name="like">Like</string>
+    <string name="liked">Liked</string>
     <string name="reply">Reply</string>
     <string name="share">Share</string>
     <string name="bookmark">Bookmark</string>
     <string name="location">Location</string>
     <string name="verified">Verified</string>
-    <string name="view_more_replies">View more replies...</string>
+    <string name="view_more_replies">View more replies</string>
+    <string name="view_replies_singular">View %d reply</string>
+    <string name="view_replies_plural">View %d replies</string>
     <string name="compose_hint_comment">Write a comment...</string>
     <string name="comment_empty_error">Comment cannot be empty</string>
     <string name="drag_handle_desc">Drag to move</string>

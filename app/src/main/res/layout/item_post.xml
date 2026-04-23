@@ -118,7 +118,7 @@
                 android:background="@drawable/bg_indicator"
                 android:paddingHorizontal="8dp"
                 android:paddingVertical="4dp"
-                android:textColor="@color/white"
+                android:textColor="?attr/colorSurface"
                 android:textSize="12sp"
                 android:visibility="gone"
                 tools:text="1/3" />

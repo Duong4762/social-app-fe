@@ -15,6 +15,8 @@ import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
 import com.example.social_app.R;
+import com.example.social_app.utils.UserAvatarLoader;
+import com.google.android.material.imageview.ShapeableImageView;
 import com.example.social_app.firebase.FirebaseManager;
 import androidx.swiperefreshlayout.widget.SwipeRefreshLayout;
 import com.example.social_app.adapters.PostAdapter;
@@ -89,6 +91,9 @@ public class HomeFragment extends Fragment implements PostAdapter.OnPostActionLi
 
         // Set up RecyclerView
         setupRecyclerView();
+
+        // Load current user avatar
+        loadCurrentUserAvatar(view);
 
         // Load initial posts
         loadPosts();
@@ -187,6 +192,42 @@ public class HomeFragment extends Fragment implements PostAdapter.OnPostActionLi
      */
     private void loadPosts() {
         homeViewModel.loadPosts(true);
+    }
+
+    private void loadCurrentUserAvatar(View view) {
+        ShapeableImageView ivUserAvatar = view.findViewById(R.id.iv_user_avatar);
+        String uid = FirebaseManager.getInstance().getAuth().getUid();
+        
+        // Load placeholder first
+        if (ivUserAvatar != null) {
+            ivUserAvatar.setImageResource(R.drawable.avatar_placeholder);
+        }
+
+        if (uid != null) {
+            FirebaseManager.getInstance().getFirestore()
+                    .collection(FirebaseManager.COLLECTION_USERS)
+                    .document(uid)
+                    .get()
+                    .addOnSuccessListener(documentSnapshot -> {
+                        if (isAdded() && documentSnapshot.exists()) {
+                            String avatarUrl = documentSnapshot.getString("avatarUrl");
+                            if (ivUserAvatar != null) {
+                                UserAvatarLoader.load(ivUserAvatar, avatarUrl);
+                            }
+                            if (postAdapter != null) {
+                                postAdapter.setCurrentUserAvatarUrl(avatarUrl);
+                            }
+                        } else if (isAdded() && ivUserAvatar != null) {
+                            // Fallback to default if not found in Firestore
+                            UserAvatarLoader.load(ivUserAvatar, null);
+                        }
+                    })
+                    .addOnFailureListener(e -> {
+                        if (isAdded() && ivUserAvatar != null) {
+                            UserAvatarLoader.load(ivUserAvatar, null);
+                        }
+                    });
+        }
     }
 
     /**

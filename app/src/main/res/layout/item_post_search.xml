@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
     android:orientation="vertical"
@@ -36,7 +37,7 @@
                 android:layout_height="wrap_content"
                 android:text="Username"
                 android:textStyle="bold"
-                android:textColor="@color/text"
+                android:textColor="?attr/colorOnSurface"
                 android:textSize="14sp" />
 
             <LinearLayout
@@ -49,7 +50,7 @@
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:text="Just now"
-                    android:textColor="@color/muted"
+                    android:textColor="?attr/colorOnSurfaceVariant"
                     android:textSize="11sp" />
 
                 <TextView
@@ -58,7 +59,7 @@
                     android:layout_height="wrap_content"
                     android:layout_marginStart="8dp"
                     android:text="Location"
-                    android:textColor="@color/muted"
+                    android:textColor="?attr/colorOnSurfaceVariant"
                     android:textSize="11sp"
                     android:visibility="gone" />
             </LinearLayout>
@@ -71,7 +72,8 @@
             android:padding="4dp"
             android:src="@drawable/ic_more_horiz"
             android:background="?attr/selectableItemBackgroundBorderless"
-            android:contentDescription="@string/app_name" />
+            android:contentDescription="@string/app_name"
+            app:tint="?attr/colorOnSurfaceVariant" />
 
     </LinearLayout>
 
@@ -82,20 +84,37 @@
         android:layout_height="wrap_content"
         android:layout_marginTop="8dp"
         android:text="Post content here..."
-        android:textColor="@color/text"
+        android:textColor="?attr/colorOnSurface"
         android:textSize="14sp"
         android:maxLines="3"
         android:ellipsize="end" />
 
-    <!-- Post Image -->
-    <ImageView
-        android:id="@+id/post_image"
+    <!-- Post Media Container -->
+    <FrameLayout
+        android:id="@+id/post_media_container"
         android:layout_width="match_parent"
         android:layout_height="200dp"
-        android:layout_marginTop="8dp"
-        android:scaleType="centerCrop"
-        android:src="@drawable/bg_nav_item_selected"
-        android:contentDescription="@string/post_image" />
+        android:layout_marginTop="8dp">
+
+        <ImageView
+            android:id="@+id/post_image"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:scaleType="centerCrop"
+            android:src="@drawable/bg_nav_item_selected"
+            android:contentDescription="@string/post_image" />
+
+        <ImageView
+            android:id="@+id/ic_play_video"
+            android:layout_width="48dp"
+            android:layout_height="48dp"
+            android:layout_gravity="center"
+            android:src="@drawable/ic_play"
+            android:visibility="gone"
+            android:alpha="0.8"
+            android:contentDescription="@string/app_name" />
+
+    </FrameLayout>
 
     <!-- Like & Comment & Share & Bookmark -->
     <LinearLayout
@@ -127,7 +146,7 @@
                 android:layout_height="wrap_content"
                 android:layout_marginStart="4dp"
                 android:text="0"
-                android:textColor="@color/muted"
+                android:textColor="?attr/colorOnSurfaceVariant"
                 android:textSize="12sp" />
 
         </LinearLayout>
@@ -155,7 +174,7 @@
                 android:layout_height="wrap_content"
                 android:layout_marginStart="4dp"
                 android:text="0"
-                android:textColor="@color/muted"
+                android:textColor="?attr/colorOnSurfaceVariant"
                 android:textSize="12sp" />
 
         </LinearLayout>
@@ -183,7 +202,7 @@
                 android:layout_height="wrap_content"
                 android:layout_marginStart="4dp"
                 android:text="0"
-                android:textColor="@color/muted"
+                android:textColor="?attr/colorOnSurfaceVariant"
                 android:textSize="12sp" />
 
         </LinearLayout>

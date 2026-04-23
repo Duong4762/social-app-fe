@@ -5,6 +5,7 @@
     android:id="@+id/main"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
+    android:background="?attr/colorSurface"
     tools:context=".RegisterActivity">
     <LinearLayout
         android:layout_width="match_parent"
@@ -22,7 +23,7 @@
         <TextView
             android:textSize="32dp"
             android:textStyle="bold"
-            android:textColor="@color/black"
+            android:textColor="?attr/colorOnSurface"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:text="Create Account" />
@@ -31,7 +32,7 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_marginTop="4dp"
-            android:textColor="@color/gray"
+            android:textColor="?attr/colorOnSurfaceVariant"
             android:textAlignment="center"
             android:text="Join our community and start sharing
 \nyour moments"/>
@@ -43,7 +44,8 @@
             android:gravity="center_vertical"
             android:paddingHorizontal="14dp"
             android:layout_marginTop="24dp"
-            android:background="@drawable/bg_input_text">
+            android:background="@drawable/bg_input_text"
+            android:backgroundTint="?attr/colorSurfaceVariant">
             <EditText
                 android:id="@+id/edtFullName"
                 android:layout_width="0dp"
@@ -52,8 +54,8 @@
                 android:hint="Full Name"
                 android:layout_marginLeft="6dp"
                 android:background="@android:color/transparent"
-                android:textColor="@color/black"
-                android:textColorHint="@color/gray"
+                android:textColor="?attr/colorOnSurface"
+                android:textColorHint="?attr/colorOnSurfaceVariant"
                 />
         </LinearLayout>
         <LinearLayout
@@ -63,7 +65,8 @@
             android:gravity="center_vertical"
             android:paddingHorizontal="14dp"
             android:layout_marginTop="24dp"
-            android:background="@drawable/bg_input_text">
+            android:background="@drawable/bg_input_text"
+            android:backgroundTint="?attr/colorSurfaceVariant">
 
             <EditText
                 android:id="@+id/edtUsername"
@@ -73,8 +76,8 @@
                 android:hint="Username"
                 android:layout_marginLeft="6dp"
                 android:background="@android:color/transparent"
-                android:textColor="@color/black"
-                android:textColorHint="@color/gray"
+                android:textColor="?attr/colorOnSurface"
+                android:textColorHint="?attr/colorOnSurfaceVariant"
                 />
         </LinearLayout>
         <LinearLayout
@@ -84,7 +87,8 @@
             android:gravity="center_vertical"
             android:paddingHorizontal="14dp"
             android:layout_marginTop="24dp"
-            android:background="@drawable/bg_input_text">
+            android:background="@drawable/bg_input_text"
+            android:backgroundTint="?attr/colorSurfaceVariant">
 
             <EditText
                 android:id="@+id/edtEmail"
@@ -94,8 +98,8 @@
                 android:hint="EmailAddress"
                 android:layout_marginLeft="6dp"
                 android:background="@android:color/transparent"
-                android:textColor="@color/black"
-                android:textColorHint="@color/gray"
+                android:textColor="?attr/colorOnSurface"
+                android:textColorHint="?attr/colorOnSurfaceVariant"
                 />
         </LinearLayout>
 
@@ -107,6 +111,7 @@
             android:layout_marginTop="24dp"
             android:paddingHorizontal="14dp"
             android:background="@drawable/bg_input_text"
+            android:backgroundTint="?attr/colorSurfaceVariant"
             android:paddingEnd="25dp">
 
             <EditText
@@ -117,8 +122,8 @@
                 android:background="@android:color/transparent"
                 android:hint="Password"
                 android:inputType="textPassword"
-                android:textColor="@color/black"
-                android:textColorHint="@color/gray"
+                android:textColor="?attr/colorOnSurface"
+                android:textColorHint="?attr/colorOnSurfaceVariant"
                 android:layout_weight="1"/>
             <ImageView
                 android:id="@+id/ivTogglePassword"
@@ -128,6 +133,7 @@
                 android:clickable="true"
                 android:focusable="true"
                 android:contentDescription="@string/cd_toggle_password"
+                app:tint="?attr/colorOnSurfaceVariant"
                 />
         </LinearLayout>
 
@@ -139,6 +145,7 @@
             android:paddingHorizontal="14dp"
             android:layout_marginTop="24dp"
             android:background="@drawable/bg_input_text"
+            android:backgroundTint="?attr/colorSurfaceVariant"
             android:paddingEnd="25dp">
 
             <EditText
@@ -150,8 +157,8 @@
                 android:inputType="textPassword"
                 android:layout_marginLeft="6dp"
                 android:background="@android:color/transparent"
-                android:textColor="@color/black"
-                android:textColorHint="@color/gray"
+                android:textColor="?attr/colorOnSurface"
+                android:textColorHint="?attr/colorOnSurfaceVariant"
                 />
             <ImageView
                 android:id="@+id/ivToggleConfirmPassword"
@@ -161,13 +168,14 @@
                 android:clickable="true"
                 android:focusable="true"
                 android:contentDescription="@string/cd_toggle_password"
+                app:tint="?attr/colorOnSurfaceVariant"
                 />
         </LinearLayout>
         <TextView
             android:text="Date of birth"
             android:layout_marginTop="32dp"
             android:layout_marginLeft="4dp"
-            android:textColor="@color/gray"
+            android:textColor="?attr/colorOnSurfaceVariant"
             android:textSize="16sp"
             android:layout_width="match_parent"
             android:layout_height="wrap_content" />
@@ -185,8 +193,9 @@
                 android:text="Day"
                 android:gravity="center"
                 android:textSize="16sp"
-                android:textColor="@color/gray"
+                android:textColor="?attr/colorOnSurfaceVariant"
                 android:background="@drawable/bg_input_text"
+                android:backgroundTint="?attr/colorSurfaceVariant"
                 android:clickable="true"
                 android:focusable="true"
                 />
@@ -201,9 +210,10 @@
                 android:layout_height="56dp"
                 android:text="Month"
                 android:gravity="center"
-                android:textColor="@color/gray"
+                android:textColor="?attr/colorOnSurfaceVariant"
                 android:textSize="16sp"
                 android:background="@drawable/bg_input_text"
+                android:backgroundTint="?attr/colorSurfaceVariant"
                 android:clickable="true"
                 android:focusable="true"
                 />
@@ -218,8 +228,9 @@
                 android:text="Year"
                 android:gravity="center"
                 android:textSize="16sp"
-                android:textColor="@color/gray"
+                android:textColor="?attr/colorOnSurfaceVariant"
                 android:background="@drawable/bg_input_text"
+                android:backgroundTint="?attr/colorSurfaceVariant"
                 android:clickable="true"
                 android:focusable="true"
                 />
@@ -229,7 +240,7 @@
             android:text="Gender"
             android:layout_marginTop="24dp"
             android:layout_marginLeft="4dp"
-            android:textColor="@color/gray"
+            android:textColor="?attr/colorOnSurfaceVariant"
             android:textSize="16sp"
             android:layout_width="match_parent"
             android:layout_height="wrap_content" />
@@ -240,7 +251,8 @@
             android:layout_marginTop="8dp"
             android:gravity="center_vertical"
             android:paddingHorizontal="14dp"
-            android:background="@drawable/bg_input_text">
+            android:background="@drawable/bg_input_text"
+            android:backgroundTint="?attr/colorSurfaceVariant">
             <Spinner
                 android:id="@+id/spGender"
                 android:layout_width="0dp"
@@ -265,7 +277,7 @@
             android:id="@+id/btnRegister"
             android:layout_width="match_parent"
             android:layout_height="56dp"
-            android:textColor="@color/white"
+            android:textColor="?attr/colorSurface"
             android:text="Sign Up"
             android:layout_marginTop="28dp"
             android:textStyle="bold"
@@ -280,7 +292,7 @@
 
         <TextView
             android:text="OR"
-            android:textColor="@color/gray"
+            android:textColor="?attr/colorOnSurfaceVariant"
             android:layout_marginTop="24dp"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content" />
@@ -296,7 +308,7 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:text="Already have an account? "
-                android:textColor="#6B7280"/>
+                android:textColor="?attr/colorOnSurfaceVariant"/>
 
             <TextView
                 android:id="@+id/btnGoToLogin"

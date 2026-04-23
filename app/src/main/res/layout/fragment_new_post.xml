@@ -3,7 +3,7 @@
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="@color/bg">
+    android:background="?attr/colorSurface">
 
     <!-- AppBar -->
     <LinearLayout
@@ -16,7 +16,7 @@
         android:paddingEnd="16dp"
         android:paddingTop="18dp"
         android:paddingBottom="14dp"
-        android:background="@color/white"
+        android:background="?attr/colorSurface"
         app:layout_constraintTop_toTopOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent">
@@ -27,7 +27,7 @@
             android:background="?attr/selectableItemBackgroundBorderless"
             android:src="@drawable/ic_close"
             android:contentDescription="@string/cancel"
-            app:tint="@color/text_primary"
+            app:tint="?attr/colorOnSurface"
             android:padding="6dp"/>
         <TextView
             android:id="@+id/new_post_title"
@@ -36,7 +36,7 @@
             android:layout_weight="1"
             android:gravity="center"
             android:text="@string/new_post"
-            android:textColor="@color/text_primary"
+            android:textColor="?attr/colorOnSurface"
             android:textStyle="bold"
             android:textSize="18sp" />
     </LinearLayout>
@@ -82,21 +82,38 @@
                     android:scaleType="centerCrop"
                     android:src="@drawable/avatar_placeholder"
                     app:shapeAppearanceOverlay="@style/ShapeAppearanceOverlay.SocialApp.Circle" />
+
+                <LinearLayout
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:orientation="vertical"
+                    android:layout_marginStart="12dp">
+
+                    <TextView
+                        android:id="@+id/user_name"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="User Name"
+                        android:textColor="?attr/colorOnSurface"
+                        android:textStyle="bold"
+                        android:textSize="15sp" />
+
                     <EditText
                         android:id="@+id/post_input"
-                        android:layout_width="0dp"
+                        android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:layout_weight="1"
                         android:minHeight="40dp"
                         android:background="@android:color/transparent"
                         android:hint="@string/write_something"
-                        android:textColor="@color/text_primary"
-                        android:textColorHint="@color/muted"
+                        android:textColor="?attr/colorOnSurface"
+                        android:textColorHint="?attr/colorOnSurfaceVariant"
                         android:textSize="16sp"
-                        android:paddingStart="14dp"
-                        android:paddingEnd="5dp"
+                        android:paddingTop="4dp"
+                        android:paddingBottom="4dp"
                         android:inputType="textMultiLine"
-                        android:maxLines="3"/>
+                        android:maxLines="10"/>
+                </LinearLayout>
             </LinearLayout>
 
             <!-- Photo Section -->
@@ -180,7 +197,7 @@
                     android:layout_weight="1"
                     android:backgroundTint="@color/primary"
                     android:text="@string/upload_image"
-                    android:textColor="@color/white"
+                    android:textColor="?attr/colorSurface"
                     android:drawableStart="@drawable/ic_composer_image"
                     android:textAllCaps="false"
                     android:drawablePadding="7dp"/>
@@ -194,76 +211,15 @@
                     android:layout_weight="1"
                     android:backgroundTint="@color/primary"
                     android:text="@string/upload_video"
-                    android:textColor="@color/white"
+                    android:textColor="?attr/colorSurface"
                     android:drawableStart="@drawable/ic_composer_video"
                     android:textAllCaps="false"
                     android:drawablePadding="7dp"/>
             </LinearLayout>
 
             <!-- Actions List -->
-            <LinearLayout
-                android:id="@+id/quick_actions"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:orientation="vertical">
+            <!-- REMOVED: Add Location, Tag People, Audience -->
 
-                <!-- Add Location -->
-                <include
-                    android:id="@+id/add_location_row"
-                    layout="@layout/item_row_action"/>
-                <View android:layout_height="1dp" android:layout_width="match_parent" android:background="?attr/colorOutlineVariant" />
-
-                <!-- Tag People -->
-                <include
-                    android:id="@+id/tag_people_row"
-                    layout="@layout/item_row_tag"/>
-
-                <!-- Tagged Users Chips Container -->
-                <com.google.android.material.chip.ChipGroup
-                    android:id="@+id/tagged_users_chip_group"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="4dp"
-                    android:layout_marginBottom="8dp"
-                    android:paddingStart="40dp"
-                    app:chipSpacingHorizontal="8dp"
-                    app:chipSpacingVertical="4dp"
-                    android:visibility="gone" />
-
-                <View android:layout_height="1dp" android:layout_width="match_parent" android:background="?attr/colorOutlineVariant" />
-
-                <!-- Audience -->
-                <LinearLayout
-                    android:layout_width="match_parent"
-                    android:layout_height="48dp"
-                    android:orientation="horizontal"
-                    android:gravity="center_vertical">
-
-                    <ImageView
-                        android:layout_width="24dp"
-                        android:layout_height="24dp"
-                        android:src="@drawable/ic_audience"
-                        app:tint="@color/primary"/>
-                    <TextView
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:paddingStart="13dp"
-                        android:text="@string/audience"
-                        android:textColor="@color/text_primary"
-                        android:textSize="15sp" />
-                    <Spinner
-                        android:id="@+id/privacy_spinner"
-                        android:layout_width="0dp"
-                        android:layout_height="40dp"
-                        android:layout_weight="1"
-                        android:background="@drawable/bg_spinner_audience"
-                        android:entries="@array/privacy_options"
-                        android:paddingStart="7dp"
-                        android:paddingEnd="7dp"
-                        android:textAlignment="viewStart"
-                        android:popupBackground="?attr/colorSurface"/>
-                </LinearLayout>
-            </LinearLayout>
         </LinearLayout>
     </ScrollView>
 
@@ -275,7 +231,7 @@
         android:orientation="horizontal"
         android:padding="18dp"
         android:gravity="center_vertical"
-        android:background="@color/white"
+        android:background="?attr/colorSurface"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintEnd_toEndOf="parent">
@@ -287,7 +243,7 @@
             android:background="@drawable/bg_fab_button"
             android:src="@drawable/ic_camera"
             android:contentDescription="@string/camera"
-            app:tint="@color/white"/>
+            app:tint="?attr/colorSurface"/>
         <View
             android:layout_width="0dp"
             android:layout_weight="1"
@@ -299,6 +255,6 @@
             android:backgroundTint="@color/primary"
             android:text="@string/post"
             android:textAllCaps="false"
-            android:textColor="@color/white"/>
+            android:textColor="?attr/colorSurface"/>
     </LinearLayout>
 </androidx.constraintlayout.widget.ConstraintLayout>

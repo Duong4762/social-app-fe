@@ -21,6 +21,7 @@ public class FirebaseManager {
     public static final String COLLECTION_MESSAGE_READS        = "message_reads";
     public static final String COLLECTION_NOTIFICATIONS        = "notifications";
     public static final String COLLECTION_REPORTS              = "reports";
+    public static final String COLLECTION_BOOKMARKS            = "bookmarks";
 
     // -------------------------------------------------------
     // Firebase Storage Paths

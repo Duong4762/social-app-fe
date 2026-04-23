@@ -25,7 +25,7 @@ import com.example.social_app.firebase.AdminUserInitializer;
 import com.example.social_app.firebase.FirebaseManager;
 import com.google.firebase.auth.FirebaseUser;
 
-public class LoginActivity extends AppCompatActivity {
+public class LoginActivity extends BaseActivity {
 
     private static final String TAG = "LoginActivity";
 

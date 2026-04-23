@@ -48,9 +48,8 @@ public class CommentViewModel extends ViewModel {
         db = firebaseManager.getFirestore();
     }
 
-    /**
-     * Load comments for a specific post from Firestore.
-     */
+    private String currentSortBy = "createdAt"; // Default sort
+
     public void loadComments(String postId) {
         isLoading.setValue(true);
         db.collection(FirebaseManager.COLLECTION_COMMENTS)
@@ -58,16 +57,11 @@ public class CommentViewModel extends ViewModel {
                 .get()
                 .addOnSuccessListener(queryDocumentSnapshots -> {
                     List<Comment> fetchedComments = queryDocumentSnapshots.toObjects(Comment.class);
-                    // Sort manually to avoid index requirement error
-                    fetchedComments.sort((c1, c2) -> {
-                        if (c1.getCreatedAt() == null || c2.getCreatedAt() == null) return 0;
-                        return c2.getCreatedAt().compareTo(c1.getCreatedAt());
-                    });
                     comments.setValue(fetchedComments);
                     isLoading.setValue(false);
                 })
                 .addOnFailureListener(e -> {
-                    error.setValue("Lỗi tải bình luận: " + e.getMessage());
+                    error.setValue("Error loading comments: " + e.getMessage());
                     isLoading.setValue(false);
                 });
     }
@@ -75,7 +69,7 @@ public class CommentViewModel extends ViewModel {
     /**
      * Send a new comment to Firestore.
      */
-    public void sendComment(String postId, String text) {
+    public void sendComment(String postId, String text, String parentId) {
         String userId = firebaseManager.getAuth().getUid();
         if (userId == null) {
             error.setValue("Vui lòng đăng nhập");
@@ -83,12 +77,12 @@ public class CommentViewModel extends ViewModel {
         }
 
         String commentId = UUID.randomUUID().toString();
-        Comment newComment = new Comment(commentId, postId, userId, null, text, 0);
+        Comment newComment = new Comment(commentId, postId, userId, parentId, text, 0);
 
         db.collection(FirebaseManager.COLLECTION_COMMENTS).document(commentId)
                 .set(newComment)
                 .addOnSuccessListener(aVoid -> {
-                    // Update like count in Post document (optional, but good for UI)
+                    // Update comment count in Post document
                     db.collection(FirebaseManager.COLLECTION_POSTS).document(postId)
                             .update("commentCount", com.google.firebase.firestore.FieldValue.increment(1));
                     loadComments(postId); // Refresh list
@@ -96,22 +90,50 @@ public class CommentViewModel extends ViewModel {
                 .addOnFailureListener(e -> error.setValue("Lỗi gửi bình luận: " + e.getMessage()));
     }
 
+    public void sendComment(String postId, String text) {
+        sendComment(postId, text, null);
+    }
+
     /**
      * Toggle like status for a comment.
      */
     public void toggleLike(Comment comment) {
-        try {
-            String commentId = comment.getId();
-            if (commentId != null && likedCommentIds.add(commentId)) {
-                comment.setLikeCount(comment.getLikeCount() + 1);
-            } else {
-                likedCommentIds.remove(commentId);
-                comment.setLikeCount(Math.max(0, comment.getLikeCount() - 1));
-            }
-            comments.setValue(comments.getValue()); // Trigger update
-        } catch (Exception e) {
-            error.setValue("Failed to like comment: " + e.getMessage());
+        if (comment == null) return;
+        
+        String userId = firebaseManager.getAuth().getUid();
+        if (userId == null) {
+            error.setValue("Vui lòng đăng nhập để thích");
+            return;
         }
+
+        String commentId = comment.getId();
+        boolean isLiking = !likedCommentIds.contains(commentId);
+        
+        // Optimistic UI Update
+        if (isLiking) {
+            likedCommentIds.add(commentId);
+            comment.setLikeCount(comment.getLikeCount() + 1);
+        } else {
+            likedCommentIds.remove(commentId);
+            comment.setLikeCount(Math.max(0, comment.getLikeCount() - 1));
+        }
+        comments.setValue(comments.getValue());
+
+        // Firestore Update
+        db.collection(FirebaseManager.COLLECTION_COMMENTS).document(commentId)
+                .update("likeCount", com.google.firebase.firestore.FieldValue.increment(isLiking ? 1 : -1))
+                .addOnFailureListener(e -> {
+                    // Rollback on failure
+                    if (isLiking) {
+                        likedCommentIds.remove(commentId);
+                        comment.setLikeCount(comment.getLikeCount() - 1);
+                    } else {
+                        likedCommentIds.add(commentId);
+                        comment.setLikeCount(comment.getLikeCount() + 1);
+                    }
+                    comments.setValue(comments.getValue());
+                    error.setValue("Lỗi cập nhật lượt thích");
+                });
     }
 
     /**

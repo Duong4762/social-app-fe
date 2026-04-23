@@ -18,7 +18,7 @@
         android:paddingTop="10dp"
         android:paddingEnd="14dp"
         android:paddingBottom="10dp"
-        android:textColor="@color/white"
+        android:textColor="?attr/colorSurface"
         android:textSize="15sp"
         tools:text="I'm good, thanks!" />
 

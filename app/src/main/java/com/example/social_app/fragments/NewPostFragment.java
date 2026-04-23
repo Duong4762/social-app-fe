@@ -10,13 +10,11 @@ import android.text.TextWatcher;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
-import android.widget.ArrayAdapter;
 import android.widget.Button;
 import android.widget.EditText;
 import android.widget.ImageButton;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
-import android.widget.Spinner;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -39,11 +37,11 @@ public class NewPostFragment extends Fragment {
     private static final int PICK_VIDEO_REQUEST = 2;
 
     private EditText postInput;
+    private TextView userName;
     private ImageButton cameraButton;
     private Button uploadImageButton, uploadVideoButton, postButton;
     private ImageButton cancelButton;
     private ImageView userAvatar;
-    private Spinner privacySpinner;
 
     private LinearLayout photoPreviewContainer;
     private LinearLayout videoPreviewContainer;
@@ -51,20 +49,18 @@ public class NewPostFragment extends Fragment {
     private TextView videoSectionTitle;
     private View photoScrollView;
     private View videoScrollView;
-    private LinearLayout addLocationRow, tagPeopleRow;
-    private com.google.android.material.chip.ChipGroup taggedUsersChipGroup;
 
     private NewPostViewModel newPostViewModel;
     private List<Uri> selectedMedias = new ArrayList<>();
     private Uri cameraImageUri;
-    private String selectedLocation = null;
-    private List<com.example.social_app.data.model.User> taggedPeople = new ArrayList<>();
-    private String privacyLevel = "Everyone";
     private String mEditPostId = null;
 
     private static final int MAX_CHARACTERS = 280;
     private static final int CAMERA_REQUEST = 3;
     private static final int CAMERA_PERMISSION_REQUEST = 4;
+
+    private static final long MAX_IMAGE_SIZE = 10 * 1024 * 1024; // 10MB
+    private static final long MAX_VIDEO_SIZE = 15 * 1024 * 1024; // 15MB
 
     public static NewPostFragment newInstance() {
         return new NewPostFragment();
@@ -91,7 +87,6 @@ public class NewPostFragment extends Fragment {
         super.onCreate(savedInstanceState);
         newPostViewModel = new ViewModelProvider(this).get(NewPostViewModel.class);
         selectedMedias = new ArrayList<>();
-        taggedPeople = new ArrayList<>();
 
         if (getArguments() != null) {
             mEditPostId = getArguments().getString("edit_post_id");
@@ -116,17 +111,10 @@ public class NewPostFragment extends Fragment {
             updatePostButtonState();
         }
 
-        // Khôi phục UI nếu đã có dữ liệu (trường hợp quay lại từ BackStack)
-        if (selectedLocation != null) {
-            TextView locationText = addLocationRow.findViewById(R.id.action_text);
-            if (locationText != null) locationText.setText(selectedLocation);
-        }
-        renderTaggedPeople();
         renderMediaPreview();
 
         // Kiểm tra xem có cần mở picker ngay không
         if (getArguments() != null && getArguments().getBoolean("open_picker", false)) {
-            // Xóa flag để tránh mở lại khi xoay màn hình hoặc quay lại fragment
             getArguments().remove("open_picker");
             view.post(this::pickImage);
         }
@@ -139,61 +127,9 @@ public class NewPostFragment extends Fragment {
         
         newPostViewModel.getEditingPost().observe(getViewLifecycleOwner(), post -> {
             if (post != null && mEditPostId != null) {
-                // Chỉ set text nếu input đang trống để tránh ghi đè khi quay lại từ TagPeople
                 if (postInput.getText().toString().isEmpty()) {
                     postInput.setText(post.getCaption());
                 }
-                
-                // Nếu chưa có location được chọn mới, lấy từ post cũ
-                if (selectedLocation == null) {
-                    selectedLocation = post.getLocation();
-                    if (selectedLocation != null && !selectedLocation.isEmpty()) {
-                        TextView locationText = addLocationRow.findViewById(R.id.action_text);
-                        if (locationText != null) locationText.setText(selectedLocation);
-                    }
-                }
-
-                // Nếu danh sách hiện tại đang trống (chưa đi tag bạn mới), lấy từ post cũ
-                if (taggedPeople.isEmpty() && post.getTaggedUsers() != null && !post.getTaggedUsers().isEmpty()) {
-                    List<String> taggedIds = post.getTaggedUsers();
-                    
-                    com.google.firebase.firestore.FirebaseFirestore.getInstance()
-                            .collection(com.example.social_app.firebase.FirebaseManager.COLLECTION_USERS)
-                            .whereIn(com.google.firebase.firestore.FieldPath.documentId(), taggedIds)
-                            .get()
-                            .addOnSuccessListener(queryDocumentSnapshots -> {
-                                // Nếu trong lúc load từ Firestore mà mình vẫn chưa tag thêm ai mới, thì mới lấy data cũ
-                                if (taggedPeople.isEmpty()) {
-                                    this.taggedPeople = queryDocumentSnapshots.toObjects(com.example.social_app.data.model.User.class);
-                                }
-                                // Luôn render để cập nhật UI cho dù là data cũ hay data mới
-                                renderTaggedPeople();
-                            })
-                            .addOnFailureListener(e -> {
-                                // Ngay cả khi lỗi load data cũ, vẫn render data hiện tại (có thể là rỗng)
-                                renderTaggedPeople();
-                            });
-                } else {
-                    // Nếu đã có danh sách (do vừa tag mới xong quay lại) hoặc post cũ không có tag
-                    renderTaggedPeople();
-                }
-                
-                // Map Firestore visibility back to Spinner
-                String visibility = post.getVisibility();
-                if (visibility != null && privacySpinner != null) {
-                    privacyLevel = visibility;
-                    int selection = 0;
-                    String upperVisibility = visibility.toUpperCase();
-                    if (upperVisibility.equals("EVERYONE") || upperVisibility.equals("PUBLIC")) selection = 0;
-                    else if (upperVisibility.equals("FRIENDS")) selection = 1;
-                    else if (upperVisibility.equals("FRIENDS_ONLY")) selection = 2;
-                    else if (upperVisibility.equals("PRIVATE")) selection = 3;
-
-                    if (selection < privacySpinner.getCount()) {
-                        privacySpinner.setSelection(selection);
-                    }
-                }
-                
                 updatePostButtonState();
             }
         });
@@ -207,18 +143,14 @@ public class NewPostFragment extends Fragment {
                 newPostViewModel.setExistingMediaUrls(urls);
             }
         });
-        
-        newPostViewModel.getExistingMediaUrls().observe(getViewLifecycleOwner(), urls -> {
-             renderMediaPreview();
-        });
     }
 
     private void initializeViews(View view) {
         postInput = view.findViewById(R.id.post_input);
+        userName = view.findViewById(R.id.user_name);
         cameraButton = view.findViewById(R.id.camera_button);
         uploadImageButton = view.findViewById(R.id.upload_image_button);
         uploadVideoButton = view.findViewById(R.id.upload_video_button);
-        privacySpinner = view.findViewById(R.id.privacy_spinner);
         userAvatar = view.findViewById(R.id.user_avatar);
         postButton = view.findViewById(R.id.post_button);
         cancelButton = view.findViewById(R.id.cancel_button);
@@ -230,35 +162,53 @@ public class NewPostFragment extends Fragment {
         photoScrollView = view.findViewById(R.id.photo_scroll_view);
         videoScrollView = view.findViewById(R.id.video_scroll_view);
 
-        addLocationRow = view.findViewById(R.id.add_location_row);
-        tagPeopleRow = view.findViewById(R.id.tag_people_row);
-        taggedUsersChipGroup = view.findViewById(R.id.tagged_users_chip_group);
-
-        if (userAvatar != null) {
-            UserAvatarLoader.load(userAvatar, null);
-        }
+        loadCurrentUserAvatar();
 
         if (postInput != null) {
             postInput.setFilters(new InputFilter[]{new InputFilter.LengthFilter(MAX_CHARACTERS)});
         }
 
-        // Setup privacy spinner an toàn hơn
-        try {
-            ArrayAdapter<CharSequence> privacyAdapter = ArrayAdapter.createFromResource(
-                    requireContext(),
-                    R.array.privacy_options,
-                    android.R.layout.simple_spinner_item
-            );
-            privacyAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
-            if (privacySpinner != null) {
-                privacySpinner.setAdapter(privacyAdapter);
-            }
-        } catch (Exception e) {
-            android.util.Log.e("NewPostFragment", "Spinner error", e);
-        }
-
         if (postButton != null) {
             postButton.setEnabled(false);
+        }
+    }
+
+    private void loadCurrentUserAvatar() {
+        String uid = com.example.social_app.firebase.FirebaseManager.getInstance().getAuth().getUid();
+        
+        // Initial placeholder
+        if (userAvatar != null) {
+            userAvatar.setImageResource(R.drawable.avatar_placeholder);
+        }
+        if (userName != null) {
+            userName.setText("Loading...");
+        }
+
+        if (uid != null) {
+            com.google.firebase.firestore.FirebaseFirestore.getInstance()
+                    .collection(com.example.social_app.firebase.FirebaseManager.COLLECTION_USERS)
+                    .document(uid)
+                    .get()
+                    .addOnSuccessListener(documentSnapshot -> {
+                        if (isAdded() && documentSnapshot.exists()) {
+                            String avatarUrl = documentSnapshot.getString("avatarUrl");
+                            String name = documentSnapshot.getString("fullName");
+                            
+                            UserAvatarLoader.load(userAvatar, avatarUrl);
+                            if (userName != null) {
+                                userName.setText(name != null ? name : "Unknown User");
+                            }
+                        } else if (isAdded()) {
+                            UserAvatarLoader.load(userAvatar, null);
+                            if (userName != null) userName.setText("Unknown User");
+                        }
+                    })
+                    .addOnFailureListener(e -> {
+                        if (isAdded()) {
+                            UserAvatarLoader.load(userAvatar, null);
+                            if (userName != null) userName.setText("Unknown User");
+                        }
+                    });
         }
     }
 
@@ -274,17 +224,6 @@ public class NewPostFragment extends Fragment {
         uploadImageButton.setOnClickListener(v -> pickImage());
         uploadVideoButton.setOnClickListener(v -> pickVideo());
         cameraButton.setOnClickListener(v -> openCamera());
-
-        // Hành động: Add Location, Tag People
-        addLocationRow.setOnClickListener(v -> openLocationPicker());
-        tagPeopleRow.setOnClickListener(v -> openPeopleTagger());
-
-        privacySpinner.setOnItemSelectedListener(new android.widget.AdapterView.OnItemSelectedListener() {
-            @Override public void onItemSelected(android.widget.AdapterView<?> parent, View view, int position, long id) {
-                privacyLevel = parent.getItemAtPosition(position).toString();
-            }
-            @Override public void onNothingSelected(android.widget.AdapterView<?> parent) {}
-        });
 
         postButton.setOnClickListener(v -> createPost());
         cancelButton.setOnClickListener(v -> handleCancel());
@@ -313,23 +252,6 @@ public class NewPostFragment extends Fragment {
         newPostViewModel.getError().observe(getViewLifecycleOwner(), error -> {
             if (error != null) {
                 Toast.makeText(getContext(), error, Toast.LENGTH_SHORT).show();
-            }
-        });
-
-        newPostViewModel.getEditingPost().observe(getViewLifecycleOwner(), post -> {
-            if (post != null) {
-                postInput.setText(post.getCaption());
-                selectedLocation = post.getLocation();
-                if (selectedLocation != null && !selectedLocation.isEmpty()) {
-                    TextView locationText = addLocationRow.findViewById(R.id.action_text);
-                    if (locationText != null) locationText.setText(selectedLocation);
-                }
-                
-                // Set privacy
-                if (post.getVisibility() != null) {
-                    privacyLevel = post.getVisibility();
-                    // Update spinner selection if needed
-                }
             }
         });
 
@@ -365,7 +287,6 @@ public class NewPostFragment extends Fragment {
         try {
             String timeStamp = new java.text.SimpleDateFormat("yyyyMMdd_HHmmss", java.util.Locale.getDefault()).format(new java.util.Date());
             String imageFileName = "JPEG_" + timeStamp + "_";
-            // Đảm bảo thư mục "Pictures" tồn tại và khớp với file_paths.xml
             java.io.File storageDir = new java.io.File(requireContext().getExternalFilesDir(null), "Pictures");
             if (!storageDir.exists()) {
                 storageDir.mkdirs();
@@ -373,7 +294,6 @@ public class NewPostFragment extends Fragment {
             photoFile = java.io.File.createTempFile(imageFileName, ".jpg", storageDir);
         } catch (java.io.IOException ex) {
             Toast.makeText(getContext(), "Error creating file: " + ex.getMessage(), Toast.LENGTH_SHORT).show();
-            android.util.Log.e("NewPostFragment", "Camera file error", ex);
         }
 
         if (photoFile != null) {
@@ -381,10 +301,7 @@ public class NewPostFragment extends Fragment {
                     requireContext().getPackageName() + ".fileprovider",
                     photoFile);
             takePictureIntent.putExtra(android.provider.MediaStore.EXTRA_OUTPUT, cameraImageUri);
-            
-            // Cấp quyền cho các app có thể xử lý Intent này
             takePictureIntent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION | Intent.FLAG_GRANT_WRITE_URI_PERMISSION);
-
             startActivityForResult(takePictureIntent, CAMERA_REQUEST);
         }
     }
@@ -400,114 +317,6 @@ public class NewPostFragment extends Fragment {
         }
     }
 
-    private void openLocationPicker() {
-        List<String> options = new ArrayList<>();
-        options.add("Sử dụng vị trí hiện tại");
-        options.add("Nhập địa điểm thủ công");
-        if (selectedLocation != null) {
-            options.add("Xóa vị trí");
-        }
-
-        AlertDialog.Builder builder = new AlertDialog.Builder(getContext());
-        builder.setTitle(getString(R.string.add_location))
-                .setItems(options.toArray(new String[0]), (dialog, which) -> {
-                    if (which == 0) {
-                        selectedLocation = "Hà Nội, Việt Nam"; // Giả lập vị trí hiện tại
-                        ((TextView) addLocationRow.findViewById(R.id.action_text)).setText(selectedLocation);
-                    } else if (which == 1) {
-                        showManualLocationInput();
-                    } else if (which == 2) {
-                        selectedLocation = null;
-                        ((TextView) addLocationRow.findViewById(R.id.action_text)).setText(R.string.add_location);
-                    }
-                })
-                .setNegativeButton(R.string.cancel, null)
-                .show();
-    }
-
-    private void showManualLocationInput() {
-        final EditText input = new EditText(getContext());
-        input.setHint("Nhập địa điểm...");
-        if (selectedLocation != null && !selectedLocation.equals("Hà Nội, Việt Nam")) {
-            input.setText(selectedLocation);
-        }
-        
-        LinearLayout container = new LinearLayout(getContext());
-        container.setOrientation(LinearLayout.VERTICAL);
-        LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(
-                LinearLayout.LayoutParams.MATCH_PARENT,
-                LinearLayout.LayoutParams.WRAP_CONTENT);
-        lp.setMargins(40, 20, 40, 0);
-        input.setLayoutParams(lp);
-        container.addView(input);
-
-        new AlertDialog.Builder(getContext())
-                .setTitle("Nhập địa điểm")
-                .setView(container)
-                .setPositiveButton("Lưu", (d, w) -> {
-                    String loc = input.getText().toString().trim();
-                    if (!loc.isEmpty()) {
-                        selectedLocation = loc;
-                        ((TextView) addLocationRow.findViewById(R.id.action_text)).setText(selectedLocation);
-                    }
-                })
-                .setNegativeButton("Hủy", null)
-                .show();
-    }
-
-    private void openPeopleTagger() {
-        ArrayList<String> currentIds = new ArrayList<>();
-        for (com.example.social_app.data.model.User u : taggedPeople) {
-            currentIds.add(u.getId());
-        }
-        
-        TagPeopleFragment tagFragment = TagPeopleFragment.newInstance(currentIds);
-        tagFragment.setOnPeopleTaggedListener(users -> {
-            this.taggedPeople = users;
-            renderTaggedPeople();
-        });
-        
-        getParentFragmentManager().beginTransaction()
-                .replace(R.id.nav_host_fragment, tagFragment)
-                .addToBackStack(null)
-                .commit();
-    }
-
-    private void renderTaggedPeople() {
-        if (taggedUsersChipGroup == null) return;
-        
-        taggedUsersChipGroup.removeAllViews();
-        
-        TextView tagText = tagPeopleRow.findViewById(R.id.action_text);
-        if (taggedPeople == null || taggedPeople.isEmpty()) {
-            taggedUsersChipGroup.setVisibility(View.GONE);
-            if (tagText != null) tagText.setText(R.string.tag_people);
-            return;
-        }
-
-        taggedUsersChipGroup.setVisibility(View.VISIBLE);
-        if (tagText != null) tagText.setText("Tagged " + taggedPeople.size() + " people");
-        
-        for (com.example.social_app.data.model.User user : taggedPeople) {
-            com.google.android.material.chip.Chip chip = new com.google.android.material.chip.Chip(requireContext());
-            // Hiển thị Full Name thay vì ID
-            chip.setText(user.getFullName() != null ? user.getFullName() : user.getUsername()); 
-            chip.setCloseIconVisible(true);
-            chip.setChipBackgroundColorResource(android.R.color.transparent);
-            chip.setChipStrokeWidth(1.5f);
-            chip.setChipStrokeColorResource(R.color.primary);
-            chip.setTextColor(getResources().getColor(R.color.primary));
-            chip.setCloseIconTintResource(R.color.primary);
-            
-            chip.setOnCloseIconClickListener(v -> {
-                taggedPeople.remove(user);
-                renderTaggedPeople();
-            });
-            
-            taggedUsersChipGroup.addView(chip);
-        }
-    }
-
     private void createPost() {
         String content = postInput.getText().toString().trim();
         List<String> existingUrls = newPostViewModel.getExistingMediaUrls().getValue();
@@ -518,13 +327,15 @@ public class NewPostFragment extends Fragment {
             return;
         }
         
-        List<String> taggedIds = new ArrayList<>();
-        for (com.example.social_app.data.model.User u : taggedPeople) taggedIds.add(u.getId());
+        // Use default values for removed features
+        String defaultPrivacy = "EVERYONE";
+        String defaultLocation = null;
+        List<String> defaultTagged = new ArrayList<>();
 
         if (mEditPostId != null) {
-            newPostViewModel.updatePost(mEditPostId, content, selectedMedias, existingUrls, privacyLevel, selectedLocation, taggedIds);
+            newPostViewModel.updatePost(mEditPostId, content, selectedMedias, existingUrls, defaultPrivacy, defaultLocation, defaultTagged);
         } else {
-            newPostViewModel.createPost(content, selectedMedias, selectedLocation, taggedIds, privacyLevel);
+            newPostViewModel.createPost(content, selectedMedias, defaultLocation, defaultTagged, defaultPrivacy);
         }
     }
 
@@ -558,7 +369,6 @@ public class NewPostFragment extends Fragment {
         postButton.setEnabled(hasContent);
     }
 
-    // region Media Preview
     @Override
     public void onActivityResult(int requestCode, int resultCode, @Nullable Intent data) {
         super.onActivityResult(requestCode, resultCode, data);
@@ -568,9 +378,11 @@ public class NewPostFragment extends Fragment {
             } else if (requestCode == PICK_VIDEO_REQUEST && data != null) {
                 handleVideoPicked(data);
             } else if (requestCode == CAMERA_REQUEST) {
-                // Kiểm tra cameraImageUri có null không (do Fragment bị recreation)
                 if (cameraImageUri != null) {
-                    if (!selectedMedias.contains(cameraImageUri)) {
+                    long size = getFileSize(cameraImageUri);
+                    if (size > MAX_IMAGE_SIZE) {
+                        Toast.makeText(getContext(), "Ảnh chụp quá lớn (>10MB). Hãy thử giảm độ phân giải camera.", Toast.LENGTH_LONG).show();
+                    } else if (!selectedMedias.contains(cameraImageUri)) {
                         selectedMedias.add(cameraImageUri);
                     }
                 }
@@ -601,10 +413,10 @@ public class NewPostFragment extends Fragment {
             int count = data.getClipData().getItemCount();
             for (int i = 0; i < count; i++) {
                 Uri uri = data.getClipData().getItemAt(i).getUri();
-                selectedMedias.add(uri);
+                validateAndAddMedia(uri, MAX_IMAGE_SIZE, "Ảnh quá lớn (>10MB)");
             }
         } else if (data.getData() != null) {
-            selectedMedias.add(data.getData());
+            validateAndAddMedia(data.getData(), MAX_IMAGE_SIZE, "Ảnh quá lớn (>10MB)");
         }
     }
 
@@ -613,11 +425,35 @@ public class NewPostFragment extends Fragment {
             int count = data.getClipData().getItemCount();
             for (int i = 0; i < count; i++) {
                 Uri uri = data.getClipData().getItemAt(i).getUri();
-                selectedMedias.add(uri);
+                validateAndAddMedia(uri, MAX_VIDEO_SIZE, "Video quá lớn (>15MB)");
             }
         } else if (data.getData() != null) {
-            selectedMedias.add(data.getData());
+            validateAndAddMedia(data.getData(), MAX_VIDEO_SIZE, "Video quá lớn (>15MB)");
         }
+    }
+
+    private void validateAndAddMedia(Uri uri, long maxSize, String errorMessage) {
+        long size = getFileSize(uri);
+        if (size > maxSize) {
+            Toast.makeText(getContext(), errorMessage, Toast.LENGTH_SHORT).show();
+        } else {
+            selectedMedias.add(uri);
+        }
+    }
+
+    private long getFileSize(Uri uri) {
+        try {
+            android.database.Cursor cursor = getContext().getContentResolver().query(uri, null, null, null, null);
+            if (cursor != null && cursor.moveToFirst()) {
+                int sizeIndex = cursor.getColumnIndex(android.provider.OpenableColumns.SIZE);
+                long size = cursor.getLong(sizeIndex);
+                cursor.close();
+                return size;
+            }
+        } catch (Exception e) {
+            android.util.Log.e("NewPostFragment", "Error getting file size", e);
+        }
+        return 0;
     }
 
     private String getMimeType(Uri uri) {
@@ -632,9 +468,6 @@ public class NewPostFragment extends Fragment {
         return mimeType;
     }
 
-    /**
-     * Render media preview separated by type
-     */
     private void renderMediaPreview() {
         photoPreviewContainer.removeAllViews();
         videoPreviewContainer.removeAllViews();
@@ -691,7 +524,6 @@ public class NewPostFragment extends Fragment {
             else photoPreviewContainer.addView(mediaItem);
         }
 
-        // Update Visibility of sections
         boolean hasPhotos = photoPreviewContainer.getChildCount() > 0;
         boolean hasVideos = videoPreviewContainer.getChildCount() > 0;
         
@@ -743,5 +575,4 @@ public class NewPostFragment extends Fragment {
         btnClose.setOnClickListener(v -> dialog.dismiss());
         dialog.show();
     }
-    // endregion
 }

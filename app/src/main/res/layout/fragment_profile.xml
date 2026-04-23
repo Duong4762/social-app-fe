@@ -3,7 +3,7 @@
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="@color/white">
+    android:background="?attr/colorSurface">
 
     <TextView
         android:id="@+id/tvUsernameTop"
@@ -11,7 +11,7 @@
         android:layout_height="wrap_content"
         android:layout_marginTop="16dp"
         android:text="@string/profile_username_top"
-        android:textColor="@color/black"
+        android:textColor="?attr/colorOnSurface"
         android:textSize="18sp"
         android:textStyle="bold"
         app:layout_constraintEnd_toEndOf="parent"
@@ -52,7 +52,7 @@
         android:layout_marginStart="16dp"
         android:layout_marginEnd="12dp"
         android:text="Full name"
-        android:textColor="@color/black"
+        android:textColor="?attr/colorOnSurface"
         android:textSize="22sp"
         android:textStyle="bold"
         app:layout_constraintEnd_toStartOf="@id/imgAvatar"
@@ -65,7 +65,7 @@
         android:layout_height="wrap_content"
         android:layout_marginTop="4dp"
         android:text="username"
-        android:textColor="@color/muted"
+        android:textColor="?attr/colorOnSurfaceVariant"
         app:layout_constraintEnd_toEndOf="@id/tvName"
         app:layout_constraintStart_toStartOf="@id/tvName"
         app:layout_constraintTop_toBottomOf="@id/tvName" />
@@ -77,7 +77,7 @@
         android:layout_marginTop="8dp"
         android:layout_marginEnd="16dp"
         android:text="bio"
-        android:textColor="@color/black"
+        android:textColor="?attr/colorOnSurface"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="@id/tvName"
         app:layout_constraintTop_toBottomOf="@id/tvHandle" />
@@ -100,7 +100,7 @@
             android:layout_height="wrap_content"
             android:layout_weight="1"
             android:text="0 Posts"
-            android:textColor="@color/black"
+            android:textColor="?attr/colorOnSurface"
             android:textStyle="bold" />
         <TextView
             android:id="@+id/tvFollowed"
@@ -108,7 +108,7 @@
             android:layout_height="wrap_content"
             android:layout_weight="1"
             android:text="0 Followers"
-            android:textColor="@color/black"
+            android:textColor="?attr/colorOnSurface"
             android:textStyle="bold" />
 
         <TextView
@@ -118,7 +118,7 @@
             android:layout_weight="1"
             android:gravity="end"
             android:text="0 Following"
-            android:textColor="@color/black"
+            android:textColor="?attr/colorOnSurface"
             android:textStyle="bold" />
     </LinearLayout>
 
@@ -141,7 +141,7 @@
             android:backgroundTint="@color/primary_blue"
             android:text="Edit Profile"
             android:textAllCaps="false"
-            android:textColor="@color/white" />
+            android:textColor="?attr/colorSurface" />
     </LinearLayout>
 
     <LinearLayout
@@ -162,7 +162,7 @@
             android:layout_marginHorizontal="16dp"
             android:layout_marginVertical="10dp"
             android:text="@string/profile_tab_posts"
-            android:textColor="@color/text"
+            android:textColor="?attr/colorOnSurface"
             android:textStyle="bold" />
 
         <TextView
@@ -172,7 +172,7 @@
             android:layout_marginHorizontal="16dp"
             android:layout_marginVertical="10dp"
             android:text="@string/profile_tab_followers"
-            android:textColor="@color/muted" />
+            android:textColor="?attr/colorOnSurfaceVariant" />
 
         <TextView
             android:id="@+id/tabReposts"
@@ -181,14 +181,14 @@
             android:layout_marginHorizontal="16dp"
             android:layout_marginVertical="10dp"
             android:text="@string/profile_tab_following"
-            android:textColor="@color/muted" />
+            android:textColor="?attr/colorOnSurfaceVariant" />
     </LinearLayout>
 
     <View
         android:id="@+id/tabIndicator"
         android:layout_width="48dp"
         android:layout_height="2dp"
-        android:background="@color/text"
+        android:background="?attr/colorOnSurface"
         app:layout_constraintEnd_toEndOf="@id/tabLayout"
         app:layout_constraintStart_toStartOf="@id/tabLayout"
         app:layout_constraintTop_toBottomOf="@id/tabLayout" />
@@ -219,7 +219,7 @@
         android:layout_height="wrap_content"
         android:gravity="center"
         android:text="@string/profile_empty_posts"
-        android:textColor="@color/muted"
+        android:textColor="?attr/colorOnSurfaceVariant"
         android:textSize="14sp"
         android:visibility="gone"
         app:layout_constraintBottom_toBottomOf="@id/rvPosts"

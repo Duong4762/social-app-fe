@@ -138,6 +138,7 @@ public class SearchFragment extends Fragment implements PostAdapter.OnPostAction
         // Search posts adapter
         postsRecyclerView.setLayoutManager(new LinearLayoutManager(requireContext()));
         postSearchAdapter = new PostAdapter(requireContext(), this);
+        postSearchAdapter.setUseSearchLayout(true);
         postsRecyclerView.setAdapter(postSearchAdapter);
 
         // Tab listener

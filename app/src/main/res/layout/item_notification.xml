@@ -32,7 +32,7 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:text="Username liked your post"
-            android:textColor="@color/text"
+            android:textColor="?attr/colorOnSurface"
             android:textSize="14sp"
             android:maxLines="2"
             android:ellipsize="end" />
@@ -43,7 +43,7 @@
             android:layout_height="wrap_content"
             android:layout_marginTop="4dp"
             android:text="2m ago"
-            android:textColor="@color/muted"
+            android:textColor="?attr/colorOnSurfaceVariant"
             android:textSize="12sp" />
 
     </LinearLayout>

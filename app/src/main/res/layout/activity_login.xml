@@ -6,6 +6,7 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:fillViewport="true"
+    android:background="?attr/colorSurface"
     tools:context=".LoginActivity">
 
     <LinearLayout
@@ -24,7 +25,7 @@
         <TextView
             android:textSize="32dp"
             android:textStyle="bold"
-            android:textColor="@color/black"
+            android:textColor="?attr/colorOnSurface"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:text="Welcome Back" />
@@ -33,7 +34,7 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_marginTop="4dp"
-            android:textColor="@color/gray"
+            android:textColor="?attr/colorOnSurfaceVariant"
             android:text="Log in to stay connected"/>
 
         <LinearLayout
@@ -43,7 +44,8 @@
             android:background="@drawable/bg_input_text"
             android:gravity="center_vertical"
             android:orientation="horizontal"
-            android:paddingHorizontal="14dp">
+            android:paddingHorizontal="14dp"
+            android:backgroundTint="?attr/colorSurfaceVariant">
 
             <EditText
                 android:id="@+id/edtUsername"
@@ -53,8 +55,8 @@
                 android:layout_weight="1"
                 android:background="@android:color/transparent"
                 android:hint="Username or Email"
-                android:textColor="@color/black"
-                android:textColorHint="@color/gray" />
+                android:textColor="?attr/colorOnSurface"
+                android:textColorHint="?attr/colorOnSurfaceVariant" />
         </LinearLayout>
 
         <LinearLayout
@@ -65,7 +67,8 @@
             android:paddingLeft="14dp"
             android:paddingRight="25dp"
             android:background="@drawable/bg_input_text"
-            android:layout_marginTop="25dp">
+            android:layout_marginTop="25dp"
+            android:backgroundTint="?attr/colorSurfaceVariant">
 
             <EditText
                 android:id="@+id/edtPassword"
@@ -75,8 +78,8 @@
                 android:background="@android:color/transparent"
                 android:hint="Password"
                 android:inputType="textPassword"
-                android:textColor="@color/black"
-                android:textColorHint="@color/gray"
+                android:textColor="?attr/colorOnSurface"
+                android:textColorHint="?attr/colorOnSurfaceVariant"
                 android:layout_weight="1"/>
             <ImageView
                 android:id="@+id/ivTogglePassword"
@@ -86,13 +89,14 @@
                 android:clickable="true"
                 android:focusable="true"
                 android:contentDescription="@string/cd_toggle_password"
+                app:tint="?attr/colorOnSurfaceVariant"
                 />
         </LinearLayout>
         <Button
             android:id="@+id/btnLogin"
             android:layout_width="match_parent"
             android:layout_height="56dp"
-            android:textColor="@color/white"
+            android:textColor="?attr/colorSurface"
             android:text="Login"
             android:layout_marginTop="40dp"
             app:backgroundTint="@null"
@@ -123,7 +127,7 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:text="Don't have an account? "
-                android:textColor="#6B7280"/>
+                android:textColor="?attr/colorOnSurfaceVariant"/>
 
             <TextView
                 android:id="@+id/btnGoToRegister"

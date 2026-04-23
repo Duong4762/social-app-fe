@@ -18,4 +18,60 @@
     <string name="no_notifications">Chưa có thông báo nào</string>
     <string name="messages_title">Tin nhắn</string>
     <string name="search_hint">Tìm kiếm người dùng hoặc bài viết...</string>
+
+    <!-- Content Descriptions -->
+    <string name="cd_back">Quay lại</string>
+    <string name="cd_send_message">Gửi tin nhắn</string>
+    <string name="cd_search">Tìm kiếm</string>
+    <string name="cd_toggle_password">Ẩn/hiện mật khẩu</string>
+
+    <!-- Post Actions -->
+    <string name="action_like">Thích</string>
+    <string name="action_comment">Bình luận</string>
+    <string name="action_share">Chia sẻ</string>
+    <string name="action_bookmark">Lưu</string>
+
+    <!-- Comment Fragment -->
+    <string name="write_a_comment">Viết bình luận công khai...</string>
+    <string name="view_more_replies">Xem thêm phản hồi...</string>
+    <string name="compose_hint_comment">Viết bình luận...</string>
+    <string name="send">Gửi</string>
+    <string name="reply">Trả lời</string>
+
+    <string-array name="comment_sort_options">
+        <item>Phù hợp nhất</item>
+        <item>Mới nhất</item>
+        <item>Nhiều lượt thích nhất</item>
+    </string-array>
+
+    <!-- New Post -->
+    <string name="new_post">Bài viết mới</string>
+    <string name="post">Đăng</string>
+    <string name="write_something">Bạn đang nghĩ gì?</string>
+    <string name="select_images">Chọn ảnh</string>
+    <string name="select_video">Chọn video</string>
+
+    <!-- Search Results -->
+    <string name="tab_users">Người dùng</string>
+    <string name="tab_posts">Bài viết</string>
+    <string name="no_users_found">Không tìm thấy người dùng nào</string>
+    <string name="no_posts_found">Không tìm thấy bài viết nào</string>
+
+    <!-- Time -->
+    <string name="just_now">Vừa xong</string>
+    <string name="minutes_ago">%d phút trước</string>
+    <string name="hours_ago">%d giờ trước</string>
+    <string name="days_ago">%d ngày trước</string>
+
+    <!-- Profile -->
+    <string name="follow">Theo dõi</string>
+    <string name="following">Đang theo dõi</string>
+    <string name="follow_back">Theo dõi lại</string>
+    <string name="profile_edit_title">Chỉnh sửa hồ sơ</string>
+    <string name="profile_edit_done">Hoàn tất</string>
+    <string name="profile_edit_cancel">Hủy</string>
+
+    <!-- Chat -->
+    <string name="chat_active_now">Đang hoạt động</string>
+    <string name="chat_message_hint">Tin nhắn...</string>
 </resources>

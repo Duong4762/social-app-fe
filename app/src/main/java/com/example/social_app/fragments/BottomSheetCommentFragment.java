@@ -4,6 +4,7 @@ import android.os.Bundle;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.AdapterView;
 import android.widget.ArrayAdapter;
 import android.widget.EditText;
 import android.widget.ImageButton;
@@ -12,6 +13,9 @@ import android.widget.LinearLayout;
 import android.widget.Spinner;
 import android.widget.TextView;
 import android.widget.Toast;
+
+import com.example.social_app.firebase.FirebaseManager;
+import com.example.social_app.utils.UserAvatarLoader;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
@@ -39,7 +43,7 @@ public class BottomSheetCommentFragment extends BottomSheetDialogFragment implem
     private EditText commentInput;
     private ImageButton sendButton, emojiButton, gifButton, attachMediaButton;
     private ImageView composeAvatar;
-    private Spinner sortSpinner;
+    private TextView userName;
     private SwipeRefreshLayout swipeRefresh;
     private TextView charCountText;
     private LinearLayout actionButtonsSection;
@@ -50,6 +54,7 @@ public class BottomSheetCommentFragment extends BottomSheetDialogFragment implem
     private CommentViewModel commentViewModel;
     private String postId;
     private String replyingToUserId = null;
+    private String replyingToCommentId = null;
     private boolean isLoadingMore = false;
     private LinearLayoutManager layoutManager;
     private BottomSheetBehavior<?> bottomSheetBehavior;
@@ -87,7 +92,6 @@ public class BottomSheetCommentFragment extends BottomSheetDialogFragment implem
     private void initializeViews(View view) {
         // Comment list
         commentsRecyclerView = view.findViewById(R.id.comments_recycler_view);
-        sortSpinner = view.findViewById(R.id.comment_sort_spinner);
         swipeRefresh = view.findViewById(R.id.swipe_refresh_layout);
 
         // Compose
@@ -97,20 +101,15 @@ public class BottomSheetCommentFragment extends BottomSheetDialogFragment implem
 
         // Action buttons
         actionButtonsSection = view.findViewById(R.id.compose_action_buttons_section);
-        attachMediaButton = view.findViewById(R.id.compose_attach_media_button);
-        gifButton = view.findViewById(R.id.compose_gif_button);
         emojiButton = view.findViewById(R.id.compose_emoji_button);
         sendButton = view.findViewById(R.id.compose_send_button);
 
-        if (composeAvatar != null) {
-            UserAvatarLoader.load(composeAvatar, null);
-        }
+        loadCurrentUserAvatar();
+
         if (charCountText != null) {
             updateCharacterCount(0);
         }
-        if (sortSpinner != null) {
-            setupSortSpinner();
-        }
+
         // RecyclerView - maximize vertical space
         if (commentsRecyclerView != null && layoutManager == null) {
             layoutManager = new LinearLayoutManager(getContext(), LinearLayoutManager.VERTICAL, false);
@@ -119,14 +118,31 @@ public class BottomSheetCommentFragment extends BottomSheetDialogFragment implem
         }
     }
 
-    private void setupSortSpinner() {
-        ArrayAdapter<CharSequence> adapter = ArrayAdapter.createFromResource(
-                getContext(),
-                R.array.comment_sort_options,
-                android.R.layout.simple_spinner_item
-        );
-        adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
-        sortSpinner.setAdapter(adapter);
+    private void loadCurrentUserAvatar() {
+        String uid = FirebaseManager.getInstance().getAuth().getUid();
+        if (composeAvatar != null) {
+            composeAvatar.setImageResource(R.drawable.avatar_placeholder);
+        }
+
+        if (uid != null) {
+            FirebaseManager.getInstance().getFirestore()
+                    .collection(FirebaseManager.COLLECTION_USERS)
+                    .document(uid)
+                    .get()
+                    .addOnSuccessListener(documentSnapshot -> {
+                        if (isAdded() && documentSnapshot.exists()) {
+                            String avatarUrl = documentSnapshot.getString("avatarUrl");
+                            UserAvatarLoader.load(composeAvatar, avatarUrl);
+                        } else if (isAdded()) {
+                            UserAvatarLoader.load(composeAvatar, null);
+                        }
+                    })
+                    .addOnFailureListener(e -> {
+                        if (isAdded()) {
+                            UserAvatarLoader.load(composeAvatar, null);
+                        }
+                    });
+        }
     }
 
     private void setupAdapters() {
@@ -159,8 +175,6 @@ public class BottomSheetCommentFragment extends BottomSheetDialogFragment implem
             sendButton.setEnabled(false);
         }
         if (emojiButton != null) emojiButton.setOnClickListener(v -> openEmojiPicker());
-        if (gifButton != null) gifButton.setOnClickListener(v -> openGifPicker());
-        if (attachMediaButton != null) attachMediaButton.setOnClickListener(v -> openFileChooser());
 
         if (commentInput != null) {
             // Auto-scroll when focus to keep compose section visible above keyboard
@@ -219,12 +233,8 @@ public class BottomSheetCommentFragment extends BottomSheetDialogFragment implem
 
     private void setupObservers() {
         commentViewModel.getComments().observe(getViewLifecycleOwner(), comments -> {
-            if (comments != null && !comments.isEmpty()) {
+            if (comments != null) {
                 commentAdapter.setComments(comments);
-            } else {
-                if (commentAdapter != null) {
-                    commentAdapter.setComments(new java.util.ArrayList<>());
-                }
             }
             if (swipeRefresh != null) swipeRefresh.setRefreshing(false);
         });
@@ -275,7 +285,7 @@ public class BottomSheetCommentFragment extends BottomSheetDialogFragment implem
             String commentText = replyingToUserId != null
                     ? text.replace("@" + replyingToUserId + " ", "").trim()
                     : text;
-            commentViewModel.sendComment(postId, commentText);
+            commentViewModel.sendComment(postId, commentText, replyingToCommentId);
             resetCommentInput();
         }
     }
@@ -318,6 +328,7 @@ public class BottomSheetCommentFragment extends BottomSheetDialogFragment implem
         selectedMediaUri = null;
         selectedMediaType = null;
         replyingToUserId = null;
+        replyingToCommentId = null;
         updateSendButtonState();
     }
 
@@ -408,12 +419,13 @@ public class BottomSheetCommentFragment extends BottomSheetDialogFragment implem
     }
 
     @Override
-    public void onReplyClicked(Comment comment) {
+    public void onReplyClicked(Comment comment, String userName) {
         if (comment == null) {
             Toast.makeText(getContext(), "Error: Cannot reply to this comment", Toast.LENGTH_SHORT).show();
             return;
         }
-        replyingToUserId = MockDataGenerator.getUserDisplayName(comment.getUserId());
+        replyingToUserId = userName;
+        replyingToCommentId = comment.getId();
         if (commentInput != null) {
             commentInput.requestFocus();
             // Force update text and selection even if already focused
