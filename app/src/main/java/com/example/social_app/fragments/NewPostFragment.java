@@ -52,12 +52,13 @@ public class NewPostFragment extends Fragment {
     private View photoScrollView;
     private View videoScrollView;
     private LinearLayout addLocationRow, tagPeopleRow;
+    private com.google.android.material.chip.ChipGroup taggedUsersChipGroup;
 
     private NewPostViewModel newPostViewModel;
     private List<Uri> selectedMedias = new ArrayList<>();
     private Uri cameraImageUri;
     private String selectedLocation = null;
-    private List<String> taggedPeople = new ArrayList<>();
+    private List<com.example.social_app.data.model.User> taggedPeople = new ArrayList<>();
     private String privacyLevel = "Everyone";
     private String mEditPostId = null;
 
@@ -108,11 +109,19 @@ public class NewPostFragment extends Fragment {
 
         if (mEditPostId != null) {
             loadPostDataForEdit(mEditPostId);
-            postButton.setText(R.string.update);
+            postButton.setText(R.string.save);
+            TextView titleView = view.findViewById(R.id.new_post_title);
+            if (titleView != null) titleView.setText(R.string.edit_post);
         } else {
             updatePostButtonState();
         }
 
+        // Khôi phục UI nếu đã có dữ liệu (trường hợp quay lại từ BackStack)
+        if (selectedLocation != null) {
+            TextView locationText = addLocationRow.findViewById(R.id.action_text);
+            if (locationText != null) locationText.setText(selectedLocation);
+        }
+        renderTaggedPeople();
         renderMediaPreview();
 
         // Kiểm tra xem có cần mở picker ngay không
@@ -130,41 +139,56 @@ public class NewPostFragment extends Fragment {
         
         newPostViewModel.getEditingPost().observe(getViewLifecycleOwner(), post -> {
             if (post != null && mEditPostId != null) {
-                postInput.setText(post.getCaption());
-                selectedLocation = post.getLocation();
-                if (selectedLocation != null && !selectedLocation.isEmpty()) {
-                    TextView locationText = addLocationRow.findViewById(R.id.action_text);
-                    if (locationText != null) locationText.setText(selectedLocation);
+                // Chỉ set text nếu input đang trống để tránh ghi đè khi quay lại từ TagPeople
+                if (postInput.getText().toString().isEmpty()) {
+                    postInput.setText(post.getCaption());
+                }
+                
+                // Nếu chưa có location được chọn mới, lấy từ post cũ
+                if (selectedLocation == null) {
+                    selectedLocation = post.getLocation();
+                    if (selectedLocation != null && !selectedLocation.isEmpty()) {
+                        TextView locationText = addLocationRow.findViewById(R.id.action_text);
+                        if (locationText != null) locationText.setText(selectedLocation);
+                    }
                 }
 
-                // Load tagged users
-                if (post.getTaggedUsers() != null) {
-                    taggedPeople = new ArrayList<>(post.getTaggedUsers());
-                    TextView tagText = tagPeopleRow.findViewById(R.id.action_text);
-                    if (tagText != null && !taggedPeople.isEmpty()) {
-                        tagText.setText("Đã gắn thẻ " + taggedPeople.size() + " người");
-                    }
+                // Nếu danh sách hiện tại đang trống (chưa đi tag bạn mới), lấy từ post cũ
+                if (taggedPeople.isEmpty() && post.getTaggedUsers() != null && !post.getTaggedUsers().isEmpty()) {
+                    List<String> taggedIds = post.getTaggedUsers();
+                    
+                    com.google.firebase.firestore.FirebaseFirestore.getInstance()
+                            .collection(com.example.social_app.firebase.FirebaseManager.COLLECTION_USERS)
+                            .whereIn(com.google.firebase.firestore.FieldPath.documentId(), taggedIds)
+                            .get()
+                            .addOnSuccessListener(queryDocumentSnapshots -> {
+                                // Nếu trong lúc load từ Firestore mà mình vẫn chưa tag thêm ai mới, thì mới lấy data cũ
+                                if (taggedPeople.isEmpty()) {
+                                    this.taggedPeople = queryDocumentSnapshots.toObjects(com.example.social_app.data.model.User.class);
+                                }
+                                // Luôn render để cập nhật UI cho dù là data cũ hay data mới
+                                renderTaggedPeople();
+                            })
+                            .addOnFailureListener(e -> {
+                                // Ngay cả khi lỗi load data cũ, vẫn render data hiện tại (có thể là rỗng)
+                                renderTaggedPeople();
+                            });
+                } else {
+                    // Nếu đã có danh sách (do vừa tag mới xong quay lại) hoặc post cũ không có tag
+                    renderTaggedPeople();
                 }
                 
                 // Map Firestore visibility back to Spinner
                 String visibility = post.getVisibility();
                 if (visibility != null && privacySpinner != null) {
+                    privacyLevel = visibility;
                     int selection = 0;
-                    switch (visibility.toUpperCase()) {
-                        case "PUBLIC":
-                        case "EVERYONE":
-                            selection = 0;
-                            break;
-                        case "FRIENDS":
-                            selection = 1;
-                            break;
-                        case "FRIENDS_ONLY":
-                            selection = 2;
-                            break;
-                        case "PRIVATE":
-                            selection = 3;
-                            break;
-                    }
+                    String upperVisibility = visibility.toUpperCase();
+                    if (upperVisibility.equals("EVERYONE") || upperVisibility.equals("PUBLIC")) selection = 0;
+                    else if (upperVisibility.equals("FRIENDS")) selection = 1;
+                    else if (upperVisibility.equals("FRIENDS_ONLY")) selection = 2;
+                    else if (upperVisibility.equals("PRIVATE")) selection = 3;
+
                     if (selection < privacySpinner.getCount()) {
                         privacySpinner.setSelection(selection);
                     }
@@ -208,6 +232,7 @@ public class NewPostFragment extends Fragment {
 
         addLocationRow = view.findViewById(R.id.add_location_row);
         tagPeopleRow = view.findViewById(R.id.tag_people_row);
+        taggedUsersChipGroup = view.findViewById(R.id.tagged_users_chip_group);
 
         if (userAvatar != null) {
             UserAvatarLoader.load(userAvatar, null);
@@ -270,9 +295,9 @@ public class NewPostFragment extends Fragment {
             postButton.setEnabled(!isPosting);
             String buttonText;
             if (isPosting) {
-                buttonText = "Đang lưu...";
+                buttonText = "Saving...";
             } else {
-                buttonText = (mEditPostId != null) ? "Cập nhật" : getString(R.string.post);
+                buttonText = (mEditPostId != null) ? getString(R.string.save) : getString(R.string.post);
             }
             postButton.setText(buttonText);
             cancelButton.setEnabled(!isPosting);
@@ -431,21 +456,56 @@ public class NewPostFragment extends Fragment {
     }
 
     private void openPeopleTagger() {
-        TagPeopleFragment tagFragment = TagPeopleFragment.newInstance(new ArrayList<>(taggedPeople));
-        tagFragment.setOnPeopleTaggedListener(userIds -> {
-            taggedPeople = userIds;
-            TextView tagText = tagPeopleRow.findViewById(R.id.action_text);
-            if (userIds.isEmpty()) {
-                tagText.setText(R.string.tag_people);
-            } else {
-                tagText.setText("Đã gắn thẻ " + userIds.size() + " người");
-            }
+        ArrayList<String> currentIds = new ArrayList<>();
+        for (com.example.social_app.data.model.User u : taggedPeople) {
+            currentIds.add(u.getId());
+        }
+        
+        TagPeopleFragment tagFragment = TagPeopleFragment.newInstance(currentIds);
+        tagFragment.setOnPeopleTaggedListener(users -> {
+            this.taggedPeople = users;
+            renderTaggedPeople();
         });
         
         getParentFragmentManager().beginTransaction()
                 .replace(R.id.nav_host_fragment, tagFragment)
                 .addToBackStack(null)
                 .commit();
+    }
+
+    private void renderTaggedPeople() {
+        if (taggedUsersChipGroup == null) return;
+        
+        taggedUsersChipGroup.removeAllViews();
+        
+        TextView tagText = tagPeopleRow.findViewById(R.id.action_text);
+        if (taggedPeople == null || taggedPeople.isEmpty()) {
+            taggedUsersChipGroup.setVisibility(View.GONE);
+            if (tagText != null) tagText.setText(R.string.tag_people);
+            return;
+        }
+
+        taggedUsersChipGroup.setVisibility(View.VISIBLE);
+        if (tagText != null) tagText.setText("Tagged " + taggedPeople.size() + " people");
+        
+        for (com.example.social_app.data.model.User user : taggedPeople) {
+            com.google.android.material.chip.Chip chip = new com.google.android.material.chip.Chip(requireContext());
+            // Hiển thị Full Name thay vì ID
+            chip.setText(user.getFullName() != null ? user.getFullName() : user.getUsername()); 
+            chip.setCloseIconVisible(true);
+            chip.setChipBackgroundColorResource(android.R.color.transparent);
+            chip.setChipStrokeWidth(1.5f);
+            chip.setChipStrokeColorResource(R.color.primary);
+            chip.setTextColor(getResources().getColor(R.color.primary));
+            chip.setCloseIconTintResource(R.color.primary);
+            
+            chip.setOnCloseIconClickListener(v -> {
+                taggedPeople.remove(user);
+                renderTaggedPeople();
+            });
+            
+            taggedUsersChipGroup.addView(chip);
+        }
     }
 
     private void createPost() {
@@ -458,10 +518,13 @@ public class NewPostFragment extends Fragment {
             return;
         }
         
+        List<String> taggedIds = new ArrayList<>();
+        for (com.example.social_app.data.model.User u : taggedPeople) taggedIds.add(u.getId());
+
         if (mEditPostId != null) {
-            newPostViewModel.updatePost(mEditPostId, content, selectedMedias, existingUrls, privacyLevel, selectedLocation, taggedPeople);
+            newPostViewModel.updatePost(mEditPostId, content, selectedMedias, existingUrls, privacyLevel, selectedLocation, taggedIds);
         } else {
-            newPostViewModel.createPost(content, selectedMedias, selectedLocation, taggedPeople, privacyLevel);
+            newPostViewModel.createPost(content, selectedMedias, selectedLocation, taggedIds, privacyLevel);
         }
     }
 

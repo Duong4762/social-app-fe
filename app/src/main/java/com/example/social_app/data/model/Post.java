@@ -23,6 +23,7 @@ public class Post {
     private java.util.List<String> taggedUsers;
     private long likeCount;
     private long commentCount;
+    private long shareCount;
 
     @ServerTimestamp
     private java.util.Date createdAt;
@@ -66,6 +67,9 @@ public class Post {
 
     public long getCommentCount() { return commentCount; }
     public void setCommentCount(long commentCount) { this.commentCount = commentCount; }
+
+    public long getShareCount() { return shareCount; }
+    public void setShareCount(long shareCount) { this.shareCount = shareCount; }
 
     public Date getCreatedAt() { return createdAt; }
     public void setCreatedAt(Date createdAt) { this.createdAt = createdAt; }

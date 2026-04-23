@@ -80,6 +80,8 @@
 
     <!-- New Post Fragment -->
     <string name="new_post">New Post</string>
+    <string name="edit_post">Edit Post</string>
+    <string name="save">Save</string>
     <string name="cancel">Cancel</string>
     <string name="post">Post</string>
     <string name="posting">Posting...</string>
@@ -195,11 +197,11 @@
     <string name="messages_title">Messages</string>
     <string name="messages_search_hint">Search</string>
     <string name="messages_compose">New message</string>
-    <string name="messages_empty">Chưa có cuộc trò chuyện</string>
-    <string name="messages_need_login">Đăng nhập để xem tin nhắn</string>
-    <string name="message_preview_sent_photo">Đã gửi ảnh</string>
-    <string name="message_preview_sent_video">Đã gửi video</string>
-    <string name="message_no_messages_yet">Chưa có tin nhắn</string>
+    <string name="messages_empty">No conversations yet</string>
+    <string name="messages_need_login">Log in to view messages</string>
+    <string name="message_preview_sent_photo">Sent a photo</string>
+    <string name="message_preview_sent_video">Sent a video</string>
+    <string name="message_no_messages_yet">No messages yet</string>
     <string name="story_sarah">Sarah</string>
     <string name="story_alex">Alex</string>
     <string name="story_jordan">Jordan</string>
@@ -231,9 +233,9 @@
     <string name="chat_label_yesterday">Yesterday</string>
     <string name="chat_typing">%1$s is typing…</string>
     <string name="chat_send_failed">Could not send message</string>
-    <string name="chat_pick_image_title">Chọn ảnh</string>
-    <string name="chat_need_image_permission">App chưa có quyền đọc ảnh</string>
-    <string name="chat_cannot_read_images">Không thể đọc ảnh trong máy</string>
+    <string name="chat_pick_image_title">Pick image</string>
+    <string name="chat_need_image_permission">App needs image permission</string>
+    <string name="chat_cannot_read_images">Cannot read images from device</string>
     <string name="chat_tick_sent" translatable="false">✓</string>
     <string name="chat_tick_read" translatable="false">✓✓</string>
 </resources>

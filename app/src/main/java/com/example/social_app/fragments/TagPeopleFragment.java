@@ -36,7 +36,7 @@ public class TagPeopleFragment extends Fragment {
     private Set<String> previouslySelectedIds = new HashSet<>();
 
     public interface OnPeopleTaggedListener {
-        void onPeopleTagged(List<String> userIds);
+        void onPeopleTagged(List<User> taggedUsers);
     }
 
     public static TagPeopleFragment newInstance(ArrayList<String> selectedIds) {
@@ -85,7 +85,7 @@ public class TagPeopleFragment extends Fragment {
         backButton.setOnClickListener(v -> getParentFragmentManager().popBackStack());
         doneButton.setOnClickListener(v -> {
             if (listener != null) {
-                listener.onPeopleTagged(new ArrayList<>(adapter.getSelectedUserIds()));
+                listener.onPeopleTagged(new ArrayList<>(adapter.getSelectedUsers()));
             }
             getParentFragmentManager().popBackStack();
         });
@@ -101,6 +101,16 @@ public class TagPeopleFragment extends Fragment {
         }
 
         Set<String> getSelectedUserIds() { return selectedUserIds; }
+
+        List<User> getSelectedUsers() {
+            List<User> selected = new ArrayList<>();
+            for (User u : users) {
+                if (selectedUserIds.contains(u.getId())) {
+                    selected.add(u);
+                }
+            }
+            return selected;
+        }
 
         @NonNull
         @Override
