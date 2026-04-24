@@ -137,7 +137,24 @@ public class BottomSheetCommentFragment extends BottomSheetDialogFragment implem
         }
 
         if (composeAvatar != null) {
-            UserAvatarLoader.load(composeAvatar, null);
+            String currentUserId = FirebaseManager.getInstance().getAuth().getUid();
+            if (currentUserId != null) {
+                FirebaseManager.getInstance().getFirestore()
+                        .collection(FirebaseManager.COLLECTION_USERS)
+                        .document(currentUserId)
+                        .get()
+                        .addOnSuccessListener(documentSnapshot -> {
+                            if (documentSnapshot.exists()) {
+                                String avatarUrl = documentSnapshot.getString("avatarUrl");
+                                UserAvatarLoader.load(composeAvatar, avatarUrl);
+                            } else {
+                                UserAvatarLoader.load(composeAvatar, null);
+                            }
+                        })
+                        .addOnFailureListener(e -> UserAvatarLoader.load(composeAvatar, null));
+            } else {
+                UserAvatarLoader.load(composeAvatar, null);
+            }
         }
         if (charCountText != null) {
             updateCharacterCount(0);
@@ -763,21 +780,41 @@ public class BottomSheetCommentFragment extends BottomSheetDialogFragment implem
             View bottomSheet = getDialog().findViewById(com.google.android.material.R.id.design_bottom_sheet);
             if (bottomSheet != null) {
                 bottomSheetBehavior = BottomSheetBehavior.from(bottomSheet);
-                
+
                 // Mở rộng tối đa ngay khi hiện ra
                 bottomSheetBehavior.setState(BottomSheetBehavior.STATE_EXPANDED);
-                
-                // Đặt chiều cao tối thiểu là full màn hình để khung comment không bị lửng lơ
-                bottomSheet.getLayoutParams().height = ViewGroup.LayoutParams.MATCH_PARENT;
-                
-                // Ngăn chặn việc vuốt xuống để ẩn đi nếu đang cuộn RecyclerView
+
+                // Cho phép kéo và vuốt mượt mà
+                bottomSheetBehavior.setDraggable(true);
+                bottomSheetBehavior.setHideable(true);
                 bottomSheetBehavior.setSkipCollapsed(true);
+
+                // Đặt chiều cao là 90% hoặc MATCH_PARENT
+                bottomSheet.getLayoutParams().height = ViewGroup.LayoutParams.MATCH_PARENT;
+
+                // Quan trọng: Đồng bộ cuộn giữa RecyclerView và BottomSheet
+                // Khi RecyclerView cuộn lên trên cùng, thao tác vuốt tiếp theo sẽ kéo BottomSheet xuống
+                bottomSheetBehavior.addBottomSheetCallback(new BottomSheetBehavior.BottomSheetCallback() {
+                    @Override
+                    public void onStateChanged(@NonNull View bottomSheet, int newState) {
+                        if (newState == BottomSheetBehavior.STATE_HIDDEN) {
+                            dismiss();
+                        }
+                    }
+
+                    @Override
+                    public void onSlide(@NonNull View bottomSheet, float slideOffset) {
+                        // Có thể thêm hiệu ứng làm mờ nền nếu muốn
+                    }
+                });
             }
-            
+
             if (getDialog().getWindow() != null) {
                 getDialog().getWindow().setSoftInputMode(
                         android.view.WindowManager.LayoutParams.SOFT_INPUT_ADJUST_RESIZE
                 );
+                // Làm nền mờ phía sau nhẹ hơn để tập trung vào comment
+                getDialog().getWindow().setDimAmount(0.5f);
             }
         }
     }
