@@ -31,7 +31,7 @@ import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
 import com.example.social_app.R;
-import com.example.social_app.adapters.PostSearchAdapter;
+import com.example.social_app.adapters.PostAdapter;
 import com.example.social_app.adapters.UserSearchAdapter;
 import com.example.social_app.data.model.Follow;
 import com.example.social_app.data.model.Post;
@@ -39,6 +39,8 @@ import com.example.social_app.data.model.User;
 import com.example.social_app.firebase.FirebaseManager;
 import com.example.social_app.utils.UserAvatarLoader;
 import com.example.social_app.utils.CloudinaryUploadUtil;
+import com.example.social_app.viewmodels.HomeViewModel;
+import com.example.social_app.viewmodels.NewPostViewModel;
 import com.example.social_app.widgets.AvatarCropperView;
 import com.google.firebase.auth.FirebaseUser;
 import com.google.firebase.firestore.FirebaseFirestore;
@@ -55,7 +57,9 @@ import java.util.Map;
 import java.util.Set;
 import java.util.Calendar;
 
-public class ProfileFragment extends Fragment {
+import androidx.lifecycle.ViewModelProvider;
+
+public class ProfileFragment extends Fragment implements PostAdapter.OnPostActionListener {
 
     private TextView tvUsernameTop;
     private TextView tvName;
@@ -87,9 +91,11 @@ public class ProfileFragment extends Fragment {
     private String currentAvatarUrl;
     private boolean isAvatarUploading = false;
     private String selectedTab = "posts";
-    private PostSearchAdapter postAdapter;
+    private PostAdapter postAdapter;
     private UserSearchAdapter userAdapter;
     private final Set<String> myFollowingUserIds = new HashSet<>();
+    private HomeViewModel homeViewModel;
+    private NewPostViewModel newPostViewModel;
 
     private final ActivityResultLauncher<String> galleryLauncher =
             registerForActivityResult(new ActivityResultContracts.GetContent(), uri -> {
@@ -133,6 +139,8 @@ public class ProfileFragment extends Fragment {
     @Override
     public void onViewCreated(@NonNull View view, @Nullable Bundle savedInstanceState) {
         super.onViewCreated(view, savedInstanceState);
+        homeViewModel = new ViewModelProvider(this).get(HomeViewModel.class);
+        newPostViewModel = new ViewModelProvider(this).get(NewPostViewModel.class);
         bindViews(view);
         loadCurrentUserProfile();
     }
@@ -170,7 +178,7 @@ public class ProfileFragment extends Fragment {
         currentAuthUser = authUser;
 
         if (authUser == null) {
-            Toast.makeText(requireContext(), "Session has expired", Toast.LENGTH_SHORT).show();
+            Toast.makeText(requireContext(), getString(R.string.session_expired), Toast.LENGTH_SHORT).show();
             return;
         }
         currentUserId = authUser.getUid();
@@ -206,7 +214,7 @@ public class ProfileFragment extends Fragment {
                     if (!isAdded()) {
                         return;
                     }
-                    Toast.makeText(requireContext(), "Failed to load profile", Toast.LENGTH_SHORT).show();
+                    Toast.makeText(requireContext(), getString(R.string.profile_load_failed), Toast.LENGTH_SHORT).show();
                     bindFallbackProfile(authUser);
                 });
 
@@ -215,9 +223,9 @@ public class ProfileFragment extends Fragment {
     }
 
     private void bindProfile(User user, FirebaseUser authUser) {
-        String fullName = safeOrDefault(user.getFullName(), "User");
-        String username = safeOrDefault(user.getUsername(), authUser.getEmail() != null ? authUser.getEmail() : "username");
-        String bio = safeOrDefault(user.getBio(), "No bio yet");
+        String fullName = safeOrDefault(user.getFullName(), getString(R.string.default_user_name));
+        String username = safeOrDefault(user.getUsername(), authUser.getEmail() != null ? authUser.getEmail() : getString(R.string.default_username));
+        String bio = safeOrDefault(user.getBio(), getString(R.string.default_bio));
 
         tvName.setText(fullName);
         tvHandle.setText("@" + username.replace("@", ""));
@@ -232,21 +240,21 @@ public class ProfileFragment extends Fragment {
         String email = authUser.getEmail();
         String username = !TextUtils.isEmpty(email) && email.contains("@")
                 ? email.substring(0, email.indexOf("@"))
-                : "username";
+                : getString(R.string.default_username);
 
-        tvName.setText("User");
+        tvName.setText(getString(R.string.default_user_name));
         tvHandle.setText("@" + username);
         tvUsernameTop.setText(username);
-        tvBio.setText("No bio yet");
+        tvBio.setText(getString(R.string.default_bio));
         currentAvatarUrl = "";
         loadAvatar("");
 
         User fallbackUser = new User();
         fallbackUser.setId(authUser.getUid());
-        fallbackUser.setFullName("User");
+        fallbackUser.setFullName(getString(R.string.default_user_name));
         fallbackUser.setUsername(username);
         fallbackUser.setEmail(email != null ? email : "");
-        fallbackUser.setBio("No bio yet");
+        fallbackUser.setBio(getString(R.string.default_bio));
         fallbackUser.setAvatarUrl("");
         currentUserProfile = fallbackUser;
     }
@@ -343,7 +351,7 @@ public class ProfileFragment extends Fragment {
             );
             cameraLauncher.launch(cameraOutputUri);
         } catch (Exception e) {
-            Toast.makeText(requireContext(), "Cannot open camera", Toast.LENGTH_SHORT).show();
+            Toast.makeText(requireContext(), getString(R.string.profile_camera_open_failed), Toast.LENGTH_SHORT).show();
         }
     }
 
@@ -356,7 +364,7 @@ public class ProfileFragment extends Fragment {
             return;
         }
         if (currentAuthUser == null || TextUtils.isEmpty(currentUserId)) {
-            Toast.makeText(requireContext(), "Invalid session", Toast.LENGTH_SHORT).show();
+            Toast.makeText(requireContext(), getString(R.string.session_invalid), Toast.LENGTH_SHORT).show();
             return;
         }
         if (avatarCropperView == null) {
@@ -545,7 +553,7 @@ public class ProfileFragment extends Fragment {
         edtEmail.setText(safeOrDefault(currentUserProfile.getEmail(), ""));
         edtBio.setText(safeOrDefault(currentUserProfile.getBio(), ""));
         edtGender.setText(safeOrDefault(currentUserProfile.getGender(), ""));
-        edtDateOfBirth.setText(safeOrDefault(currentUserProfile.getDateOfBirth(), ""));
+        edtDateOfBirth.setText(formatDateForDisplay(currentUserProfile.getDateOfBirth()));
         setupDateOfBirthPicker(edtDateOfBirth);
 
         AlertDialog editDialog = new AlertDialog.Builder(requireContext())
@@ -561,7 +569,8 @@ public class ProfileFragment extends Fragment {
             String email = edtEmail.getText().toString().trim();
             String bio = edtBio.getText().toString().trim();
             String gender = edtGender.getText().toString().trim();
-            String dateOfBirth = edtDateOfBirth.getText().toString().trim();
+            String dateOfBirthDisplay = edtDateOfBirth.getText().toString().trim();
+            String dateOfBirthStore = formatDateForStorage(dateOfBirthDisplay);
 
             if (TextUtils.isEmpty(username)) {
                 edtUsername.setError(getString(R.string.profile_edit_required_username));
@@ -574,7 +583,7 @@ public class ProfileFragment extends Fragment {
 
             btnDone.setEnabled(false);
             btnDone.setText(getString(R.string.posting));
-            saveProfileChanges(editDialog, btnDone, fullName, username, email, bio, gender, dateOfBirth);
+            saveProfileChanges(editDialog, btnDone, fullName, username, email, bio, gender, dateOfBirthStore);
         });
 
         editDialog.show();
@@ -589,13 +598,13 @@ public class ProfileFragment extends Fragment {
             String currentDob = edtDateOfBirth.getText() != null
                     ? edtDateOfBirth.getText().toString().trim()
                     : "";
-            if (!TextUtils.isEmpty(currentDob) && currentDob.matches("\\d{4}-\\d{2}-\\d{2}")) {
+            if (!TextUtils.isEmpty(currentDob) && currentDob.matches("\\d{2}/\\d{2}/\\d{4}")) {
                 try {
-                    String[] parts = currentDob.split("-");
+                    String[] parts = currentDob.split("/");
                     calendar.set(
-                            Integer.parseInt(parts[0]),
+                            Integer.parseInt(parts[2]),
                             Integer.parseInt(parts[1]) - 1,
-                            Integer.parseInt(parts[2])
+                            Integer.parseInt(parts[0])
                     );
                 } catch (Exception ignored) {
                     // Keep current date when parsing fails.
@@ -605,7 +614,7 @@ public class ProfileFragment extends Fragment {
             DatePickerDialog picker = new DatePickerDialog(
                     requireContext(),
                     (view, year, month, dayOfMonth) -> edtDateOfBirth.setText(
-                            String.format(Locale.US, "%04d-%02d-%02d", year, month + 1, dayOfMonth)
+                            String.format(Locale.US, "%02d/%02d/%04d", dayOfMonth, month + 1, year)
                     ),
                     calendar.get(Calendar.YEAR),
                     calendar.get(Calendar.MONTH),
@@ -676,6 +685,30 @@ public class ProfileFragment extends Fragment {
         return TextUtils.isEmpty(value) ? fallback : value;
     }
 
+    private String formatDateForDisplay(String storageDate) {
+        if (TextUtils.isEmpty(storageDate) || !storageDate.matches("\\d{4}-\\d{2}-\\d{2}")) {
+            return storageDate;
+        }
+        try {
+            String[] parts = storageDate.split("-");
+            return String.format(Locale.US, "%s/%s/%s", parts[2], parts[1], parts[0]);
+        } catch (Exception e) {
+            return storageDate;
+        }
+    }
+
+    private String formatDateForStorage(String displayDate) {
+        if (TextUtils.isEmpty(displayDate) || !displayDate.matches("\\d{2}/\\d{2}/\\d{4}")) {
+            return displayDate;
+        }
+        try {
+            String[] parts = displayDate.split("/");
+            return String.format(Locale.US, "%s-%s-%s", parts[2], parts[1], parts[0]);
+        } catch (Exception e) {
+            return displayDate;
+        }
+    }
+
     private void refreshProfileStats() {
         if (TextUtils.isEmpty(currentUserId)) {
             return;
@@ -689,7 +722,7 @@ public class ProfileFragment extends Fragment {
                     if (!isAdded()) {
                         return;
                     }
-                    tvFollowed.setText(query.size() + " Followers");
+                    tvFollowed.setText(getString(R.string.followers_count_label, String.valueOf(query.size())));
                 });
 
         FirebaseManager.getInstance().getFirestore()
@@ -700,7 +733,7 @@ public class ProfileFragment extends Fragment {
                     if (!isAdded()) {
                         return;
                     }
-                    tvFollower.setText(query.size() + " Following");
+                    tvFollower.setText(getString(R.string.following_count_label, String.valueOf(query.size())));
                 });
 
         FirebaseManager.getInstance().getFirestore()
@@ -711,14 +744,14 @@ public class ProfileFragment extends Fragment {
                     if (!isAdded()) {
                         return;
                     }
-                    tvBlog.setText(query.size() + " Posts");
+                    tvBlog.setText(getString(R.string.posts_count_label, String.valueOf(query.size())));
                 });
     }
 
     private void setupRecycler() {
         rvPosts.setLayoutManager(new LinearLayoutManager(requireContext()));
-        postAdapter = new PostSearchAdapter(requireContext(), post ->
-                Toast.makeText(requireContext(), "View post", Toast.LENGTH_SHORT).show());
+        postAdapter = new PostAdapter(requireContext(), this);
+        postAdapter.setUseSearchLayout(true);
         userAdapter = new UserSearchAdapter(requireContext(), new UserSearchAdapter.OnUserActionListener() {
             @Override
             public void onUserClicked(User user) {
@@ -761,9 +794,10 @@ public class ProfileFragment extends Fragment {
     }
 
     private void updateTabUI() {
-        tabThreads.setTextColor(requireContext().getColor(R.color.text));
-        tabReplies.setTextColor(requireContext().getColor(R.color.muted));
-        tabReposts.setTextColor(requireContext().getColor(R.color.muted));
+        tabThreads.setSelected("posts".equals(selectedTab));
+        tabReplies.setSelected("followers".equals(selectedTab));
+        tabReposts.setSelected("following".equals(selectedTab));
+
         tabThreads.setTextSize(14f);
         tabReplies.setTextSize(14f);
         tabReposts.setTextSize(14f);
@@ -771,12 +805,8 @@ public class ProfileFragment extends Fragment {
         TextView selectedView = tabThreads;
         if ("followers".equals(selectedTab)) {
             selectedView = tabReplies;
-            tabReplies.setTextColor(requireContext().getColor(R.color.text));
         } else if ("following".equals(selectedTab)) {
             selectedView = tabReposts;
-            tabReposts.setTextColor(requireContext().getColor(R.color.text));
-        } else {
-            tabThreads.setTextColor(requireContext().getColor(R.color.text));
         }
 
         final TextView finalSelectedView = selectedView;
@@ -990,6 +1020,118 @@ public class ProfileFragment extends Fragment {
             tabEmptyState.setText(getString(R.string.profile_empty_posts));
         }
         tabEmptyState.setVisibility(View.VISIBLE);
+    }
+
+    @Override
+    public void onUserClicked(String userId) {
+        if (userId == null || userId.isEmpty()) return;
+
+        if (userId.equals(currentUserId)) {
+            // Already on ProfileFragment, just refresh if needed or do nothing
+            loadTabContent();
+        } else {
+            requireActivity().getSupportFragmentManager()
+                    .beginTransaction()
+                    .replace(R.id.nav_host_fragment, OtherProfileFragment.newInstance(userId))
+                    .addToBackStack(null)
+                    .commit();
+        }
+    }
+
+    @Override
+    public void onLikeClicked(Post post, int position) {
+        homeViewModel.toggleLike(post);
+    }
+
+    @Override
+    public void onCommentClicked(Post post) {
+        BottomSheetCommentFragment bottomSheetCommentFragment = BottomSheetCommentFragment.newInstance(post.getId());
+        bottomSheetCommentFragment.show(getParentFragmentManager(), "comments_bottom_sheet");
+    }
+
+    @Override
+    public void onShareClicked(Post post) {
+        android.content.Intent shareIntent = new android.content.Intent(android.content.Intent.ACTION_SEND);
+        shareIntent.setType("text/plain");
+        shareIntent.putExtra(android.content.Intent.EXTRA_TEXT, post.getCaption());
+        startActivity(android.content.Intent.createChooser(shareIntent, getString(R.string.share)));
+    }
+
+    @Override
+    public void onBookmarkClicked(Post post) {
+        homeViewModel.toggleBookmark(post);
+    }
+
+    @Override
+    public void onComposerPostClicked(String content) {}
+
+    @Override
+    public void onComposerClicked() {}
+
+    @Override
+    public void onComposerImageClicked() {}
+
+    @Override
+    public void onEditPostClicked(Post post) {
+        NewPostFragment editFragment = NewPostFragment.newInstanceForEdit(post.getId());
+        requireActivity().getSupportFragmentManager()
+                .beginTransaction()
+                .replace(R.id.nav_host_fragment, editFragment)
+                .addToBackStack(null)
+                .commit();
+    }
+
+    @Override
+    public void onDeletePostClicked(Post post) {
+        new androidx.appcompat.app.AlertDialog.Builder(requireContext())
+                .setTitle(getString(R.string.delete_post_title))
+                .setMessage(getString(R.string.delete_post_confirm))
+                .setPositiveButton(getString(R.string.delete), (dialog, which) -> {
+                    newPostViewModel.deletePost(post.getId());
+                    loadTabContent();
+                })
+                .setNegativeButton(getString(R.string.cancel), null)
+                .show();
+    }
+
+    @Override
+    public void onReportPostClicked(Post post) {
+        String[] reasons = {
+                getString(R.string.report_reason_inappropriate),
+                getString(R.string.report_reason_spam),
+                getString(R.string.report_reason_harassment),
+                getString(R.string.report_reason_false_info),
+                getString(R.string.report_reason_other)
+        };
+        new androidx.appcompat.app.AlertDialog.Builder(requireContext())
+                .setTitle(getString(R.string.report_post_title))
+                .setItems(reasons, (dialog, which) -> {
+                    String selectedReason = reasons[which];
+                    showReportDetailDialog(post, selectedReason);
+                })
+                .setNegativeButton(getString(R.string.cancel_action), null)
+                .show();
+    }
+
+    private void showReportDetailDialog(Post post, String baseReason) {
+        android.widget.EditText input = new android.widget.EditText(requireContext());
+        input.setHint(R.string.report_reason_hint);
+        int padding = (int) (16 * getResources().getDisplayMetrics().density);
+        android.widget.FrameLayout container = new android.widget.FrameLayout(requireContext());
+        container.addView(input);
+        input.setPadding(padding, padding, padding, padding);
+
+        new androidx.appcompat.app.AlertDialog.Builder(requireContext())
+                .setTitle(R.string.report_reason_title)
+                .setView(container)
+                .setPositiveButton(R.string.report_submit, (dialog, which) -> {
+                    String detail = input.getText().toString().trim();
+                    String finalReason = detail.isEmpty() ? baseReason : baseReason + ": " + detail;
+                    homeViewModel.reportPost(post, finalReason);
+                    Toast.makeText(requireContext(), getString(R.string.report_thanks), Toast.LENGTH_SHORT).show();
+                })
+                .setNegativeButton(R.string.cancel_action, null)
+                .show();
     }
 
     @Override

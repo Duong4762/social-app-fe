@@ -11,6 +11,8 @@ import com.google.firebase.firestore.FieldValue;
 import com.google.firebase.firestore.FirebaseFirestore;
 import com.google.firebase.firestore.Query;
 
+import com.example.social_app.data.model.Report;
+import com.google.firebase.firestore.DocumentReference;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
@@ -61,6 +63,9 @@ public class HomeViewModel extends ViewModel {
                     
                     if (isRefresh) {
                         posts.setValue(newPosts);
+                        // Khi refresh, xóa trạng thái cũ và tải lại engagement mới nhất
+                        likedPostIds.clear();
+                        bookmarkedPostIds.clear();
                         loadUserEngagement();
                     } else {
                         List<Post> currentPosts = posts.getValue();
@@ -118,24 +123,39 @@ public class HomeViewModel extends ViewModel {
 
     public void toggleBookmark(Post post) {
         String userId = firebaseManager.getAuth().getUid();
-        if (userId == null) return;
+        if (userId == null || post == null || post.getId() == null) return;
 
         String postId = post.getId();
         boolean isBookmarking = !bookmarkedPostIds.contains(postId);
 
+        // Optimistic UI update
         if (isBookmarking) {
             bookmarkedPostIds.add(postId);
-            
+        } else {
+            bookmarkedPostIds.remove(postId);
+        }
+        posts.setValue(posts.getValue()); // Trigger UI update immediately
+
+        String docId = postId + "_" + userId;
+        if (isBookmarking) {
             java.util.Map<String, Object> bookmarkData = new java.util.HashMap<>();
             bookmarkData.put("postId", postId);
             bookmarkData.put("userId", userId);
             bookmarkData.put("createdAt", FieldValue.serverTimestamp());
-            db.collection("bookmarks").document(postId + "_" + userId).set(bookmarkData);
+            db.collection(FirebaseManager.COLLECTION_BOOKMARKS).document(docId).set(bookmarkData)
+                .addOnFailureListener(e -> {
+                    // Revert on failure
+                    bookmarkedPostIds.remove(postId);
+                    posts.setValue(posts.getValue());
+                });
         } else {
-            bookmarkedPostIds.remove(postId);
-            db.collection("bookmarks").document(postId + "_" + userId).delete();
+            db.collection(FirebaseManager.COLLECTION_BOOKMARKS).document(docId).delete()
+                .addOnFailureListener(e -> {
+                    // Revert on failure
+                    bookmarkedPostIds.add(postId);
+                    posts.setValue(posts.getValue());
+                });
         }
-        posts.setValue(posts.getValue()); // Notify UI
     }
 
     public void incrementShareCount(Post post) {
@@ -159,6 +179,28 @@ public class HomeViewModel extends ViewModel {
                 });
     }
 
+    public void reportPost(Post post, String reason) {
+        String userId = firebaseManager.getAuth().getUid();
+        if (userId == null || post == null) return;
+
+        DocumentReference reportRef = db.collection(FirebaseManager.COLLECTION_REPORTS).document();
+        Report report = new Report();
+        report.setId(reportRef.getId());
+        report.setReporterId(userId);
+        report.setTargetId(post.getId());
+        report.setType("POST");
+        report.setStatus("UNPROCESSED");
+        report.setReason(reason);
+
+        reportRef.set(report)
+                .addOnSuccessListener(aVoid -> {
+                    // Show success or update UI
+                })
+                .addOnFailureListener(e -> {
+                    error.setValue("Lỗi khi gửi báo cáo: " + e.getMessage());
+                });
+    }
+
     private void loadUserEngagement() {
         String userId = firebaseManager.getAuth().getUid();
         if (userId == null) return;
@@ -176,13 +218,14 @@ public class HomeViewModel extends ViewModel {
                 });
 
         // Load bookmarks
-        db.collection("bookmarks")
+        db.collection(FirebaseManager.COLLECTION_BOOKMARKS)
                 .whereEqualTo("userId", userId)
                 .get()
                 .addOnSuccessListener(queryDocumentSnapshots -> {
                     bookmarkedPostIds.clear();
                     for (DocumentSnapshot doc : queryDocumentSnapshots) {
-                        bookmarkedPostIds.add(doc.getString("postId"));
+                        String pId = doc.getString("postId");
+                        if (pId != null) bookmarkedPostIds.add(pId);
                     }
                     posts.setValue(posts.getValue());
                 });

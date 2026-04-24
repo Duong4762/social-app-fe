@@ -536,20 +536,20 @@ public class ConversationRepository {
     }
 
     @NonNull
-    private static String formatRelativeTime(long timeMillis) {
+    private String formatRelativeTime(long timeMillis) {
         long now = System.currentTimeMillis();
         long diff = now - timeMillis;
         if (diff < 60_000L) {
-            return "Vừa xong";
+            return appContext.getString(R.string.just_now);
         }
         if (diff < 3600_000L) {
-            return (diff / 60_000L) + " phút";
+            return appContext.getString(R.string.minutes_ago, (int) (diff / 60_000L));
         }
         if (diff < 86400_000L) {
-            return (diff / 3600_000L) + " giờ";
+            return appContext.getString(R.string.hours_ago, (int) (diff / 3600_000L));
         }
         if (diff < 604800_000L) {
-            return (diff / 86400_000L) + " ngày";
+            return appContext.getString(R.string.days_ago, (int) (diff / 86400_000L));
         }
         java.text.DateFormat df = java.text.DateFormat.getDateInstance(java.text.DateFormat.SHORT);
         return df.format(new Date(timeMillis));

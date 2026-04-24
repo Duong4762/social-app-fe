@@ -4,6 +4,7 @@ import android.os.Bundle;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.AdapterView;
 import android.widget.ArrayAdapter;
 import android.widget.EditText;
 import android.widget.ImageButton;
@@ -12,6 +13,9 @@ import android.widget.LinearLayout;
 import android.widget.Spinner;
 import android.widget.TextView;
 import android.widget.Toast;
+
+import com.example.social_app.firebase.FirebaseManager;
+import com.example.social_app.utils.UserAvatarLoader;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
@@ -39,7 +43,7 @@ public class BottomSheetCommentFragment extends BottomSheetDialogFragment implem
     private EditText commentInput;
     private ImageButton sendButton, emojiButton, gifButton, attachMediaButton;
     private ImageView composeAvatar;
-    private Spinner sortSpinner;
+    private TextView userName;
     private SwipeRefreshLayout swipeRefresh;
     private TextView charCountText;
     private LinearLayout actionButtonsSection;
@@ -50,6 +54,7 @@ public class BottomSheetCommentFragment extends BottomSheetDialogFragment implem
     private CommentViewModel commentViewModel;
     private String postId;
     private String replyingToUserId = null;
+    private String replyingToCommentId = null;
     private boolean isLoadingMore = false;
     private LinearLayoutManager layoutManager;
     private BottomSheetBehavior<?> bottomSheetBehavior;
@@ -87,7 +92,6 @@ public class BottomSheetCommentFragment extends BottomSheetDialogFragment implem
     private void initializeViews(View view) {
         // Comment list
         commentsRecyclerView = view.findViewById(R.id.comments_recycler_view);
-        sortSpinner = view.findViewById(R.id.comment_sort_spinner);
         swipeRefresh = view.findViewById(R.id.swipe_refresh_layout);
 
         // Compose
@@ -97,20 +101,15 @@ public class BottomSheetCommentFragment extends BottomSheetDialogFragment implem
 
         // Action buttons
         actionButtonsSection = view.findViewById(R.id.compose_action_buttons_section);
-        attachMediaButton = view.findViewById(R.id.compose_attach_media_button);
-        gifButton = view.findViewById(R.id.compose_gif_button);
         emojiButton = view.findViewById(R.id.compose_emoji_button);
         sendButton = view.findViewById(R.id.compose_send_button);
 
-        if (composeAvatar != null) {
-            UserAvatarLoader.load(composeAvatar, null);
-        }
+        loadCurrentUserAvatar();
+
         if (charCountText != null) {
             updateCharacterCount(0);
         }
-        if (sortSpinner != null) {
-            setupSortSpinner();
-        }
+
         // RecyclerView - maximize vertical space
         if (commentsRecyclerView != null && layoutManager == null) {
             layoutManager = new LinearLayoutManager(getContext(), LinearLayoutManager.VERTICAL, false);
@@ -119,14 +118,31 @@ public class BottomSheetCommentFragment extends BottomSheetDialogFragment implem
         }
     }
 
-    private void setupSortSpinner() {
-        ArrayAdapter<CharSequence> adapter = ArrayAdapter.createFromResource(
-                getContext(),
-                R.array.comment_sort_options,
-                android.R.layout.simple_spinner_item
-        );
-        adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
-        sortSpinner.setAdapter(adapter);
+    private void loadCurrentUserAvatar() {
+        String uid = FirebaseManager.getInstance().getAuth().getUid();
+        if (composeAvatar != null) {
+            composeAvatar.setImageResource(R.drawable.avatar_placeholder);
+        }
+
+        if (uid != null) {
+            FirebaseManager.getInstance().getFirestore()
+                    .collection(FirebaseManager.COLLECTION_USERS)
+                    .document(uid)
+                    .get()
+                    .addOnSuccessListener(documentSnapshot -> {
+                        if (isAdded() && documentSnapshot.exists()) {
+                            String avatarUrl = documentSnapshot.getString("avatarUrl");
+                            UserAvatarLoader.load(composeAvatar, avatarUrl);
+                        } else if (isAdded()) {
+                            UserAvatarLoader.load(composeAvatar, null);
+                        }
+                    })
+                    .addOnFailureListener(e -> {
+                        if (isAdded()) {
+                            UserAvatarLoader.load(composeAvatar, null);
+                        }
+                    });
+        }
     }
 
     private void setupAdapters() {
@@ -159,8 +175,6 @@ public class BottomSheetCommentFragment extends BottomSheetDialogFragment implem
             sendButton.setEnabled(false);
         }
         if (emojiButton != null) emojiButton.setOnClickListener(v -> openEmojiPicker());
-        if (gifButton != null) gifButton.setOnClickListener(v -> openGifPicker());
-        if (attachMediaButton != null) attachMediaButton.setOnClickListener(v -> openFileChooser());
 
         if (commentInput != null) {
             // Auto-scroll when focus to keep compose section visible above keyboard
@@ -219,12 +233,8 @@ public class BottomSheetCommentFragment extends BottomSheetDialogFragment implem
 
     private void setupObservers() {
         commentViewModel.getComments().observe(getViewLifecycleOwner(), comments -> {
-            if (comments != null && !comments.isEmpty()) {
+            if (comments != null) {
                 commentAdapter.setComments(comments);
-            } else {
-                if (commentAdapter != null) {
-                    commentAdapter.setComments(new java.util.ArrayList<>());
-                }
             }
             if (swipeRefresh != null) swipeRefresh.setRefreshing(false);
         });
@@ -249,7 +259,7 @@ public class BottomSheetCommentFragment extends BottomSheetDialogFragment implem
             if (swipeRefresh != null) swipeRefresh.setRefreshing(true);
             commentViewModel.loadComments(postId);
         } else {
-            Toast.makeText(getContext(), "Error: Post ID not found", Toast.LENGTH_SHORT).show();
+            Toast.makeText(getContext(), R.string.error_post_id_not_found, Toast.LENGTH_SHORT).show();
         }
     }
 
@@ -259,7 +269,7 @@ public class BottomSheetCommentFragment extends BottomSheetDialogFragment implem
 
     private void sendComment() {
         if (commentInput == null) {
-            Toast.makeText(getContext(), "Error: Comment input not available", Toast.LENGTH_SHORT).show();
+            Toast.makeText(getContext(), R.string.error_comment_input_not_available, Toast.LENGTH_SHORT).show();
             return;
         }
 
@@ -275,7 +285,7 @@ public class BottomSheetCommentFragment extends BottomSheetDialogFragment implem
             String commentText = replyingToUserId != null
                     ? text.replace("@" + replyingToUserId + " ", "").trim()
                     : text;
-            commentViewModel.sendComment(postId, commentText);
+            commentViewModel.sendComment(postId, commentText, replyingToCommentId);
             resetCommentInput();
         }
     }
@@ -283,7 +293,7 @@ public class BottomSheetCommentFragment extends BottomSheetDialogFragment implem
     private void uploadMediaAndSendComment(String text) {
         if (selectedMediaUri == null) return;
 
-        Toast.makeText(getContext(), "Uploading media...", Toast.LENGTH_SHORT).show();
+        Toast.makeText(getContext(), R.string.uploading_media, Toast.LENGTH_SHORT).show();
         com.example.social_app.utils.CloudinaryUploadUtil.uploadMedia(
                 requireContext(),
                 selectedMediaUri,
@@ -307,7 +317,7 @@ public class BottomSheetCommentFragment extends BottomSheetDialogFragment implem
 
                     @Override
                     public void onError(String message, Throwable throwable) {
-                        Toast.makeText(getContext(), "Upload failed: " + message, Toast.LENGTH_SHORT).show();
+                        Toast.makeText(getContext(), getString(R.string.upload_failed, message), Toast.LENGTH_SHORT).show();
                     }
                 }
         );
@@ -318,6 +328,7 @@ public class BottomSheetCommentFragment extends BottomSheetDialogFragment implem
         selectedMediaUri = null;
         selectedMediaType = null;
         replyingToUserId = null;
+        replyingToCommentId = null;
         updateSendButtonState();
     }
 
@@ -375,7 +386,7 @@ public class BottomSheetCommentFragment extends BottomSheetDialogFragment implem
         selectedMediaUri = android.net.Uri.parse("https://media.giphy.com/media/v1.Y2lkPTc5MGI3NjExNHJidmZ3Z3R3Z3R3Z3R3Z3R3Z3R3Z3R3Z3R3Z3R3Z3R3JlcD1ndm1fYnlfaWQmY3Q9Zw/3o7TKMGpxP5OqP6V9u/giphy.gif");
         selectedMediaType = "gif";
         updateSendButtonState();
-        Toast.makeText(getContext(), "GIF selected", Toast.LENGTH_SHORT).show();
+        Toast.makeText(getContext(), R.string.gif_selected, Toast.LENGTH_SHORT).show();
     }
 
     private void openFileChooser() {
@@ -391,7 +402,7 @@ public class BottomSheetCommentFragment extends BottomSheetDialogFragment implem
                             selectedMediaUri = result.getData().getData();
                             selectedMediaType = "image";
                             updateSendButtonState();
-                            Toast.makeText(getContext(), "Image selected", Toast.LENGTH_SHORT).show();
+                            Toast.makeText(getContext(), R.string.image_selected, Toast.LENGTH_SHORT).show();
                         }
                     });
 
@@ -408,12 +419,13 @@ public class BottomSheetCommentFragment extends BottomSheetDialogFragment implem
     }
 
     @Override
-    public void onReplyClicked(Comment comment) {
+    public void onReplyClicked(Comment comment, String userName) {
         if (comment == null) {
-            Toast.makeText(getContext(), "Error: Cannot reply to this comment", Toast.LENGTH_SHORT).show();
+            Toast.makeText(getContext(), R.string.error_cannot_reply, Toast.LENGTH_SHORT).show();
             return;
         }
-        replyingToUserId = MockDataGenerator.getUserDisplayName(comment.getUserId());
+        replyingToUserId = userName;
+        replyingToCommentId = comment.getId();
         if (commentInput != null) {
             commentInput.requestFocus();
             // Force update text and selection even if already focused
@@ -441,18 +453,18 @@ public class BottomSheetCommentFragment extends BottomSheetDialogFragment implem
 
     private void showCommentOptionsMenu(Comment comment, int position) {
         android.app.AlertDialog.Builder builder = new android.app.AlertDialog.Builder(requireContext());
-        builder.setTitle("Comment options");
+        builder.setTitle(R.string.report_reason_title);
 
         boolean isOwnComment = isOwnedByCurrentUser(comment);
         java.util.List<String> options = new java.util.ArrayList<>();
         if (isOwnComment) {
-            options.add("Edit");
-            options.add("Delete");
+            options.add(getString(R.string.menu_edit));
+            options.add(getString(R.string.delete));
         }
-        options.add("Report");
-        options.add("Share");
-        options.add("Copy");
-        options.add("Cancel");
+        options.add(getString(R.string.menu_report));
+        options.add(getString(R.string.action_share));
+        options.add(getString(R.string.copy_action)); // Assuming we'll add copy_action
+        options.add(getString(R.string.cancel_action));
 
         builder.setItems(options.toArray(new String[0]), (dialog, which) -> {
             if (which == 0 && isOwnComment) {
@@ -495,18 +507,53 @@ public class BottomSheetCommentFragment extends BottomSheetDialogFragment implem
     }
     private void deleteComment(Comment comment, int position) {
         new android.app.AlertDialog.Builder(requireContext())
-                .setTitle("Delete comment?")
-                .setMessage("This action cannot be undone.")
-                .setPositiveButton("Delete", (dialog, which) -> {
+                .setTitle(R.string.delete_post_title)
+                .setMessage(R.string.delete_post_confirm)
+                .setPositiveButton(R.string.delete, (dialog, which) -> {
                     commentViewModel.deleteComment(comment.getId());
                     commentAdapter.removeComment(position);
-                    Toast.makeText(getContext(), "Comment deleted", Toast.LENGTH_SHORT).show();
+                    Toast.makeText(getContext(), R.string.comment_deleted, Toast.LENGTH_SHORT).show();
                 })
-                .setNegativeButton("Cancel", null)
+                .setNegativeButton(R.string.cancel_action, null)
                 .show();
     }
     private void reportComment(Comment comment) {
-        Toast.makeText(getContext(), "Comment reported", Toast.LENGTH_SHORT).show();
+        String[] reasons = {
+                getString(R.string.report_reason_inappropriate),
+                getString(R.string.report_reason_spam),
+                getString(R.string.report_reason_harassment),
+                getString(R.string.report_reason_false_info),
+                getString(R.string.report_reason_other)
+        };
+        new androidx.appcompat.app.AlertDialog.Builder(requireContext())
+                .setTitle(getString(R.string.report_post_title)) // Có thể dùng chung title báo cáo
+                .setItems(reasons, (dialog, which) -> {
+                    String selectedReason = reasons[which];
+                    showReportDetailDialog(comment, selectedReason);
+                })
+                .setNegativeButton(getString(R.string.cancel_action), null)
+                .show();
+    }
+
+    private void showReportDetailDialog(Comment comment, String baseReason) {
+        android.widget.EditText input = new android.widget.EditText(requireContext());
+        input.setHint(R.string.report_reason_hint);
+        int padding = (int) (16 * getResources().getDisplayMetrics().density);
+        android.widget.FrameLayout container = new android.widget.FrameLayout(requireContext());
+        container.addView(input);
+        input.setPadding(padding, padding, padding, padding);
+
+        new androidx.appcompat.app.AlertDialog.Builder(requireContext())
+                .setTitle(R.string.report_reason_title)
+                .setView(container)
+                .setPositiveButton(R.string.report_submit, (dialog, which) -> {
+                    String detail = input.getText().toString().trim();
+                    String finalReason = detail.isEmpty() ? baseReason : baseReason + ": " + detail;
+                    commentViewModel.reportComment(comment, finalReason);
+                    Toast.makeText(requireContext(), getString(R.string.report_thanks), Toast.LENGTH_SHORT).show();
+                })
+                .setNegativeButton(R.string.cancel_action, null)
+                .show();
     }
     private void shareComment(Comment comment) {
         android.content.Intent sendIntent = new android.content.Intent();
@@ -520,7 +567,7 @@ public class BottomSheetCommentFragment extends BottomSheetDialogFragment implem
                 (android.content.ClipboardManager) requireContext().getSystemService(android.content.Context.CLIPBOARD_SERVICE);
         android.content.ClipData clip = android.content.ClipData.newPlainText("comment", comment.getContent());
         clipboard.setPrimaryClip(clip);
-        Toast.makeText(getContext(), "Comment copied to clipboard", Toast.LENGTH_SHORT).show();
+        Toast.makeText(getContext(), R.string.comment_copied, Toast.LENGTH_SHORT).show();
     }
     @Override
     public void onStart() {

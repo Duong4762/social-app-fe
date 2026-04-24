@@ -15,6 +15,9 @@ import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
 import com.example.social_app.R;
+import com.example.social_app.utils.UserAvatarLoader;
+import com.google.android.material.imageview.ShapeableImageView;
+import com.example.social_app.firebase.FirebaseManager;
 import androidx.swiperefreshlayout.widget.SwipeRefreshLayout;
 import com.example.social_app.adapters.PostAdapter;
 import com.example.social_app.data.model.Post;
@@ -40,7 +43,6 @@ public class HomeFragment extends Fragment implements PostAdapter.OnPostActionLi
     private NewPostViewModel newPostViewModel;
     private HomeViewModel homeViewModel;
 
-    private List<Post> posts;
     private boolean isLoading = false;
     private boolean hasMorePosts = true;
     private int currentPage = 0;
@@ -90,6 +92,9 @@ public class HomeFragment extends Fragment implements PostAdapter.OnPostActionLi
         // Set up RecyclerView
         setupRecyclerView();
 
+        // Load current user avatar
+        loadCurrentUserAvatar(view);
+
         // Load initial posts
         loadPosts();
 
@@ -108,7 +113,6 @@ public class HomeFragment extends Fragment implements PostAdapter.OnPostActionLi
     private void setupObservers() {
         homeViewModel.getPosts().observe(getViewLifecycleOwner(), postsList -> {
             if (postsList != null) {
-                this.posts = postsList;
                 if (postsList.isEmpty()) {
                     showEmptyState();
                 } else {
@@ -133,7 +137,7 @@ public class HomeFragment extends Fragment implements PostAdapter.OnPostActionLi
 
         newPostViewModel.getPostSuccess().observe(getViewLifecycleOwner(), success -> {
             if (success) {
-                Toast.makeText(requireContext(), "Thao tác thành công!", Toast.LENGTH_SHORT).show();
+                Toast.makeText(requireContext(), R.string.action_success, Toast.LENGTH_SHORT).show();
                 homeViewModel.loadPosts(true); // Reload feed từ Firestore
                 newPostViewModel.resetPostSuccess();
             }
@@ -190,6 +194,42 @@ public class HomeFragment extends Fragment implements PostAdapter.OnPostActionLi
         homeViewModel.loadPosts(true);
     }
 
+    private void loadCurrentUserAvatar(View view) {
+        ShapeableImageView ivUserAvatar = view.findViewById(R.id.iv_user_avatar);
+        String uid = FirebaseManager.getInstance().getAuth().getUid();
+        
+        // Load placeholder first
+        if (ivUserAvatar != null) {
+            ivUserAvatar.setImageResource(R.drawable.avatar_placeholder);
+        }
+
+        if (uid != null) {
+            FirebaseManager.getInstance().getFirestore()
+                    .collection(FirebaseManager.COLLECTION_USERS)
+                    .document(uid)
+                    .get()
+                    .addOnSuccessListener(documentSnapshot -> {
+                        if (isAdded() && documentSnapshot.exists()) {
+                            String avatarUrl = documentSnapshot.getString("avatarUrl");
+                            if (ivUserAvatar != null) {
+                                UserAvatarLoader.load(ivUserAvatar, avatarUrl);
+                            }
+                            if (postAdapter != null) {
+                                postAdapter.setCurrentUserAvatarUrl(avatarUrl);
+                            }
+                        } else if (isAdded() && ivUserAvatar != null) {
+                            // Fallback to default if not found in Firestore
+                            UserAvatarLoader.load(ivUserAvatar, null);
+                        }
+                    })
+                    .addOnFailureListener(e -> {
+                        if (isAdded() && ivUserAvatar != null) {
+                            UserAvatarLoader.load(ivUserAvatar, null);
+                        }
+                    });
+        }
+    }
+
     /**
      * Loads more posts for infinite scroll.
      */
@@ -232,6 +272,26 @@ public class HomeFragment extends Fragment implements PostAdapter.OnPostActionLi
         feedRecyclerView.setVisibility(View.GONE);
         emptyState.setVisibility(View.GONE);
         errorState.setVisibility(View.VISIBLE);
+    }
+
+    @Override
+    public void onUserClicked(String userId) {
+        if (userId == null || userId.isEmpty()) return;
+
+        String currentUserId = FirebaseManager.getInstance().getAuth().getUid();
+        androidx.fragment.app.Fragment fragment;
+
+        if (userId.equals(currentUserId)) {
+            fragment = new ProfileFragment();
+        } else {
+            fragment = OtherProfileFragment.newInstance(userId);
+        }
+
+        requireActivity().getSupportFragmentManager()
+                .beginTransaction()
+                .replace(R.id.nav_host_fragment, fragment)
+                .addToBackStack(null)
+                .commit();
     }
 
     @Override
@@ -281,7 +341,7 @@ public class HomeFragment extends Fragment implements PostAdapter.OnPostActionLi
     @Override
     public void onComposerPostClicked(String content) {
         if (content.trim().isEmpty()) {
-            Toast.makeText(requireContext(), "Vui lòng nhập nội dung", Toast.LENGTH_SHORT).show();
+            Toast.makeText(requireContext(), R.string.please_enter_content, Toast.LENGTH_SHORT).show();
             return;
         }
         
@@ -332,12 +392,52 @@ public class HomeFragment extends Fragment implements PostAdapter.OnPostActionLi
     @Override
     public void onDeletePostClicked(Post post) {
         new androidx.appcompat.app.AlertDialog.Builder(requireContext())
-                .setTitle("Xóa bài viết")
-                .setMessage("Bạn có chắc chắn muốn xóa bài viết này?")
-                .setPositiveButton("Xóa", (dialog, which) -> {
+                .setTitle(getString(R.string.delete_post_title))
+                .setMessage(getString(R.string.delete_post_confirm))
+                .setPositiveButton(getString(R.string.delete), (dialog, which) -> {
                     newPostViewModel.deletePost(post.getId());
                 })
-                .setNegativeButton("Hủy", null)
+                .setNegativeButton(getString(R.string.cancel_action), null)
+                .show();
+    }
+
+    @Override
+    public void onReportPostClicked(Post post) {
+        String[] reasons = {
+                getString(R.string.report_reason_inappropriate),
+                getString(R.string.report_reason_spam),
+                getString(R.string.report_reason_harassment),
+                getString(R.string.report_reason_false_info),
+                getString(R.string.report_reason_other)
+        };
+        new androidx.appcompat.app.AlertDialog.Builder(requireContext())
+                .setTitle(getString(R.string.report_post_title))
+                .setItems(reasons, (dialog, which) -> {
+                    String selectedReason = reasons[which];
+                    showReportDetailDialog(post, selectedReason);
+                })
+                .setNegativeButton(getString(R.string.cancel_action), null)
+                .show();
+    }
+
+    private void showReportDetailDialog(Post post, String baseReason) {
+        android.widget.EditText input = new android.widget.EditText(requireContext());
+        input.setHint(R.string.report_reason_hint);
+        int padding = (int) (16 * getResources().getDisplayMetrics().density);
+        android.widget.FrameLayout container = new android.widget.FrameLayout(requireContext());
+        container.addView(input);
+        input.setPadding(padding, padding, padding, padding);
+
+        new androidx.appcompat.app.AlertDialog.Builder(requireContext())
+                .setTitle(R.string.report_reason_title)
+                .setView(container)
+                .setPositiveButton(R.string.report_submit, (dialog, which) -> {
+                    String detail = input.getText().toString().trim();
+                    String finalReason = detail.isEmpty() ? baseReason : baseReason + ": " + detail;
+                    homeViewModel.reportPost(post, finalReason);
+                    Toast.makeText(requireContext(), getString(R.string.report_thanks), Toast.LENGTH_SHORT).show();
+                })
+                .setNegativeButton(R.string.cancel_action, null)
                 .show();
     }
 }

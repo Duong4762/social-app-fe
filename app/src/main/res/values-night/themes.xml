@@ -6,9 +6,15 @@
         <item name="colorOnPrimary">@color/white</item>
         <item name="colorSecondary">@color/primary_purple_light</item>
         <item name="colorOnSecondary">@color/dark_bg_primary</item>
-        <item name="colorSurface">@color/dark_surface</item>
+        <item name="colorSurface">@color/dark_bg_primary</item>
         <item name="colorOnSurface">@color/dark_text_primary</item>
+        <item name="android:colorBackground">@color/dark_bg_primary</item>
         <item name="colorOnBackground">@color/dark_text_primary</item>
+        <item name="colorSurfaceVariant">@color/dark_bg_secondary</item>
+        <item name="colorOnSurfaceVariant">@color/dark_text_secondary</item>
+        <item name="colorOutline">@color/dark_bg_tertiary</item>
+        <item name="colorSecondaryContainer">@color/dark_bg_tertiary</item>
+        <item name="colorOnSecondaryContainer">@color/dark_text_primary</item>
 
         <!-- Typography - Apply Inter Font Family Globally -->
         <item name="android:fontFamily">@font/inter</item>
@@ -24,4 +30,6 @@
         <item name="textAppearanceLabelMedium">@style/TextAppearance.Caption</item>
         <item name="textAppearanceLabelSmall">@style/TextAppearance.PostTime</item>
     </style>
+
+    <style name="Theme.Socialapp" parent="Base.Theme.Socialapp" />
 </resources>

@@ -4,7 +4,7 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:orientation="vertical"
-    android:background="@color/white">
+    android:background="?attr/colorSurface">
 
     <TextView
         android:layout_width="match_parent"
@@ -13,8 +13,8 @@
         android:layout_marginTop="12dp"
         android:layout_marginEnd="16dp"
         android:layout_marginBottom="8dp"
-        android:text="Search"
-        android:textColor="@color/text"
+        android:text="@string/search_title"
+        android:textColor="?attr/colorOnSurface"
         android:textSize="24sp"
         android:textStyle="bold" />
 
@@ -24,19 +24,21 @@
         android:layout_height="wrap_content"
         android:layout_margin="12dp"
         app:cardCornerRadius="24dp"
-        app:cardElevation="2dp"
-        app:cardBackgroundColor="@color/white">
+        app:cardElevation="0dp"
+        app:cardBackgroundColor="?attr/colorSurfaceVariant">
 
         <EditText
             android:id="@+id/etSearch"
             android:layout_width="match_parent"
             android:layout_height="48dp"
-            android:background="@drawable/bg_search_input"
-            android:hint="Search"
+            android:background="@android:color/transparent"
+            android:hint="@string/nav_search"
             android:paddingStart="16dp"
             android:paddingEnd="16dp"
             android:drawableStart="@drawable/ic_search"
-            android:drawableTint="@color/gray_dark"
+            android:drawableTint="?attr/colorOnSurfaceVariant"
+            android:textColor="?attr/colorOnSurface"
+            android:textColorHint="?attr/colorOnSurfaceVariant"
             android:drawablePadding="12dp"
             android:imeOptions="actionSearch"
             android:inputType="text"
@@ -52,8 +54,8 @@
         android:layout_marginStart="16dp"
         android:layout_marginTop="8dp"
         android:layout_marginBottom="8dp"
-        android:text="Suggested for you"
-        android:textColor="@color/text"
+        android:text="@string/suggested_for_you"
+        android:textColor="?attr/colorOnSurface"
         android:textSize="16sp"
         android:textStyle="bold" />
 
@@ -92,10 +94,10 @@
                 android:id="@+id/tabLayout"
                 android:layout_width="match_parent"
                 android:layout_height="48dp"
-                android:background="@color/white"
-                app:tabIndicatorColor="#0095F6"
-                app:tabSelectedTextColor="#0095F6"
-                app:tabTextColor="@color/gray"
+                android:background="?attr/colorSurface"
+                app:tabIndicatorColor="@color/primary_blue"
+                app:tabSelectedTextColor="@color/primary_blue"
+                app:tabTextColor="?attr/colorOnSurfaceVariant"
                 app:tabTextAppearance="@style/TextAppearance.Search.Tab"
                 app:tabMode="fixed" />
 
@@ -109,6 +111,7 @@
                     android:layout_width="match_parent"
                     android:layout_height="match_parent"
                     android:clipToPadding="false"
+                    android:background="?attr/colorSurface"
                     android:visibility="gone" />
 
                 <androidx.recyclerview.widget.RecyclerView
@@ -116,6 +119,7 @@
                     android:layout_width="match_parent"
                     android:layout_height="match_parent"
                     android:clipToPadding="false"
+                    android:background="?attr/colorSurface"
                     android:visibility="gone" />
 
                 <TextView
@@ -123,8 +127,8 @@
                     android:layout_width="match_parent"
                     android:layout_height="match_parent"
                     android:gravity="center"
-                    android:text="No results found"
-                    android:textColor="@color/gray"
+                    android:text="@string/no_results_found"
+                    android:textColor="?attr/colorOnSurfaceVariant"
                     android:textSize="16sp"
                     android:visibility="gone" />
 

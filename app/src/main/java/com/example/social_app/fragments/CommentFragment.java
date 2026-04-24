@@ -12,12 +12,10 @@ import android.view.LayoutInflater;
 import android.view.MotionEvent;
 import android.view.View;
 import android.view.ViewGroup;
-import android.widget.ArrayAdapter;
 import android.widget.EditText;
 import android.widget.ImageButton;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
-import android.widget.Spinner;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -49,10 +47,9 @@ public class CommentFragment extends Fragment implements CommentAdapter.OnCommen
 
     private RecyclerView commentsRecyclerView;
     private EditText commentInput;
-    private ImageButton sendButton, emojiButton, gifButton, attachMediaButton;
+    private ImageButton sendButton, emojiButton;
     private ImageView composeAvatar;
     private TextView charCountText;
-    private Spinner sortSpinner;
     private SwipeRefreshLayout swipeRefresh;
     private LinearLayout actionButtonsSection;
 
@@ -100,7 +97,9 @@ public class CommentFragment extends Fragment implements CommentAdapter.OnCommen
 
     private void setupObservers() {
         commentViewModel.getComments().observe(getViewLifecycleOwner(), comments -> {
-            commentAdapter.setComments(comments);
+            if (comments != null) {
+                commentAdapter.setComments(comments);
+            }
             swipeRefresh.setRefreshing(false);
             isLoadingMore = false;
         });
@@ -119,7 +118,6 @@ public class CommentFragment extends Fragment implements CommentAdapter.OnCommen
 
     private void initializeViews(View view) {
         commentsRecyclerView = view.findViewById(R.id.comments_recycler_view);
-        sortSpinner = view.findViewById(R.id.comment_sort_spinner);
         swipeRefresh = view.findViewById(R.id.swipe_refresh_layout);
 
         composeAvatar = view.findViewById(R.id.compose_avatar);
@@ -127,8 +125,6 @@ public class CommentFragment extends Fragment implements CommentAdapter.OnCommen
         charCountText = view.findViewById(R.id.compose_char_count_text);
 
         actionButtonsSection = view.findViewById(R.id.compose_action_buttons_section);
-        attachMediaButton = view.findViewById(R.id.compose_attach_media_button);
-        gifButton = view.findViewById(R.id.compose_gif_button);
         emojiButton = view.findViewById(R.id.compose_emoji_button);
         sendButton = view.findViewById(R.id.compose_send_button);
 
@@ -137,20 +133,8 @@ public class CommentFragment extends Fragment implements CommentAdapter.OnCommen
         }
         updateCharacterCount(0);
 
-        setupSortSpinner();
-
         layoutManager = new LinearLayoutManager(getContext());
         commentsRecyclerView.setLayoutManager(layoutManager);
-    }
-
-    private void setupSortSpinner() {
-        ArrayAdapter<CharSequence> adapter = ArrayAdapter.createFromResource(
-                getContext(),
-                R.array.comment_sort_options,
-                android.R.layout.simple_spinner_item
-        );
-        adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
-        sortSpinner.setAdapter(adapter);
     }
 
     private void setupAdapters() {
@@ -213,8 +197,7 @@ public class CommentFragment extends Fragment implements CommentAdapter.OnCommen
             sendButton.setEnabled(false);
         }
         if (emojiButton != null) emojiButton.setOnClickListener(v -> openEmojiPicker());
-        if (gifButton != null) gifButton.setOnClickListener(v -> openGifPicker());
-        if (attachMediaButton != null) attachMediaButton.setOnClickListener(v -> openFileChooser());
+
         if (commentInput != null) {
             commentInput.addTextChangedListener(new TextWatcher() {
                 @Override
@@ -265,25 +248,21 @@ public class CommentFragment extends Fragment implements CommentAdapter.OnCommen
     }
 
     private void openEmojiPicker() {
-        Toast.makeText(getContext(), "Emoji picker - Coming soon", Toast.LENGTH_SHORT).show();
-    }
-
-    private void openGifPicker() {
-        Toast.makeText(getContext(), "GIF picker - Coming soon", Toast.LENGTH_SHORT).show();
-    }
-
-    private void openFileChooser() {
-        Toast.makeText(getContext(), "File picker - Coming soon", Toast.LENGTH_SHORT).show();
+        Toast.makeText(getContext(), R.string.emoji_picker_coming_soon, Toast.LENGTH_SHORT).show();
     }
 
     private void loadComments() {
-        swipeRefresh.setRefreshing(true);
+        if (postId == null) return;
+        if (swipeRefresh != null) swipeRefresh.setRefreshing(true);
+        
         commentViewModel.loadComments(postId);
     }
 
     private void loadMoreComments() {
         commentViewModel.loadMoreComments(postId);
     }
+
+    private String replyingToCommentId = null;
 
     private void sendComment() {
         if (commentInput == null) return;
@@ -292,16 +271,13 @@ public class CommentFragment extends Fragment implements CommentAdapter.OnCommen
             Toast.makeText(getContext(), R.string.comment_empty_error, Toast.LENGTH_SHORT).show();
             return;
         }
-        String commentText = replyingToUserId != null
-                ? text.replace("@" + replyingToUserId + " ", "").trim()
-                : text;
-        if (commentText.isEmpty()) {
-            Toast.makeText(getContext(), R.string.comment_empty_error, Toast.LENGTH_SHORT).show();
-            return;
-        }
-        commentViewModel.sendComment(postId, commentText);
+        
+        // If we are replying, use the parentId
+        commentViewModel.sendComment(postId, text, replyingToCommentId);
+        
         commentInput.setText("");
         replyingToUserId = null;
+        replyingToCommentId = null;
     }
 
     // ==================== CommentAdapter.OnCommentActionListener Callbacks ====================
@@ -311,10 +287,15 @@ public class CommentFragment extends Fragment implements CommentAdapter.OnCommen
     }
 
     @Override
-    public void onReplyClicked(Comment comment) {
+    public void onReplyClicked(Comment comment, String userName) {
         if (comment == null) return;
-        replyingToUserId = MockDataGenerator.getUserDisplayName(comment.getUserId());
-        if (commentInput != null) commentInput.requestFocus();
+        replyingToUserId = userName;
+        replyingToCommentId = comment.getId();
+        if (commentInput != null) {
+            commentInput.requestFocus();
+            commentInput.setText("@" + replyingToUserId + " ");
+            commentInput.setSelection(commentInput.getText().length());
+        }
     }
 
     @Override
@@ -329,17 +310,17 @@ public class CommentFragment extends Fragment implements CommentAdapter.OnCommen
 
     private void showCommentOptionsMenu(Comment comment, int position) {
         androidx.appcompat.app.AlertDialog.Builder builder = new androidx.appcompat.app.AlertDialog.Builder(requireContext());
-        builder.setTitle("Comment options");
+        builder.setTitle(R.string.report_reason_title);
         boolean isOwnComment = isOwnedByCurrentUser(comment);
         List<String> options = new ArrayList<>();
         if (isOwnComment) {
-            options.add("Edit");
-            options.add("Delete");
+            options.add(getString(R.string.menu_edit));
+            options.add(getString(R.string.delete));
         }
-        options.add("Report");
-        options.add("Share");
-        options.add("Copy");
-        options.add("Cancel");
+        options.add(getString(R.string.menu_report));
+        options.add(getString(R.string.action_share));
+        options.add(getString(R.string.copy_action));
+        options.add(getString(R.string.cancel_action));
         builder.setItems(options.toArray(new String[0]), (dialog, which) -> {
             if (which == 0 && isOwnComment) {
                 editComment(comment);
@@ -362,24 +343,24 @@ public class CommentFragment extends Fragment implements CommentAdapter.OnCommen
     }
 
     private void editComment(Comment comment) {
-        Toast.makeText(getContext(), "Edit comment - Coming soon", Toast.LENGTH_SHORT).show();
+        Toast.makeText(getContext(), R.string.edit_comment_coming_soon, Toast.LENGTH_SHORT).show();
     }
 
     private void deleteComment(Comment comment, int position) {
         new androidx.appcompat.app.AlertDialog.Builder(requireContext())
-                .setTitle("Delete comment?")
-                .setMessage("This action cannot be undone.")
-                .setPositiveButton("Delete", (dialog, which) -> {
+                .setTitle(R.string.delete_post_title)
+                .setMessage(R.string.delete_post_confirm)
+                .setPositiveButton(R.string.delete, (dialog, which) -> {
                     commentViewModel.deleteComment(comment.getId());
                     commentAdapter.removeComment(position);
-                    Toast.makeText(getContext(), "Comment deleted", Toast.LENGTH_SHORT).show();
+                    Toast.makeText(getContext(), R.string.comment_deleted, Toast.LENGTH_SHORT).show();
                 })
-                .setNegativeButton("Cancel", null)
+                .setNegativeButton(R.string.cancel_action, null)
                 .show();
     }
 
     private void reportComment(Comment comment) {
-        Toast.makeText(getContext(), "Comment reported", Toast.LENGTH_SHORT).show();
+        Toast.makeText(getContext(), R.string.comment_reported, Toast.LENGTH_SHORT).show();
     }
 
     private void shareComment(Comment comment) {
@@ -395,7 +376,7 @@ public class CommentFragment extends Fragment implements CommentAdapter.OnCommen
                 (ClipboardManager) requireContext().getSystemService(Context.CLIPBOARD_SERVICE);
         ClipData clip = ClipData.newPlainText("comment", comment.getContent());
         clipboard.setPrimaryClip(clip);
-        Toast.makeText(getContext(), "Comment copied to clipboard", Toast.LENGTH_SHORT).show();
+        Toast.makeText(getContext(), R.string.comment_copied, Toast.LENGTH_SHORT).show();
     }
 
     @Override

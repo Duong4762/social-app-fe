@@ -5,7 +5,7 @@
     android:id="@+id/custom_bottom_nav_container"
     android:layout_width="match_parent"
     android:layout_height="72dp"
-    android:background="@color/white"
+    android:background="?attr/colorSurface"
     android:elevation="16dp">
 
     <!-- Main Navigation Bar Background -->
@@ -17,7 +17,7 @@
         android:paddingEnd="12dp"
         android:paddingTop="4dp"
         android:paddingBottom="8dp"
-        android:background="@color/white">
+        android:background="?attr/colorSurface">
 
         <!-- Home Icon -->
         <ImageButton
@@ -28,7 +28,7 @@
             android:contentDescription="@string/nav_home"
             android:background="?attr/selectableItemBackgroundBorderless"
             android:scaleType="centerInside"
-            app:tint="@color/black"
+            app:tint="?attr/colorOnSurface"
             app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintEnd_toStartOf="@id/nav_btn_search"
             app:layout_constraintHorizontal_chainStyle="spread_inside"
@@ -44,7 +44,7 @@
             android:contentDescription="@string/nav_search"
             android:background="?attr/selectableItemBackgroundBorderless"
             android:scaleType="centerInside"
-            app:tint="@color/black"
+            app:tint="?attr/colorOnSurface"
             app:layout_constraintStart_toEndOf="@id/nav_btn_home"
             app:layout_constraintEnd_toStartOf="@id/nav_btn_message"
             app:layout_constraintTop_toTopOf="parent"
@@ -59,7 +59,7 @@
             android:contentDescription="@string/nav_message"
             android:background="?attr/selectableItemBackgroundBorderless"
             android:scaleType="centerInside"
-            app:tint="@color/black"
+            app:tint="?attr/colorOnSurface"
             app:layout_constraintStart_toEndOf="@id/nav_btn_search"
             app:layout_constraintEnd_toStartOf="@id/nav_btn_notifications"
             app:layout_constraintTop_toTopOf="parent"
@@ -74,7 +74,7 @@
             android:contentDescription="@string/notification_bell"
             android:background="?attr/selectableItemBackgroundBorderless"
             android:scaleType="centerInside"
-            app:tint="@color/black"
+            app:tint="?attr/colorOnSurface"
             app:layout_constraintStart_toEndOf="@id/nav_btn_message"
             app:layout_constraintEnd_toStartOf="@id/nav_btn_profile"
             app:layout_constraintTop_toTopOf="parent"
@@ -101,7 +101,7 @@
             android:contentDescription="@string/nav_profile"
             android:background="?attr/selectableItemBackgroundBorderless"
             android:scaleType="centerInside"
-            app:tint="@color/black"
+            app:tint="?attr/colorOnSurface"
             app:layout_constraintStart_toEndOf="@id/nav_btn_notifications"
             app:layout_constraintEnd_toStartOf="@id/nav_btn_settings"
             app:layout_constraintTop_toTopOf="parent"
@@ -116,7 +116,7 @@
             android:contentDescription="@string/nav_settings"
             android:background="?attr/selectableItemBackgroundBorderless"
             android:scaleType="centerInside"
-            app:tint="@color/black"
+            app:tint="?attr/colorOnSurface"
             app:layout_constraintStart_toEndOf="@id/nav_btn_profile"
             app:layout_constraintEnd_toEndOf="parent"
             app:layout_constraintTop_toTopOf="parent"

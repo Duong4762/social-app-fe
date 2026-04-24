@@ -25,6 +25,8 @@ import com.example.social_app.fragments.ProfileFragment;
 import com.example.social_app.fragments.SearchFragment;
 import com.example.social_app.fragments.MessagesFragment;
 import com.example.social_app.fragments.SettingsFragment;
+import com.example.social_app.utils.LanguageUtils;
+import com.example.social_app.utils.ThemeUtils;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseUser;
 import com.google.firebase.firestore.SetOptions;
@@ -32,7 +34,7 @@ import com.google.firebase.firestore.SetOptions;
 import java.util.HashMap;
 import java.util.Map;
 
-public class MainActivity extends AppCompatActivity {
+public class MainActivity extends BaseActivity {
 
     private View customBottomNav;
     private ImageButton navBtnHome, navBtnSearch, navBtnMessage, navBtnNotifications, navBtnProfile, navBtnSettings;

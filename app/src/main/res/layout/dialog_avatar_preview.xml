@@ -29,6 +29,6 @@
         android:backgroundTint="@color/primary_blue"
         android:text="@string/profile_save_avatar"
         android:textAllCaps="false"
-        android:textColor="@color/white" />
+        android:textColor="?attr/colorSurface" />
 
 </LinearLayout>
