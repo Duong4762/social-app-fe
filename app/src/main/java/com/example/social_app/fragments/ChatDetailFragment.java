@@ -34,6 +34,7 @@ import com.example.social_app.R;
 import com.example.social_app.adapters.ChatMessagesAdapter;
 import com.example.social_app.data.model.Message;
 import com.example.social_app.repository.ConversationRepository;
+import com.example.social_app.repository.VoiceCallRepository;
 import com.example.social_app.utils.CloudinaryUploadUtil;
 import com.example.social_app.utils.UserAvatarLoader;
 import com.google.android.material.button.MaterialButton;
@@ -48,6 +49,8 @@ import java.util.List;
 import java.util.Set;
 
 public class ChatDetailFragment extends Fragment {
+
+    private static final int REQ_RECORD_AUDIO_FOR_CALL = 8003;
 
     private static final String ARG_CONVERSATION_ID = "conversation_id";
     private static final String ARG_PEER_NAME = "peer_name";
@@ -65,6 +68,9 @@ public class ChatDetailFragment extends Fragment {
     private String mConversationId;
     private String mPeerUid;
     private String mMyUid;
+    private String mPeerName;
+    @Nullable
+    private String mPeerAvatarUrl;
     private TextView headerStatus;
     private View headerOnlineDot;
     private View mediaPickerSheet;
@@ -130,6 +136,8 @@ public class ChatDetailFragment extends Fragment {
 
         mConversationId = conversationId;
         mPeerUid = peerUid;
+        mPeerName = peerName;
+        mPeerAvatarUrl = peerAvatar;
 
         repository = new ConversationRepository(requireContext());
 
@@ -144,8 +152,7 @@ public class ChatDetailFragment extends Fragment {
         UserAvatarLoader.load(headerAvatar, peerAvatar);
         updateHeaderStatusUi(false);
 
-        view.findViewById(R.id.btn_chat_info).setOnClickListener(v ->
-                Toast.makeText(requireContext(), R.string.chat_info, Toast.LENGTH_SHORT).show());
+        view.findViewById(R.id.btn_chat_call).setOnClickListener(v -> startVoiceCall());
 
         FirebaseUser user = FirebaseAuth.getInstance().getCurrentUser();
         if (user == null) {
@@ -215,6 +222,45 @@ public class ChatDetailFragment extends Fragment {
 
         startListening(peerAvatar);
         listenPeerActiveStatus();
+    }
+
+    private void startVoiceCall() {
+        if (ContextCompat.checkSelfPermission(requireContext(), Manifest.permission.RECORD_AUDIO)
+                != PackageManager.PERMISSION_GRANTED) {
+            requestPermissions(new String[]{Manifest.permission.RECORD_AUDIO}, REQ_RECORD_AUDIO_FOR_CALL);
+            return;
+        }
+        startVoiceCallAfterMicGranted();
+    }
+
+    private void startVoiceCallAfterMicGranted() {
+        FirebaseUser user = FirebaseAuth.getInstance().getCurrentUser();
+        if (user == null) {
+            return;
+        }
+        String callerName = user.getDisplayName();
+        if (callerName == null || callerName.trim().isEmpty()) {
+            String email = user.getEmail();
+            if (email != null && email.contains("@")) {
+                callerName = email.substring(0, email.indexOf('@'));
+            } else {
+                callerName = getString(R.string.unknown_user);
+            }
+        }
+        VoiceCallRepository voiceRepo = new VoiceCallRepository();
+        voiceRepo.startOutgoingCall(
+                user.getUid(),
+                mPeerUid,
+                callerName.trim(),
+                null,
+                mPeerName,
+                mPeerAvatarUrl,
+                mConversationId
+        ).addOnFailureListener(e -> Toast.makeText(
+                requireContext(),
+                R.string.call_start_failed,
+                Toast.LENGTH_SHORT
+        ).show());
     }
 
     private void setupKeyboardBehavior(@NonNull View root, @NonNull EditText input) {
@@ -541,6 +587,14 @@ public class ChatDetailFragment extends Fragment {
                 loadDeviceImages();
             } else {
                 Toast.makeText(requireContext(), R.string.chat_cannot_read_images, Toast.LENGTH_SHORT).show();
+            }
+        } else if (requestCode == REQ_RECORD_AUDIO_FOR_CALL) {
+            boolean granted = grantResults.length > 0
+                    && grantResults[0] == PackageManager.PERMISSION_GRANTED;
+            if (granted) {
+                startVoiceCallAfterMicGranted();
+            } else {
+                Toast.makeText(requireContext(), R.string.call_need_mic_permission, Toast.LENGTH_LONG).show();
             }
         }
     }

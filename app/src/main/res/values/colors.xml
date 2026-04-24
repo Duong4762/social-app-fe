@@ -80,4 +80,7 @@
 
     <!-- Transparent -->
     <color name="transparent">#00000000</color>
+
+    <color name="call_accept_green">#43A047</color>
+    <color name="call_decline_red">#E53935</color>
 </resources>
