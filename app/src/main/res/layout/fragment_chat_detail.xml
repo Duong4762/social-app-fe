@@ -214,17 +214,19 @@
                 tools:listitem="@layout/item_chat_gallery_image" />
         </LinearLayout>
 
-        <com.google.android.material.floatingactionbutton.FloatingActionButton
+        <com.google.android.material.button.MaterialButton
             android:id="@+id/btn_chat_send_image"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
+            android:layout_width="120dp"
+            android:layout_height="46dp"
             android:layout_gravity="bottom|center_horizontal"
             android:layout_marginBottom="24dp"
-            android:contentDescription="@string/cd_send_message"
-            android:src="@drawable/send_message"
+            android:backgroundTint="@color/primary_blue"
+            android:text="@string/send"
+            android:textAllCaps="false"
+            android:textColor="@android:color/white"
+            android:textStyle="bold"
             android:visibility="gone"
-            app:backgroundTint="@color/primary_purple"
-            app:tint="@android:color/white" />
+            app:cornerRadius="23dp" />
     </FrameLayout>
 
     <!-- Bottom input -->

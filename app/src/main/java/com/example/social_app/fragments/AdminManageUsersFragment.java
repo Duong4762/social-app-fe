@@ -165,11 +165,17 @@ public class AdminManageUsersFragment extends Fragment {
     }
 
     private void styleChip(MaterialButton button, boolean active) {
-        int bg = requireContext().getColor(active ? R.color.primary_purple : R.color.white);
-        int text = requireContext().getColor(active ? R.color.white : R.color.text);
+        int bg = active ? requireContext().getColor(R.color.primary_purple) : resolveThemeColor(com.google.android.material.R.attr.colorSurface);
+        int text = active ? requireContext().getColor(R.color.white) : resolveThemeColor(com.google.android.material.R.attr.colorOnSurface);
         button.setBackgroundTintList(android.content.res.ColorStateList.valueOf(bg));
         button.setTextColor(text);
         button.setStrokeWidth(active ? 0 : 1);
+    }
+
+    private int resolveThemeColor(int attrResId) {
+        android.util.TypedValue typedValue = new android.util.TypedValue();
+        requireContext().getTheme().resolveAttribute(attrResId, typedValue, true);
+        return typedValue.data;
     }
 
     private void toggleBan(User user) {

@@ -583,6 +583,24 @@ public class BottomSheetCommentFragment extends BottomSheetDialogFragment implem
     }
 
     @Override
+    public void onUserClicked(String userId) {
+        if (userId == null || userId.trim().isEmpty()) return;
+        String currentUserId = FirebaseManager.getInstance().getAuth().getUid();
+        androidx.fragment.app.Fragment fragment;
+        if (userId.equals(currentUserId)) {
+            fragment = new ProfileFragment();
+        } else {
+            fragment = OtherProfileFragment.newInstance(userId);
+        }
+        requireActivity().getSupportFragmentManager()
+                .beginTransaction()
+                .replace(R.id.nav_host_fragment, fragment)
+                .addToBackStack(null)
+                .commit();
+        dismiss();
+    }
+
+    @Override
     public void onLikeClicked(Comment comment, int position) {
         commentViewModel.toggleLike(comment);
     }

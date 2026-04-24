@@ -22,6 +22,7 @@ import androidx.recyclerview.widget.RecyclerView;
 import com.example.social_app.R;
 import com.example.social_app.adapters.PostAdapter;
 import com.example.social_app.adapters.UserSearchAdapter;
+import com.example.social_app.data.model.Follow;
 import com.example.social_app.data.model.Post;
 import com.example.social_app.data.model.User;
 import com.example.social_app.firebase.FirebaseManager;
@@ -31,8 +32,10 @@ import com.google.android.material.tabs.TabLayout;
 import com.google.firebase.firestore.FirebaseFirestore;
 
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Locale;
+import java.util.Set;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
@@ -66,6 +69,8 @@ public class SearchFragment extends Fragment implements PostAdapter.OnPostAction
     private ExecutorService executor = Executors.newSingleThreadExecutor();
     private Handler mainHandler = new Handler(Looper.getMainLooper());
     private FirebaseFirestore firestore;
+    private String currentUserId;
+    private final Set<String> myFollowingUserIds = new HashSet<>();
 
     private boolean isSearchMode = false;
     private String lastSearchQuery = "";
@@ -105,6 +110,10 @@ public class SearchFragment extends Fragment implements PostAdapter.OnPostAction
     }
 
     private void setupRecyclerViews() {
+        currentUserId = FirebaseManager.getInstance().getAuth().getCurrentUser() != null
+                ? FirebaseManager.getInstance().getAuth().getCurrentUser().getUid()
+                : null;
+
         // Suggested users adapter (dùng chung UserSearchAdapter)
         suggestedUsersRecycler.setLayoutManager(new LinearLayoutManager(requireContext()));
         suggestedAdapter = new UserSearchAdapter(requireContext(), new UserSearchAdapter.OnUserActionListener() {
@@ -115,9 +124,11 @@ public class SearchFragment extends Fragment implements PostAdapter.OnPostAction
 
             @Override
             public void onFollowClicked(User user, int position) {
-                Toast.makeText(requireContext(), getString(R.string.follow_user, user.getFullName()), Toast.LENGTH_SHORT).show();
+                toggleFollow(user);
             }
         });
+        suggestedAdapter.setCurrentUserId(currentUserId);
+        suggestedAdapter.setHideFollowButtonForSelf(true);
         suggestedUsersRecycler.setAdapter(suggestedAdapter);
 
         // Search users adapter
@@ -130,9 +141,11 @@ public class SearchFragment extends Fragment implements PostAdapter.OnPostAction
 
             @Override
             public void onFollowClicked(User user, int position) {
-                Toast.makeText(requireContext(), getString(R.string.follow_user, user.getFullName()), Toast.LENGTH_SHORT).show();
+                toggleFollow(user);
             }
         });
+        userSearchAdapter.setCurrentUserId(currentUserId);
+        userSearchAdapter.setHideFollowButtonForSelf(true);
         usersRecyclerView.setAdapter(userSearchAdapter);
 
         // Search posts adapter
@@ -195,6 +208,7 @@ public class SearchFragment extends Fragment implements PostAdapter.OnPostAction
     private void loadSearchData() {
         loadUsersFromFirebase();
         loadPostsFromFirebase();
+        loadFollowingState();
     }
 
     private void loadPostsFromFirebase() {
@@ -229,10 +243,6 @@ public class SearchFragment extends Fragment implements PostAdapter.OnPostAction
 
     private void loadUsersFromFirebase() {
         setGlobalLoading(true);
-        String currentUid = FirebaseManager.getInstance().getAuth().getCurrentUser() != null
-                ? FirebaseManager.getInstance().getAuth().getCurrentUser().getUid()
-                : null;
-
         firestore.collection(FirebaseManager.COLLECTION_USERS)
                 .get()
                 .addOnSuccessListener(queryDocumentSnapshots -> {
@@ -247,10 +257,10 @@ public class SearchFragment extends Fragment implements PostAdapter.OnPostAction
                             user.setId(document.getId());
                         }
 
-                        if (currentUid != null && currentUid.equals(user.getId())) {
+                        if (currentUserId != null && currentUserId.equals(user.getId())) {
                             continue;
                         }
-                        if (isAdminUser(user)) {
+                        if (!isNormalUser(user)) {
                             continue;
                         }
                         users.add(user);
@@ -276,6 +286,77 @@ public class SearchFragment extends Fragment implements PostAdapter.OnPostAction
                     showSuggestedMode();
                     Toast.makeText(requireContext(), "Cannot load users", Toast.LENGTH_SHORT).show();
                 });
+    }
+
+    private void loadFollowingState() {
+        if (currentUserId == null || currentUserId.trim().isEmpty()) {
+            myFollowingUserIds.clear();
+            syncFollowStateToAdapters();
+            return;
+        }
+        firestore.collection(FirebaseManager.COLLECTION_FOLLOWS)
+                .whereEqualTo("followerId", currentUserId)
+                .get()
+                .addOnSuccessListener(queryDocumentSnapshots -> {
+                    myFollowingUserIds.clear();
+                    for (com.google.firebase.firestore.DocumentSnapshot doc : queryDocumentSnapshots.getDocuments()) {
+                        String followingId = doc.getString("followingId");
+                        if (followingId != null && !followingId.trim().isEmpty()) {
+                            myFollowingUserIds.add(followingId);
+                        }
+                    }
+                    syncFollowStateToAdapters();
+                })
+                .addOnFailureListener(e -> {
+                    myFollowingUserIds.clear();
+                    syncFollowStateToAdapters();
+                });
+    }
+
+    private void syncFollowStateToAdapters() {
+        if (suggestedAdapter != null) {
+            suggestedAdapter.setFollowedUserIds(myFollowingUserIds);
+        }
+        if (userSearchAdapter != null) {
+            userSearchAdapter.setFollowedUserIds(myFollowingUserIds);
+        }
+    }
+
+    private void toggleFollow(@Nullable User user) {
+        if (user == null || user.getId() == null || user.getId().trim().isEmpty()) {
+            return;
+        }
+        if (currentUserId == null || currentUserId.trim().isEmpty()) {
+            Toast.makeText(requireContext(), "Vui long dang nhap de theo doi", Toast.LENGTH_SHORT).show();
+            return;
+        }
+        String targetUserId = user.getId();
+        boolean isFollowing = myFollowingUserIds.contains(targetUserId);
+        String followDocId = currentUserId + "_" + targetUserId;
+
+        if (isFollowing) {
+            firestore.collection(FirebaseManager.COLLECTION_FOLLOWS)
+                    .document(followDocId)
+                    .delete()
+                    .addOnSuccessListener(unused -> {
+                        myFollowingUserIds.remove(targetUserId);
+                        syncFollowStateToAdapters();
+                    })
+                    .addOnFailureListener(e ->
+                            Toast.makeText(requireContext(), getString(R.string.follow_action_failed), Toast.LENGTH_SHORT).show());
+            return;
+        }
+
+        Follow follow = new Follow(followDocId, currentUserId, targetUserId);
+        firestore.collection(FirebaseManager.COLLECTION_FOLLOWS)
+                .document(followDocId)
+                .set(follow)
+                .addOnSuccessListener(unused -> {
+                    myFollowingUserIds.add(targetUserId);
+                    syncFollowStateToAdapters();
+                })
+                .addOnFailureListener(e ->
+                        Toast.makeText(requireContext(), getString(R.string.follow_action_failed), Toast.LENGTH_SHORT).show());
     }
 
     private void showSuggestedMode() {
@@ -411,11 +492,11 @@ public class SearchFragment extends Fragment implements PostAdapter.OnPostAction
         onUserClicked(user.getId());
     }
 
-    private boolean isAdminUser(@Nullable User user) {
+    private boolean isNormalUser(@Nullable User user) {
         if (user == null || user.getRole() == null) {
             return false;
         }
-        return "ADMIN".equalsIgnoreCase(user.getRole().trim());
+        return "USER".equalsIgnoreCase(user.getRole().trim());
     }
 
     @Override

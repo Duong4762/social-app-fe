@@ -44,6 +44,7 @@ public class CommentAdapter extends RecyclerView.Adapter<CommentAdapter.CommentV
      * Interface for handling comment interactions.
      */
     public interface OnCommentActionListener {
+        void onUserClicked(String userId);
         void onLikeClicked(Comment comment, int position);
         void onReplyClicked(Comment comment, String userName);
         void onViewMoreRepliesClicked(Comment comment);
@@ -272,6 +273,14 @@ public class CommentAdapter extends RecyclerView.Adapter<CommentAdapter.CommentV
                             }
                         });
             }
+
+            View.OnClickListener userClickListener = v -> {
+                if (actionListener != null && comment.getUserId() != null && !comment.getUserId().trim().isEmpty()) {
+                    actionListener.onUserClicked(comment.getUserId());
+                }
+            };
+            if (avatar != null) avatar.setOnClickListener(userClickListener);
+            if (username != null) username.setOnClickListener(userClickListener);
 
             if (commentText != null) {
                 String mediaType = comment.getMediaType();

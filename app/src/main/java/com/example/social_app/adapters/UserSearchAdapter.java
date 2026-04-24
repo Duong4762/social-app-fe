@@ -121,10 +121,15 @@ public class UserSearchAdapter extends RecyclerView.Adapter<UserSearchAdapter.Us
             followButton.setText(isFollowing
                     ? context.getString(R.string.following)
                     : context.getString(R.string.follow));
+            int paddingLeft = followButton.getPaddingLeft();
+            int paddingTop = followButton.getPaddingTop();
+            int paddingRight = followButton.getPaddingRight();
+            int paddingBottom = followButton.getPaddingBottom();
             Drawable bg = context.getDrawable(isFollowing
                     ? R.drawable.bg_following_button
                     : R.drawable.bg_follow_button);
             followButton.setBackground(bg);
+            followButton.setPadding(paddingLeft, paddingTop, paddingRight, paddingBottom);
             followButton.setTextColor(context.getColor(isFollowing ? R.color.black : R.color.white));
             if (isSelf && hideFollowButtonForSelf) {
                 followButton.setVisibility(View.GONE);

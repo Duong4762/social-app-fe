@@ -3,7 +3,7 @@
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="@color/bg"
+    android:background="?attr/colorSurface"
     android:fillViewport="true">
 
     <LinearLayout
@@ -22,8 +22,8 @@
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
                 android:layout_weight="1"
-                android:text="Admin Dashboard"
-                android:textColor="@color/text"
+                android:text="@string/admin_title"
+                android:textColor="?attr/colorOnSurface"
                 android:textSize="22sp"
                 android:textStyle="bold" />
 
@@ -41,15 +41,15 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="3dp"
-            android:text="Statistics"
-            android:textColor="@color/muted"
+            android:text="@string/admin_stats_section_title"
+            android:textColor="?attr/colorOnSurfaceVariant"
             android:textSize="13sp" />
 
         <com.google.android.material.card.MaterialCardView
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="10dp"
-            app:cardBackgroundColor="@color/white"
+            app:cardBackgroundColor="?attr/colorSurface"
             app:cardCornerRadius="18dp"
             app:cardElevation="1dp"
             app:strokeColor="@color/divider"
@@ -64,8 +64,8 @@
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="Total users"
-                    android:textColor="@color/muted" />
+                    android:text="@string/admin_total_users"
+                    android:textColor="?attr/colorOnSurfaceVariant" />
 
                 <TextView
                     android:id="@+id/tvTotalUsers"
@@ -73,7 +73,7 @@
                     android:layout_height="wrap_content"
                     android:layout_marginTop="4dp"
                     android:text="84,293"
-                    android:textColor="@color/text"
+                    android:textColor="?attr/colorOnSurface"
                     android:textSize="28sp"
                     android:textStyle="bold" />
 
@@ -104,7 +104,7 @@
                     android:layout_height="34dp"
                     android:insetTop="0dp"
                     android:insetBottom="0dp"
-                    android:text="7 ngày"
+                    android:text="@string/admin_period_7_days"
                     android:textAllCaps="false"
                     android:textColor="@color/white"
                     app:backgroundTint="@color/primary_purple"
@@ -117,10 +117,10 @@
                     android:layout_marginStart="8dp"
                     android:insetTop="0dp"
                     android:insetBottom="0dp"
-                    android:text="30 ngày"
+                    android:text="@string/admin_period_30_days"
                     android:textAllCaps="false"
-                    android:textColor="@color/text"
-                    app:backgroundTint="@color/white"
+                    android:textColor="?attr/colorOnSurface"
+                    app:backgroundTint="?attr/colorSurface"
                     app:cornerRadius="17dp"
                     app:strokeColor="@color/divider"
                     app:strokeWidth="1dp" />
@@ -132,10 +132,10 @@
                     android:layout_marginStart="8dp"
                     android:insetTop="0dp"
                     android:insetBottom="0dp"
-                    android:text="90 ngày"
+                    android:text="@string/admin_period_90_days"
                     android:textAllCaps="false"
-                    android:textColor="@color/text"
-                    app:backgroundTint="@color/white"
+                    android:textColor="?attr/colorOnSurface"
+                    app:backgroundTint="?attr/colorSurface"
                     app:cornerRadius="17dp"
                     app:strokeColor="@color/divider"
                     app:strokeWidth="1dp" />
@@ -165,8 +165,8 @@
                     <TextView
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:text="Banned"
-                        android:textColor="@color/muted"
+                        android:text="@string/admin_banned_users"
+                        android:textColor="?attr/colorOnSurfaceVariant"
                         android:textSize="12sp" />
 
                     <TextView
@@ -175,7 +175,7 @@
                         android:layout_height="wrap_content"
                         android:layout_marginTop="3dp"
                         android:text="120"
-                        android:textColor="@color/text"
+                        android:textColor="?attr/colorOnSurface"
                         android:textSize="18sp"
                         android:textStyle="bold" />
                 </LinearLayout>
@@ -186,7 +186,7 @@
                 android:layout_height="wrap_content"
                 android:layout_marginStart="8dp"
                 android:layout_weight="1"
-                app:cardBackgroundColor="@color/white"
+                app:cardBackgroundColor="?attr/colorSurface"
                 app:cardCornerRadius="14dp"
                 app:cardElevation="0dp"
                 app:strokeColor="@color/divider"
@@ -202,8 +202,8 @@
                         android:id="@+id/tvPostsLabel"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:text="Posts in period"
-                        android:textColor="@color/muted"
+                        android:text="@string/admin_posts_in_period"
+                        android:textColor="?attr/colorOnSurfaceVariant"
                         android:textSize="12sp" />
 
                     <TextView
@@ -212,7 +212,7 @@
                         android:layout_height="wrap_content"
                         android:layout_marginTop="3dp"
                         android:text="58"
-                        android:textColor="@color/text"
+                        android:textColor="?attr/colorOnSurface"
                         android:textSize="18sp"
                         android:textStyle="bold" />
                 </LinearLayout>
@@ -223,7 +223,7 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="10dp"
-            app:cardBackgroundColor="@color/white"
+            app:cardBackgroundColor="?attr/colorSurface"
             app:cardCornerRadius="18dp"
             app:cardElevation="1dp"
             app:strokeColor="@color/divider"
@@ -239,8 +239,8 @@
                     android:layout_height="wrap_content"
                     android:layout_marginTop="12dp"
                     android:layout_marginStart="12dp"
-                    android:text="User growth chart"
-                    android:textColor="@color/text"
+                    android:text="@string/admin_user_growth_chart"
+                    android:textColor="?attr/colorOnSurface"
                     android:textStyle="bold" />
 
                 <TextView
@@ -249,8 +249,8 @@
                     android:layout_height="wrap_content"
                     android:layout_marginStart="12dp"
                     android:layout_marginTop="2dp"
-                    android:text="Theo mốc thời gian đã chọn"
-                    android:textColor="@color/muted" />
+                    android:text="@string/admin_chart_subtitle_default"
+                    android:textColor="?attr/colorOnSurfaceVariant" />
 
                 <LinearLayout
                     android:id="@+id/chartBarsContainer"
@@ -267,8 +267,8 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="12dp"
-            android:text="Additional metrics"
-            android:textColor="@color/text"
+            android:text="@string/admin_additional_metrics"
+            android:textColor="?attr/colorOnSurface"
             android:textStyle="bold" />
 
         <LinearLayout
@@ -281,7 +281,7 @@
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
                 android:layout_weight="1"
-                app:cardBackgroundColor="@color/white"
+                app:cardBackgroundColor="?attr/colorSurface"
                 app:cardCornerRadius="14dp"
                 app:cardElevation="0dp"
                 app:strokeColor="@color/divider"
@@ -296,8 +296,8 @@
                     <TextView
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:text="Active users"
-                        android:textColor="@color/muted"
+                        android:text="@string/admin_active_users"
+                        android:textColor="?attr/colorOnSurfaceVariant"
                         android:textSize="12sp" />
 
                     <TextView
@@ -306,7 +306,7 @@
                         android:layout_height="wrap_content"
                         android:layout_marginTop="3dp"
                         android:text="0"
-                        android:textColor="@color/text"
+                        android:textColor="?attr/colorOnSurface"
                         android:textSize="18sp"
                         android:textStyle="bold" />
                 </LinearLayout>
@@ -317,7 +317,7 @@
                 android:layout_height="wrap_content"
                 android:layout_marginStart="8dp"
                 android:layout_weight="1"
-                app:cardBackgroundColor="@color/white"
+                app:cardBackgroundColor="?attr/colorSurface"
                 app:cardCornerRadius="14dp"
                 app:cardElevation="0dp"
                 app:strokeColor="@color/divider"
@@ -332,8 +332,8 @@
                     <TextView
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:text="Total posts"
-                        android:textColor="@color/muted"
+                        android:text="@string/admin_total_posts"
+                        android:textColor="?attr/colorOnSurfaceVariant"
                         android:textSize="12sp" />
 
                     <TextView
@@ -342,7 +342,7 @@
                         android:layout_height="wrap_content"
                         android:layout_marginTop="3dp"
                         android:text="0"
-                        android:textColor="@color/text"
+                        android:textColor="?attr/colorOnSurface"
                         android:textSize="18sp"
                         android:textStyle="bold" />
                 </LinearLayout>

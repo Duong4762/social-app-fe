@@ -3,7 +3,6 @@ package com.example.social_app;
 import android.os.Bundle;
 import android.view.View;
 
-import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.graphics.Insets;
 import androidx.core.view.ViewCompat;
 import androidx.core.view.WindowInsetsCompat;
@@ -12,10 +11,11 @@ import androidx.fragment.app.Fragment;
 import com.example.social_app.fragments.AdminDashboardFragment;
 import com.example.social_app.fragments.AdminManageUsersFragment;
 import com.example.social_app.fragments.AdminStatsFragment;
+import com.example.social_app.fragments.SettingsFragment;
 import com.google.android.material.badge.BadgeDrawable;
 import com.google.android.material.bottomnavigation.BottomNavigationView;
 
-public class AdminActivity extends AppCompatActivity implements AdminDashboardFragment.DashboardListener {
+public class AdminActivity extends BaseActivity implements AdminDashboardFragment.DashboardListener {
 
     private BottomNavigationView adminBottomNav;
 
@@ -49,6 +49,10 @@ public class AdminActivity extends AppCompatActivity implements AdminDashboardFr
             }
             if (itemId == R.id.nav_admin_stats) {
                 loadFragment(new AdminStatsFragment(), true);
+                return true;
+            }
+            if (itemId == R.id.nav_admin_settings) {
+                loadFragment(new SettingsFragment(), true);
                 return true;
             }
             return false;

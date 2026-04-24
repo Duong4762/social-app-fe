@@ -22,6 +22,7 @@ import androidx.constraintlayout.widget.ConstraintLayout;
 
 import com.bumptech.glide.Glide;
 import com.example.social_app.R;
+import com.example.social_app.data.model.Report;
 import com.example.social_app.data.model.PostMedia;
 import com.example.social_app.data.model.User;
 import com.example.social_app.data.model.Post;
@@ -279,6 +280,14 @@ public class PostAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
                     : System.currentTimeMillis();
             timestamp.setText(MockDataGenerator.getTimeDifferenceString(createdAt));
 
+            View.OnClickListener openProfileClick = v -> {
+                if (actionListener != null && post.getUserId() != null && !post.getUserId().trim().isEmpty()) {
+                    actionListener.onUserClicked(post.getUserId());
+                }
+            };
+            userAvatar.setOnClickListener(openProfileClick);
+            username.setOnClickListener(openProfileClick);
+
             // Set post content
             postContent.setText(post.getCaption());
 
@@ -298,27 +307,9 @@ public class PostAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
             // Setup more options click listener
             ImageView moreOptions = itemView.findViewById(R.id.post_more_options);
             String currentUserId = FirebaseManager.getInstance().getAuth().getUid();
-            
-            // Chỉ hiển thị dấu ba chấm hoặc chỉ cho phép sửa/xóa nếu là bài viết của mình
-            if (currentUserId != null && currentUserId.equals(post.getUserId())) {
-                moreOptions.setVisibility(View.VISIBLE);
-                moreOptions.setOnClickListener(v -> {
-                    android.widget.PopupMenu popup = new android.widget.PopupMenu(context, v);
-                    popup.getMenu().add("Chỉnh sửa");
-                    popup.getMenu().add("Xóa");
-                    popup.setOnMenuItemClickListener(item -> {
-                        if (item.getTitle().equals("Chỉnh sửa")) {
-                            if (actionListener != null) actionListener.onEditPostClicked(post);
-                        } else if (item.getTitle().equals("Xóa")) {
-                            if (actionListener != null) actionListener.onDeletePostClicked(post);
-                        }
-                        return true;
-                    });
-                    popup.show();
-                });
-            } else {
-                moreOptions.setVisibility(View.GONE);
-            }
+            boolean isOwnPost = currentUserId != null && currentUserId.equals(post.getUserId());
+            moreOptions.setVisibility(View.VISIBLE);
+            moreOptions.setOnClickListener(v -> showPostOptionsMenu(post, v, isOwnPost));
 
             // Set up click listeners - ONLY ONCE
             likeContainer.setOnClickListener(v -> {
@@ -696,6 +687,75 @@ public class PostAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
                 // Reset to default color
                 likeIcon.clearColorFilter();
             }
+        }
+
+        private void showPostOptionsMenu(@NonNull Post post, @NonNull View anchor, boolean isOwnPost) {
+            android.widget.PopupMenu popup = new android.widget.PopupMenu(context, anchor);
+            if (isOwnPost) {
+                popup.getMenu().add("Chỉnh sửa");
+                popup.getMenu().add("Xóa");
+            } else {
+                popup.getMenu().add("Report");
+            }
+            popup.setOnMenuItemClickListener(menuItem -> {
+                String title = String.valueOf(menuItem.getTitle());
+                if ("Chỉnh sửa".equals(title)) {
+                    if (actionListener != null) actionListener.onEditPostClicked(post);
+                    return true;
+                }
+                if ("Xóa".equals(title)) {
+                    if (actionListener != null) actionListener.onDeletePostClicked(post);
+                    return true;
+                }
+                showReportDetailDialog(post);
+                return true;
+            });
+            popup.show();
+        }
+
+        private void showReportDetailDialog(@NonNull Post post) {
+            android.widget.EditText input = new android.widget.EditText(context);
+            input.setHint(R.string.report_reason_hint);
+            int padding = (int) (16 * context.getResources().getDisplayMetrics().density);
+            android.widget.FrameLayout container = new android.widget.FrameLayout(context);
+            container.addView(input);
+            input.setPadding(padding, padding, padding, padding);
+
+            new androidx.appcompat.app.AlertDialog.Builder(context)
+                    .setTitle(R.string.report_reason_title)
+                    .setView(container)
+                    .setPositiveButton(R.string.report_submit, (dialog, which) -> {
+                        String reason = input.getText().toString().trim();
+                        if (reason.isEmpty()) {
+                            reason = "Reported from post menu";
+                        }
+                        submitPostReport(post, reason);
+                    })
+                    .setNegativeButton(R.string.cancel_action, null)
+                    .show();
+        }
+
+        private void submitPostReport(@NonNull Post post, @NonNull String reason) {
+            String reporterId = FirebaseManager.getInstance().getAuth().getUid();
+            if (reporterId == null || post.getId() == null) {
+                android.widget.Toast.makeText(context, "Không thể gửi report", android.widget.Toast.LENGTH_SHORT).show();
+                return;
+            }
+            com.google.firebase.firestore.DocumentReference reportRef = FirebaseFirestore.getInstance()
+                    .collection(FirebaseManager.COLLECTION_REPORTS)
+                    .document();
+            Report report = new Report();
+            report.setId(reportRef.getId());
+            report.setReporterId(reporterId);
+            report.setTargetId(post.getId());
+            report.setType("POST");
+            report.setStatus("UNPROCESSED");
+            report.setReason(reason);
+            reportRef.set(report)
+                    .addOnSuccessListener(unused ->
+                            android.widget.Toast.makeText(context, R.string.report_thanks, android.widget.Toast.LENGTH_SHORT).show())
+                    .addOnFailureListener(e ->
+                            android.widget.Toast.makeText(context, "Gửi report thất bại", android.widget.Toast.LENGTH_SHORT).show());
         }
 
     }
