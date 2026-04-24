@@ -19,7 +19,6 @@ import java.util.Date;
  */
 public class Notification {
 
-    @DocumentId
     private String id;
     private String userId;        // ID của người nhận thông báo
     private String actorId;       // ID của người gây ra hành động (người like, comment...)

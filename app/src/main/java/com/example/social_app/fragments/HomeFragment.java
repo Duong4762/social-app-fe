@@ -61,6 +61,14 @@ public class HomeFragment extends Fragment implements PostAdapter.OnPostActionLi
 
     public HomeFragment() {}
 
+    public static HomeFragment newInstance(String postIdToOpen) {
+        HomeFragment fragment = new HomeFragment();
+        Bundle args = new Bundle();
+        args.putString("OPEN_POST_ID", postIdToOpen);
+        fragment.setArguments(args);
+        return fragment;
+    }
+
     @Override
     public View onCreateView(LayoutInflater inflater, ViewGroup container,
                              Bundle savedInstanceState) {

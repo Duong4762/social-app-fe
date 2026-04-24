@@ -25,6 +25,7 @@ public class User {
     private String gender;
     private String dateOfBirth;   // lưu dạng "yyyy-MM-dd"
     private String role;          // "USER" | "ADMIN"
+    private String fcmToken;      // Token cho Firebase Messaging
     private boolean isActive;
     private boolean isBanned; // false: chưa bị ban(allowed), true: đã bị ban(blocked)
     private long warningCount; // số lần cảnh báo
@@ -91,6 +92,9 @@ public class User {
 
     public String getRole() { return role; }
     public void setRole(String role) { this.role = role; }
+
+    public String getFcmToken() { return fcmToken; }
+    public void setFcmToken(String fcmToken) { this.fcmToken = fcmToken; }
 
     @PropertyName("isActive")
     public boolean isActive() { return isActive; }
