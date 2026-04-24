@@ -49,15 +49,21 @@ public class PostAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
     private Context context;
     private OnPostActionListener actionListener;
     private final Set<String> likedPostIds = new HashSet<>();
+    private String currentUserAvatarUrl;
+    private boolean useSearchLayout = false;
 
     public interface OnPostActionListener {
+        void onUserClicked(String userId);
         void onLikeClicked(Post post, int position);
         void onCommentClicked(Post post);
+        default void onShareClicked(Post post) {}
+        default void onBookmarkClicked(Post post) {}
         void onComposerPostClicked(String content);
         void onComposerClicked();  // NEW: Handle composer clicks to open new post creation
         void onComposerImageClicked(); // NEW: Handle image button clicks to pick image
         void onEditPostClicked(Post post);
         void onDeletePostClicked(Post post);
+        void onReportPostClicked(Post post);
     }
 
     public PostAdapter(Context context, OnPostActionListener actionListener) {
@@ -89,6 +95,16 @@ public class PostAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
         notifyDataSetChanged();
     }
 
+    public void setCurrentUserAvatarUrl(String avatarUrl) {
+        this.currentUserAvatarUrl = avatarUrl;
+        notifyItemChanged(0);
+    }
+
+    public void setUseSearchLayout(boolean useSearchLayout) {
+        this.useSearchLayout = useSearchLayout;
+        notifyDataSetChanged();
+    }
+
     public boolean toggleLiked(String postId) {
         if (postId == null) {
             return false;
@@ -103,6 +119,9 @@ public class PostAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
 
     @Override
     public int getItemViewType(int position) {
+        if (useSearchLayout) {
+            return VIEW_TYPE_POST;
+        }
         // First item is always the composer
         return position == 0 ? VIEW_TYPE_COMPOSER : VIEW_TYPE_POST;
     }
@@ -125,16 +144,16 @@ public class PostAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
             ((ComposerViewHolder) holder).bind();
         } else if (holder instanceof PostViewHolder) {
             PostViewHolder postHolder = (PostViewHolder) holder;
-            // Position 0 is composer, so actual post index is position - 1
-            Post post = posts.get(position - 1);
-            postHolder.bind(post, position - 1);
+            int postPosition = useSearchLayout ? position : position - 1;
+            Post post = posts.get(postPosition);
+            postHolder.bind(post, postPosition);
         }
     }
 
     @Override
     public int getItemCount() {
-        // +1 for the composer item at the top
-        return posts.size() + 1;
+        // In search/profile layout we show only posts (without composer).
+        return useSearchLayout ? posts.size() : posts.size() + 1;
     }
 
     @Override
@@ -183,7 +202,7 @@ public class PostAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
         }
 
         void bind() {
-            UserAvatarLoader.load(composerAvatar, null);
+            UserAvatarLoader.load(composerAvatar, currentUserAvatarUrl);
         }
     }
 
