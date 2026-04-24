@@ -1,6 +1,7 @@
 package com.example.social_app.adapters;
 
 import android.content.Context;
+import android.text.format.DateUtils;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -8,7 +9,6 @@ import android.widget.ImageView;
 import android.widget.TextView;
 
 import androidx.annotation.NonNull;
-import androidx.core.content.ContextCompat;
 import androidx.recyclerview.widget.RecyclerView;
 
 import com.example.social_app.R;
@@ -18,16 +18,14 @@ import com.example.social_app.firebase.FirebaseManager;
 import com.example.social_app.utils.UserAvatarLoader;
 import com.google.firebase.firestore.FirebaseFirestore;
 
-import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
-import java.util.Locale;
 
 public class NotificationAdapter extends RecyclerView.Adapter<NotificationAdapter.NotificationViewHolder> {
 
     private Context context;
-    private List<Notification> notifications;
+    private List<Notification> notifications = new ArrayList<>();
     private OnNotificationClickListener listener;
 
     public interface OnNotificationClickListener {
@@ -37,26 +35,24 @@ public class NotificationAdapter extends RecyclerView.Adapter<NotificationAdapte
 
     public NotificationAdapter(Context context, OnNotificationClickListener listener) {
         this.context = context;
-        this.notifications = new ArrayList<>();
         this.listener = listener;
     }
 
     public void setNotifications(List<Notification> notifications) {
-        this.notifications = notifications != null ? notifications : new ArrayList<>();
+        this.notifications = notifications;
         notifyDataSetChanged();
     }
 
     @NonNull
     @Override
     public NotificationViewHolder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
-        View view = LayoutInflater.from(context).inflate(R.layout.item_notification, parent, false);
+        View view = LayoutInflater.from(parent.getContext()).inflate(R.layout.item_notification, parent, false);
         return new NotificationViewHolder(view);
     }
 
     @Override
     public void onBindViewHolder(@NonNull NotificationViewHolder holder, int position) {
-        Notification notification = notifications.get(position);
-        holder.bind(notification, position);
+        holder.bind(notifications.get(position), position);
     }
 
     @Override
@@ -71,148 +67,137 @@ public class NotificationAdapter extends RecyclerView.Adapter<NotificationAdapte
         ImageView typeIcon;
         View unreadIndicator;
 
-        NotificationViewHolder(@NonNull View itemView) {
+        public NotificationViewHolder(@NonNull View itemView) {
             super(itemView);
             avatar = itemView.findViewById(R.id.notification_avatar);
             contentText = itemView.findViewById(R.id.notification_content);
             timeText = itemView.findViewById(R.id.notification_time);
             typeIcon = itemView.findViewById(R.id.notification_type_icon);
             unreadIndicator = itemView.findViewById(R.id.unread_indicator);
-        }
 
-        void bind(Notification notification, int position) {
-            String actorId = notification.getActorId();
-            
-            if (actorId != null) {
-                FirebaseFirestore.getInstance().collection(FirebaseManager.COLLECTION_USERS)
-                        .document(actorId)
-                        .get()
-                        .addOnSuccessListener(documentSnapshot -> {
-                            if (documentSnapshot.exists()) {
-                                User actor = documentSnapshot.toObject(User.class);
-                                if (actor != null) {
-                                    String actorName = actor.getFullName() != null ? actor.getFullName() : actor.getUsername();
-                                    contentText.setText(buildNotificationContent(actorName, notification.getType()));
-                                    UserAvatarLoader.load(avatar, actor.getAvatarUrl());
-                                }
-                            }
-                        });
-            } else {
-                avatar.setImageResource(R.drawable.avatar_placeholder);
-                contentText.setText(buildNotificationContent("Ai đó", notification.getType()));
-            }
-
-            // Format thời gian
-            String timeStr = formatTime(notification.getCreatedAt());
-            this.timeText.setText(timeStr);
-
-            // Set icon dựa trên type
-            setTypeIcon(notification.getType());
-
-            // Hiển thị unread indicator
-            unreadIndicator.setVisibility(notification.isRead() ? View.GONE : View.VISIBLE);
-
-            // Click listener
             itemView.setOnClickListener(v -> {
-                if (listener != null) {
-                    listener.onNotificationClick(notification);
-                    if (!notification.isRead()) {
-                        listener.onMarkAsRead(notification, position);
-                    }
+                int pos = getAdapterPosition();
+                if (pos != RecyclerView.NO_POSITION && listener != null) {
+                    listener.onNotificationClick(notifications.get(pos));
                 }
             });
 
-            // Long press to mark as read
             itemView.setOnLongClickListener(v -> {
-                if (!notification.isRead() && listener != null) {
-                    listener.onMarkAsRead(notification, position);
+                int pos = getAdapterPosition();
+                if (pos != RecyclerView.NO_POSITION && listener != null) {
+                    listener.onMarkAsRead(notifications.get(pos), pos);
                 }
                 return true;
             });
         }
 
-        private String buildNotificationContent(String actorName, String type) {
-            if (type == null) {
-                return actorName + " " + context.getString(R.string.notification_message);
+        void bind(Notification notification, int position) {
+            if (notification == null) return;
+
+            // Reset UI state
+            avatar.setImageResource(R.drawable.avatar_placeholder);
+            contentText.setText("...");
+            
+            String type = notification.getType() != null ? notification.getType() : "";
+            String actorId = notification.getActorId();
+
+            if (actorId != null && !actorId.isEmpty()) {
+                FirebaseFirestore.getInstance().collection(FirebaseManager.COLLECTION_USERS)
+                        .document(actorId)
+                        .get()
+                        .addOnSuccessListener(documentSnapshot -> {
+                            if (context == null || itemView.getParent() == null) return;
+                            
+                            try {
+                                if (documentSnapshot.exists()) {
+                                    User actor = documentSnapshot.toObject(User.class);
+                                    if (actor != null) {
+                                        String name = (actor.getFullName() != null && !actor.getFullName().isEmpty()) 
+                                                ? actor.getFullName() : actor.getUsername();
+                                        contentText.setText(buildContent(name, type));
+                                        UserAvatarLoader.load(avatar, actor.getAvatarUrl());
+                                    }
+                                } else {
+                                    contentText.setText(buildContent("Người dùng", type));
+                                }
+                            } catch (Exception ignored) {}
+                        })
+                        .addOnFailureListener(e -> {
+                            if (contentText != null) contentText.setText(buildContent("Người dùng", type));
+                        });
+            } else {
+                contentText.setText(buildContent("Hệ thống", type));
             }
 
+            try {
+                timeText.setText(formatTime(notification.getCreatedAt()));
+                unreadIndicator.setVisibility(notification.isRead() ? View.GONE : View.VISIBLE);
+                setIcon(type);
+            } catch (Exception ignored) {}
+        }
+
+        private String buildContent(String name, String type) {
+            if (type == null) return name + " đã tương tác với bạn";
             switch (type.toUpperCase()) {
-                case "LIKE":
-                    return actorName + " " + context.getString(R.string.notification_like);
-                case "COMMENT":
-                    return actorName + " " + context.getString(R.string.notification_comment);
-                case "FOLLOW":
-                    return actorName + " " + context.getString(R.string.notification_follow);
-                case "LIKE_COMMENT":
-                    return actorName + " " + context.getString(R.string.notification_like_comment);
-                case "REPLY_COMMENT":
-                    return actorName + " " + context.getString(R.string.notification_reply_comment);
-                case "MESSAGE":
-                    return actorName + " " + context.getString(R.string.notification_message);
-                default:
-                    return actorName + " " + context.getString(R.string.notification_message);
+                case "LIKE": return name + " đã thích bài viết của bạn";
+                case "COMMENT": return name + " đã bình luận về bài viết";
+                case "FOLLOW": return name + " đã bắt đầu theo dõi bạn";
+                case "MESSAGE": return name + " đã gửi một tin nhắn";
+                case "LIKE_COMMENT": return name + " đã thích bình luận của bạn";
+                case "REPLY_COMMENT": return name + " đã trả lời bình luận";
+                default: return name + " đã gửi một thông báo";
             }
         }
 
-        private void setTypeIcon(String type) {
-            if (type == null) {
-                typeIcon.setImageResource(R.drawable.ic_notification);
-                return;
-            }
-
-            switch (type.toUpperCase()) {
-                case "LIKE":
-                    typeIcon.setImageResource(R.drawable.ic_heart_filled);
-                    typeIcon.setColorFilter(ContextCompat.getColor(context, R.color.accent_red));
-                    break;
-                case "COMMENT":
-                    typeIcon.setImageResource(R.drawable.ic_comment);
-                    typeIcon.setColorFilter(ContextCompat.getColor(context, R.color.primary));
-                    break;
-                case "FOLLOW":
-                    typeIcon.setImageResource(R.drawable.ic_follow);
-                    typeIcon.setColorFilter(ContextCompat.getColor(context, R.color.primary));
-                    break;
-                case "LIKE_COMMENT":
-                    typeIcon.setImageResource(R.drawable.ic_heart_filled);
-                    typeIcon.setColorFilter(ContextCompat.getColor(context, R.color.accent_red));
-                    break;
-                case "REPLY_COMMENT":
-                    typeIcon.setImageResource(R.drawable.ic_comment);
-                    typeIcon.setColorFilter(ContextCompat.getColor(context, R.color.primary));
-                    break;
-                case "MESSAGE":
-                    typeIcon.setImageResource(R.drawable.ic_message);
-                    typeIcon.setColorFilter(ContextCompat.getColor(context, R.color.primary));
-                    break;
-                default:
-                    typeIcon.setImageResource(R.drawable.ic_notification);
-                    break;
+        private void setIcon(String type) {
+            if (typeIcon == null) return;
+            int resId = R.drawable.ic_heart_filled; // Mặc định là tim
+            try {
+                switch (type.toUpperCase()) {
+                    case "LIKE":
+                    case "LIKE_COMMENT":
+                        resId = R.drawable.ic_heart_filled;
+                        break;
+                    case "COMMENT":
+                    case "REPLY_COMMENT":
+                        resId = R.drawable.ic_comment; 
+                        break;
+                    case "FOLLOW":
+                        resId = R.drawable.ic_follow;
+                        break;
+                    case "MESSAGE":
+                        resId = R.drawable.ic_message;
+                        if (typeIcon != null) {
+                            typeIcon.setColorFilter(context.getResources().getColor(R.color.primary_blue, context.getTheme()));
+                        }
+                        break;
+                }
+                typeIcon.setImageResource(resId);
+                
+                // Reset color filter for other types if needed, or set specific colors
+                if (!"MESSAGE".equalsIgnoreCase(type)) {
+                    typeIcon.clearColorFilter();
+                }
+                
+                if ("LIKE".equalsIgnoreCase(type) || "LIKE_COMMENT".equalsIgnoreCase(type)) {
+                    typeIcon.setColorFilter(android.graphics.Color.RED);
+                } else if ("FOLLOW".equalsIgnoreCase(type)) {
+                    typeIcon.setColorFilter(context.getResources().getColor(R.color.accent_purple, context.getTheme()));
+                }
+            } catch (Exception e) {
+                // Nếu vẫn lỗi thì dùng icon hệ thống an toàn nhất
+                typeIcon.setImageResource(android.R.drawable.ic_dialog_info);
             }
         }
 
         private String formatTime(Date date) {
-            if (date == null) {
+            if (date == null) return context.getString(R.string.just_now);
+            long diff = System.currentTimeMillis() - date.getTime();
+            if (diff < 60000) { // Dưới 1 phút
                 return context.getString(R.string.just_now);
             }
-
-            long now = System.currentTimeMillis();
-            long diff = now - date.getTime();
-
-            long seconds = diff / 1000;
-            long minutes = seconds / 60;
-            long hours = minutes / 60;
-            long days = hours / 24;
-
-            if (days > 0) {
-                return context.getString(R.string.days_ago, (int) days);
-            } else if (hours > 0) {
-                return context.getString(R.string.hours_ago, (int) hours);
-            } else if (minutes > 0) {
-                return context.getString(R.string.minutes_ago, (int) minutes);
-            } else {
-                return context.getString(R.string.just_now);
-            }
+            return (String) DateUtils.getRelativeTimeSpanString(date.getTime(), 
+                    System.currentTimeMillis(), DateUtils.MINUTE_IN_MILLIS);
         }
     }
 }

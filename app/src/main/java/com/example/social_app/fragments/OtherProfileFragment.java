@@ -31,9 +31,12 @@ import com.example.social_app.utils.UserAvatarLoader;
 import com.example.social_app.viewmodels.HomeViewModel;
 import com.example.social_app.viewmodels.NewPostViewModel;
 import com.google.firebase.auth.FirebaseUser;
+import com.google.firebase.firestore.SetOptions;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 import androidx.lifecycle.ViewModelProvider;
 
@@ -432,18 +435,19 @@ public class OtherProfileFragment extends Fragment implements PostAdapter.OnPost
         }
 
         String notificationId = buildFollowNotificationId();
-        Notification notification = new Notification();
-        notification.setId(notificationId);
-        notification.setUserId(targetUserId);
-        notification.setType("FOLLOW");
-        notification.setActorId(currentUserId);
-        notification.setRead(false);
-        notification.setCreatedAt(new java.util.Date());
+        Map<String, Object> notification = new HashMap<>();
+        notification.put("id", notificationId);
+        notification.put("userId", targetUserId);
+        notification.put("type", "FOLLOW");
+        notification.put("actorId", currentUserId);
+        notification.put("referenceId", currentUserId); // Follow thì reference chính là người follow
+        notification.put("isRead", false);
+        notification.put("createdAt", com.google.firebase.firestore.FieldValue.serverTimestamp());
 
         FirebaseManager.getInstance().getFirestore()
                 .collection(FirebaseManager.COLLECTION_NOTIFICATIONS)
                 .document(notificationId)
-                .set(notification);
+                .set(notification, SetOptions.merge());
     }
 
     private void removeFollowNotification() {

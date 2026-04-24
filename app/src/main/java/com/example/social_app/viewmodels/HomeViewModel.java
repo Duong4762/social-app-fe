@@ -202,19 +202,17 @@ public class HomeViewModel extends ViewModel {
     }
 
     private void sendLikeNotification(Post post, String currentUserId) {
-        if (post.getUserId().equals(currentUserId)) return; // Don't notify yourself
+        if (post.getUserId().equals(currentUserId)) return; // Không tự gửi thông báo cho mình
 
-        DocumentReference notifRef = db.collection(FirebaseManager.COLLECTION_NOTIFICATIONS).document();
-        com.example.social_app.data.model.Notification notification = new com.example.social_app.data.model.Notification();
-        notification.setId(notifRef.getId());
-        notification.setUserId(post.getUserId());
-        notification.setActorId(currentUserId);
-        notification.setType("LIKE");
-        notification.setReferenceId(post.getId());
-        notification.setRead(false);
-        notification.setCreatedAt(new java.util.Date());
+        java.util.Map<String, Object> notification = new java.util.HashMap<>();
+        notification.put("userId", post.getUserId());
+        notification.put("actorId", currentUserId);
+        notification.put("type", "LIKE");
+        notification.put("referenceId", post.getId());
+        notification.put("isRead", false);
+        notification.put("createdAt", com.google.firebase.firestore.FieldValue.serverTimestamp());
 
-        notifRef.set(notification);
+        db.collection(FirebaseManager.COLLECTION_NOTIFICATIONS).add(notification);
     }
 
     private void loadUserEngagement() {

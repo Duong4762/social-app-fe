@@ -143,7 +143,7 @@ public class CommentViewModel extends ViewModel {
                     db.collection(FirebaseManager.COLLECTION_POSTS).document(postId)
                             .update("commentCount", com.google.firebase.firestore.FieldValue.increment(1));
                     
-                    // Send notification
+                    // Gửi thông báo cho chủ bài viết
                     sendCommentNotification(postId, "đã gửi một ảnh", userId);
                     
                     loadComments(postId);
@@ -230,16 +230,30 @@ public class CommentViewModel extends ViewModel {
      * Delete a comment by ID.
      */
     public void deleteComment(String commentId) {
-        db.collection(FirebaseManager.COLLECTION_COMMENTS).document(commentId)
-                .delete()
-                .addOnSuccessListener(aVoid -> {
-                    List<Comment> currentComments = comments.getValue();
-                    if (currentComments != null) {
-                        currentComments.removeIf(comment -> comment.getId().equals(commentId));
-                        comments.setValue(currentComments);
+        db.collection(FirebaseManager.COLLECTION_COMMENTS).document(commentId).get()
+                .addOnSuccessListener(documentSnapshot -> {
+                    if (documentSnapshot.exists()) {
+                        String postId = documentSnapshot.getString("postId");
+                        
+                        db.collection(FirebaseManager.COLLECTION_COMMENTS).document(commentId)
+                                .delete()
+                                .addOnSuccessListener(aVoid -> {
+                                    // Giảm số lượng comment trong bài viết
+                                    if (postId != null) {
+                                        db.collection(FirebaseManager.COLLECTION_POSTS).document(postId)
+                                                .update("commentCount", com.google.firebase.firestore.FieldValue.increment(-1));
+                                    }
+
+                                    List<Comment> currentComments = comments.getValue();
+                                    if (currentComments != null) {
+                                        currentComments.removeIf(comment -> comment.getId().equals(commentId));
+                                        comments.setValue(currentComments);
+                                    }
+                                })
+                                .addOnFailureListener(e -> error.setValue("Lỗi xóa bình luận: " + e.getMessage()));
                     }
                 })
-                .addOnFailureListener(e -> error.setValue("Lỗi xóa bình luận: " + e.getMessage()));
+                .addOnFailureListener(e -> error.setValue("Lỗi khi tìm bình luận để xóa: " + e.getMessage()));
     }
 
     public void reportComment(Comment comment, String reason) {
@@ -263,7 +277,12 @@ public class CommentViewModel extends ViewModel {
         db.collection(FirebaseManager.COLLECTION_POSTS).document(postId).get()
                 .addOnSuccessListener(documentSnapshot -> {
                     if (documentSnapshot.exists()) {
+                        // Lấy userId của chủ bài viết
                         String postOwnerId = documentSnapshot.getString("userId");
+                        
+                        // Debug log để kiểm tra (có thể xóa sau)
+                        android.util.Log.d("CommentNotif", "Post owner: " + postOwnerId + " | Current user: " + currentUserId);
+
                         if (postOwnerId != null && !postOwnerId.equals(currentUserId)) {
                             Map<String, Object> notification = new java.util.HashMap<>();
                             notification.put("userId", postOwnerId);
@@ -273,9 +292,14 @@ public class CommentViewModel extends ViewModel {
                             notification.put("isRead", false);
                             notification.put("createdAt", com.google.firebase.firestore.FieldValue.serverTimestamp());
                             
-                            db.collection(FirebaseManager.COLLECTION_NOTIFICATIONS).add(notification);
+                            db.collection(FirebaseManager.COLLECTION_NOTIFICATIONS).add(notification)
+                                    .addOnSuccessListener(doc -> android.util.Log.d("CommentNotif", "Notification created: " + doc.getId()))
+                                    .addOnFailureListener(e -> android.util.Log.e("CommentNotif", "Failed to create notif", e));
                         }
+                    } else {
+                        android.util.Log.e("CommentNotif", "Post not found: " + postId);
                     }
-                });
+                })
+                .addOnFailureListener(e -> android.util.Log.e("CommentNotif", "Error fetching post", e));
     }
 }
