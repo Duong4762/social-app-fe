@@ -12,14 +12,14 @@
         android:gravity="center_horizontal">
 
         <FrameLayout
-            android:layout_width="72dp"
-            android:layout_height="72dp">
+            android:layout_width="70dp"
+            android:layout_height="70dp">
 
-            <ImageView
+            <View
                 android:id="@+id/story_ring"
-                android:layout_width="72dp"
-                android:layout_height="72dp"
-                android:src="@drawable/story_ring" />
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:background="@drawable/story_ring" />
 
             <com.google.android.material.imageview.ShapeableImageView
                 android:id="@+id/story_avatar"
@@ -29,14 +29,6 @@
                 android:src="@drawable/avatar_placeholder"
                 android:scaleType="centerCrop"
                 app:shapeAppearanceOverlay="@style/ShapeAppearanceOverlay.SocialApp.Circle" />
-
-            <ImageView
-                android:id="@+id/add_story_btn"
-                android:layout_width="24dp"
-                android:layout_height="24dp"
-                android:layout_gravity="bottom|end"
-                android:src="@drawable/ic_add_circle"
-                android:visibility="gone" />
 
         </FrameLayout>
 

@@ -260,6 +260,8 @@
     <string name="message_preview_sent_photo">Sent a photo</string>
     <string name="message_preview_sent_video">Sent a video</string>
     <string name="message_no_messages_yet">No messages yet</string>
+    <string name="story_add_label">Thêm</string>
+    <string name="story_add_content_desc">Tạo story mới</string>
     <string name="story_sarah">Sarah</string>
     <string name="story_alex">Alex</string>
     <string name="story_jordan">Jordan</string>

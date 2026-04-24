@@ -1,9 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Vòng xanh quanh story: lỗ trong 66dp (bán kính 33dp), avatar 64dp → khoảng 1dp mỗi bên -->
 <shape xmlns:android="http://schemas.android.com/apk/res/android"
     android:shape="ring"
     android:innerRadius="33dp"
     android:thickness="2dp"
     android:useLevel="false">
-    <solid android:color="@color/story_ring_green" />
+    <solid android:color="@color/story_ring_gray" />
 </shape>
