@@ -252,33 +252,6 @@ public class HomeFragment extends Fragment implements PostAdapter.OnPostActionLi
     }
 
     @Override
-    public void onShareClicked(Post post) {
-        android.content.Intent shareIntent = new android.content.Intent(android.content.Intent.ACTION_SEND);
-        shareIntent.setType("text/plain");
-        String shareBody = post.getCaption() != null ? post.getCaption() : "Check out this interesting post on Social App!";
-        shareIntent.putExtra(android.content.Intent.EXTRA_SUBJECT, "Social App Post");
-        shareIntent.putExtra(android.content.Intent.EXTRA_TEXT, shareBody);
-        
-        // Tạo Intent để BroadcastReceiver nhận được khi share thành công
-        android.content.Intent receiverIntent = new android.content.Intent(requireContext(), com.example.social_app.receivers.ShareReceiver.class);
-        receiverIntent.putExtra("shared_post_id", post.getId());
-        
-        android.app.PendingIntent pendingIntent = android.app.PendingIntent.getBroadcast(
-                requireContext(), 
-                post.getId().hashCode(), 
-                receiverIntent, 
-                android.app.PendingIntent.FLAG_UPDATE_CURRENT | android.app.PendingIntent.FLAG_IMMUTABLE);
-
-        // Khởi chạy chooser với IntentSender để theo dõi kết quả
-        startActivity(android.content.Intent.createChooser(shareIntent, "Share post via", pendingIntent.getIntentSender()));
-    }
-
-    @Override
-    public void onBookmarkClicked(Post post) {
-        homeViewModel.toggleBookmark(post);
-    }
-
-    @Override
     public void onComposerPostClicked(String content) {
         if (content.trim().isEmpty()) {
             Toast.makeText(requireContext(), "Vui lòng nhập nội dung", Toast.LENGTH_SHORT).show();

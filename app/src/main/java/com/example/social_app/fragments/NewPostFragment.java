@@ -1,22 +1,24 @@
 package com.example.social_app.fragments;
 
 import android.app.Activity;
+import android.app.Dialog;
 import android.content.Intent;
+import android.content.pm.PackageManager;
+import android.database.Cursor;
 import android.net.Uri;
 import android.os.Bundle;
+import android.provider.MediaStore;
 import android.text.Editable;
 import android.text.InputFilter;
 import android.text.TextWatcher;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
-import android.widget.ArrayAdapter;
 import android.widget.Button;
 import android.widget.EditText;
 import android.widget.ImageButton;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
-import android.widget.Spinner;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -25,13 +27,20 @@ import androidx.annotation.Nullable;
 import androidx.appcompat.app.AlertDialog;
 import androidx.fragment.app.Fragment;
 import androidx.lifecycle.ViewModelProvider;
+import androidx.recyclerview.widget.GridLayoutManager;
+import androidx.recyclerview.widget.RecyclerView;
 
+import com.bumptech.glide.Glide;
+import com.example.social_app.MainActivity;
 import com.example.social_app.R;
 import com.example.social_app.utils.UserAvatarLoader;
 import com.example.social_app.viewmodels.NewPostViewModel;
 
 import java.util.ArrayList;
+import java.util.LinkedHashSet;
+import java.util.Locale;
 import java.util.List;
+import java.util.Set;
 
 public class NewPostFragment extends Fragment {
 
@@ -39,32 +48,26 @@ public class NewPostFragment extends Fragment {
     private static final int PICK_VIDEO_REQUEST = 2;
 
     private EditText postInput;
-    private ImageButton cameraButton;
-    private Button uploadImageButton, uploadVideoButton, postButton;
+    private ImageButton attachMediaButton;
+    private Button postButton;
     private ImageButton cancelButton;
     private ImageView userAvatar;
-    private Spinner privacySpinner;
+    private View postingOverlay;
 
-    private LinearLayout photoPreviewContainer;
-    private LinearLayout videoPreviewContainer;
-    private TextView photoSectionTitle;
-    private TextView videoSectionTitle;
-    private View photoScrollView;
-    private View videoScrollView;
-    private LinearLayout addLocationRow, tagPeopleRow;
-    private com.google.android.material.chip.ChipGroup taggedUsersChipGroup;
+    private LinearLayout mediaPreviewContainer;
+    private View mediaScrollView;
 
     private NewPostViewModel newPostViewModel;
     private List<Uri> selectedMedias = new ArrayList<>();
     private Uri cameraImageUri;
-    private String selectedLocation = null;
-    private List<com.example.social_app.data.model.User> taggedPeople = new ArrayList<>();
-    private String privacyLevel = "Everyone";
     private String mEditPostId = null;
 
     private static final int MAX_CHARACTERS = 280;
     private static final int CAMERA_REQUEST = 3;
     private static final int CAMERA_PERMISSION_REQUEST = 4;
+    private static final int MEDIA_PERMISSION_REQUEST = 6;
+    private final List<PickerMediaItem> pickerMediaItems = new ArrayList<>();
+    private MediaPickerAdapter mediaPickerAdapter;
 
     public static NewPostFragment newInstance() {
         return new NewPostFragment();
@@ -91,7 +94,6 @@ public class NewPostFragment extends Fragment {
         super.onCreate(savedInstanceState);
         newPostViewModel = new ViewModelProvider(this).get(NewPostViewModel.class);
         selectedMedias = new ArrayList<>();
-        taggedPeople = new ArrayList<>();
 
         if (getArguments() != null) {
             mEditPostId = getArguments().getString("edit_post_id");
@@ -116,19 +118,13 @@ public class NewPostFragment extends Fragment {
             updatePostButtonState();
         }
 
-        // Khôi phục UI nếu đã có dữ liệu (trường hợp quay lại từ BackStack)
-        if (selectedLocation != null) {
-            TextView locationText = addLocationRow.findViewById(R.id.action_text);
-            if (locationText != null) locationText.setText(selectedLocation);
-        }
-        renderTaggedPeople();
         renderMediaPreview();
 
         // Kiểm tra xem có cần mở picker ngay không
         if (getArguments() != null && getArguments().getBoolean("open_picker", false)) {
             // Xóa flag để tránh mở lại khi xoay màn hình hoặc quay lại fragment
             getArguments().remove("open_picker");
-            view.post(this::pickImage);
+            view.post(this::showMediaSourcePickerFullscreen);
         }
 
         return view;
@@ -142,56 +138,6 @@ public class NewPostFragment extends Fragment {
                 // Chỉ set text nếu input đang trống để tránh ghi đè khi quay lại từ TagPeople
                 if (postInput.getText().toString().isEmpty()) {
                     postInput.setText(post.getCaption());
-                }
-                
-                // Nếu chưa có location được chọn mới, lấy từ post cũ
-                if (selectedLocation == null) {
-                    selectedLocation = post.getLocation();
-                    if (selectedLocation != null && !selectedLocation.isEmpty()) {
-                        TextView locationText = addLocationRow.findViewById(R.id.action_text);
-                        if (locationText != null) locationText.setText(selectedLocation);
-                    }
-                }
-
-                // Nếu danh sách hiện tại đang trống (chưa đi tag bạn mới), lấy từ post cũ
-                if (taggedPeople.isEmpty() && post.getTaggedUsers() != null && !post.getTaggedUsers().isEmpty()) {
-                    List<String> taggedIds = post.getTaggedUsers();
-                    
-                    com.google.firebase.firestore.FirebaseFirestore.getInstance()
-                            .collection(com.example.social_app.firebase.FirebaseManager.COLLECTION_USERS)
-                            .whereIn(com.google.firebase.firestore.FieldPath.documentId(), taggedIds)
-                            .get()
-                            .addOnSuccessListener(queryDocumentSnapshots -> {
-                                // Nếu trong lúc load từ Firestore mà mình vẫn chưa tag thêm ai mới, thì mới lấy data cũ
-                                if (taggedPeople.isEmpty()) {
-                                    this.taggedPeople = queryDocumentSnapshots.toObjects(com.example.social_app.data.model.User.class);
-                                }
-                                // Luôn render để cập nhật UI cho dù là data cũ hay data mới
-                                renderTaggedPeople();
-                            })
-                            .addOnFailureListener(e -> {
-                                // Ngay cả khi lỗi load data cũ, vẫn render data hiện tại (có thể là rỗng)
-                                renderTaggedPeople();
-                            });
-                } else {
-                    // Nếu đã có danh sách (do vừa tag mới xong quay lại) hoặc post cũ không có tag
-                    renderTaggedPeople();
-                }
-                
-                // Map Firestore visibility back to Spinner
-                String visibility = post.getVisibility();
-                if (visibility != null && privacySpinner != null) {
-                    privacyLevel = visibility;
-                    int selection = 0;
-                    String upperVisibility = visibility.toUpperCase();
-                    if (upperVisibility.equals("EVERYONE") || upperVisibility.equals("PUBLIC")) selection = 0;
-                    else if (upperVisibility.equals("FRIENDS")) selection = 1;
-                    else if (upperVisibility.equals("FRIENDS_ONLY")) selection = 2;
-                    else if (upperVisibility.equals("PRIVATE")) selection = 3;
-
-                    if (selection < privacySpinner.getCount()) {
-                        privacySpinner.setSelection(selection);
-                    }
                 }
                 
                 updatePostButtonState();
@@ -215,46 +161,20 @@ public class NewPostFragment extends Fragment {
 
     private void initializeViews(View view) {
         postInput = view.findViewById(R.id.post_input);
-        cameraButton = view.findViewById(R.id.camera_button);
-        uploadImageButton = view.findViewById(R.id.upload_image_button);
-        uploadVideoButton = view.findViewById(R.id.upload_video_button);
-        privacySpinner = view.findViewById(R.id.privacy_spinner);
+        attachMediaButton = view.findViewById(R.id.attach_media_button);
         userAvatar = view.findViewById(R.id.user_avatar);
         postButton = view.findViewById(R.id.post_button);
         cancelButton = view.findViewById(R.id.cancel_button);
+        postingOverlay = view.findViewById(R.id.posting_overlay);
 
-        photoPreviewContainer = view.findViewById(R.id.photo_preview_container);
-        videoPreviewContainer = view.findViewById(R.id.video_preview_container);
-        photoSectionTitle = view.findViewById(R.id.photo_section_title);
-        videoSectionTitle = view.findViewById(R.id.video_section_title);
-        photoScrollView = view.findViewById(R.id.photo_scroll_view);
-        videoScrollView = view.findViewById(R.id.video_scroll_view);
-
-        addLocationRow = view.findViewById(R.id.add_location_row);
-        tagPeopleRow = view.findViewById(R.id.tag_people_row);
-        taggedUsersChipGroup = view.findViewById(R.id.tagged_users_chip_group);
-
+        mediaPreviewContainer = view.findViewById(R.id.media_preview_container);
+        mediaScrollView = view.findViewById(R.id.media_scroll_view);
         if (userAvatar != null) {
             UserAvatarLoader.load(userAvatar, null);
         }
 
         if (postInput != null) {
             postInput.setFilters(new InputFilter[]{new InputFilter.LengthFilter(MAX_CHARACTERS)});
-        }
-
-        // Setup privacy spinner an toàn hơn
-        try {
-            ArrayAdapter<CharSequence> privacyAdapter = ArrayAdapter.createFromResource(
-                    requireContext(),
-                    R.array.privacy_options,
-                    android.R.layout.simple_spinner_item
-            );
-            privacyAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
-            if (privacySpinner != null) {
-                privacySpinner.setAdapter(privacyAdapter);
-            }
-        } catch (Exception e) {
-            android.util.Log.e("NewPostFragment", "Spinner error", e);
         }
 
         if (postButton != null) {
@@ -271,20 +191,7 @@ public class NewPostFragment extends Fragment {
             @Override public void afterTextChanged(Editable s) {}
         });
 
-        uploadImageButton.setOnClickListener(v -> pickImage());
-        uploadVideoButton.setOnClickListener(v -> pickVideo());
-        cameraButton.setOnClickListener(v -> openCamera());
-
-        // Hành động: Add Location, Tag People
-        addLocationRow.setOnClickListener(v -> openLocationPicker());
-        tagPeopleRow.setOnClickListener(v -> openPeopleTagger());
-
-        privacySpinner.setOnItemSelectedListener(new android.widget.AdapterView.OnItemSelectedListener() {
-            @Override public void onItemSelected(android.widget.AdapterView<?> parent, View view, int position, long id) {
-                privacyLevel = parent.getItemAtPosition(position).toString();
-            }
-            @Override public void onNothingSelected(android.widget.AdapterView<?> parent) {}
-        });
+        attachMediaButton.setOnClickListener(v -> showMediaSourcePickerFullscreen());
 
         postButton.setOnClickListener(v -> createPost());
         cancelButton.setOnClickListener(v -> handleCancel());
@@ -293,13 +200,11 @@ public class NewPostFragment extends Fragment {
     private void setupObservers() {
         newPostViewModel.getIsPosting().observe(getViewLifecycleOwner(), isPosting -> {
             postButton.setEnabled(!isPosting);
-            String buttonText;
-            if (isPosting) {
-                buttonText = "Saving...";
-            } else {
-                buttonText = (mEditPostId != null) ? getString(R.string.save) : getString(R.string.post);
+            if (postingOverlay != null) {
+                postingOverlay.setVisibility(isPosting ? View.VISIBLE : View.GONE);
             }
-            postButton.setText(buttonText);
+            attachMediaButton.setEnabled(!isPosting);
+            postInput.setEnabled(!isPosting);
             cancelButton.setEnabled(!isPosting);
         });
 
@@ -319,17 +224,6 @@ public class NewPostFragment extends Fragment {
         newPostViewModel.getEditingPost().observe(getViewLifecycleOwner(), post -> {
             if (post != null) {
                 postInput.setText(post.getCaption());
-                selectedLocation = post.getLocation();
-                if (selectedLocation != null && !selectedLocation.isEmpty()) {
-                    TextView locationText = addLocationRow.findViewById(R.id.action_text);
-                    if (locationText != null) locationText.setText(selectedLocation);
-                }
-                
-                // Set privacy
-                if (post.getVisibility() != null) {
-                    privacyLevel = post.getVisibility();
-                    // Update spinner selection if needed
-                }
             }
         });
 
@@ -350,6 +244,61 @@ public class NewPostFragment extends Fragment {
         Intent intent = new Intent(Intent.ACTION_GET_CONTENT);
         intent.setType("video/*");
         startActivityForResult(Intent.createChooser(intent, getString(R.string.select_video)), PICK_VIDEO_REQUEST);
+    }
+
+    private void showMediaSourcePickerFullscreen() {
+        Dialog dialog = new Dialog(requireContext(), android.R.style.Theme_Black_NoTitleBar_Fullscreen);
+        dialog.setContentView(R.layout.dialog_media_source_picker);
+        if (dialog.getWindow() != null) {
+            dialog.getWindow().setWindowAnimations(0);
+            dialog.getWindow().setStatusBarColor(androidx.core.content.ContextCompat.getColor(requireContext(), R.color.white));
+            dialog.getWindow().setNavigationBarColor(androidx.core.content.ContextCompat.getColor(requireContext(), R.color.white));
+        }
+
+        View closeBtn = dialog.findViewById(R.id.media_picker_close);
+        RecyclerView mediaGrid = dialog.findViewById(R.id.media_picker_grid);
+        Button doneBtn = dialog.findViewById(R.id.media_picker_done);
+        LinkedHashSet<Uri> stagedSelected = new LinkedHashSet<>(selectedMedias);
+
+        closeBtn.setOnClickListener(v -> dialog.dismiss());
+        updateDoneButtonLabel(doneBtn, stagedSelected.size());
+
+        mediaPickerAdapter = new MediaPickerAdapter(stagedSelected, (item, position) -> {
+            if (item.isCameraTile) {
+                dialog.dismiss();
+                openCamera();
+                return;
+            }
+            if (item.uri != null) {
+                if (stagedSelected.contains(item.uri)) {
+                    stagedSelected.remove(item.uri);
+                } else {
+                    stagedSelected.add(item.uri);
+                }
+                mediaPickerAdapter.notifyItemChanged(position);
+                updateDoneButtonLabel(doneBtn, stagedSelected.size());
+            }
+        });
+        doneBtn.setOnClickListener(v -> {
+            selectedMedias.clear();
+            selectedMedias.addAll(stagedSelected);
+            renderMediaPreview();
+            updatePostButtonState();
+            dialog.dismiss();
+        });
+        mediaGrid.setLayoutManager(new GridLayoutManager(requireContext(), 3));
+        mediaGrid.setAdapter(mediaPickerAdapter);
+        loadDeviceMediaItems();
+
+        dialog.show();
+    }
+
+    private void updateDoneButtonLabel(@NonNull Button doneButton, int selectedCount) {
+        if (selectedCount > 0) {
+            doneButton.setText(getString(R.string.profile_edit_done) + " (" + selectedCount + ")");
+        } else {
+            doneButton.setText(R.string.profile_edit_done);
+        }
     }
 
     private void openCamera() {
@@ -397,114 +346,8 @@ public class NewPostFragment extends Fragment {
             } else {
                 Toast.makeText(getContext(), "Bạn cần cấp quyền Camera để chụp ảnh", Toast.LENGTH_SHORT).show();
             }
-        }
-    }
-
-    private void openLocationPicker() {
-        List<String> options = new ArrayList<>();
-        options.add("Sử dụng vị trí hiện tại");
-        options.add("Nhập địa điểm thủ công");
-        if (selectedLocation != null) {
-            options.add("Xóa vị trí");
-        }
-
-        AlertDialog.Builder builder = new AlertDialog.Builder(getContext());
-        builder.setTitle(getString(R.string.add_location))
-                .setItems(options.toArray(new String[0]), (dialog, which) -> {
-                    if (which == 0) {
-                        selectedLocation = "Hà Nội, Việt Nam"; // Giả lập vị trí hiện tại
-                        ((TextView) addLocationRow.findViewById(R.id.action_text)).setText(selectedLocation);
-                    } else if (which == 1) {
-                        showManualLocationInput();
-                    } else if (which == 2) {
-                        selectedLocation = null;
-                        ((TextView) addLocationRow.findViewById(R.id.action_text)).setText(R.string.add_location);
-                    }
-                })
-                .setNegativeButton(R.string.cancel, null)
-                .show();
-    }
-
-    private void showManualLocationInput() {
-        final EditText input = new EditText(getContext());
-        input.setHint("Nhập địa điểm...");
-        if (selectedLocation != null && !selectedLocation.equals("Hà Nội, Việt Nam")) {
-            input.setText(selectedLocation);
-        }
-        
-        LinearLayout container = new LinearLayout(getContext());
-        container.setOrientation(LinearLayout.VERTICAL);
-        LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(
-                LinearLayout.LayoutParams.MATCH_PARENT,
-                LinearLayout.LayoutParams.WRAP_CONTENT);
-        lp.setMargins(40, 20, 40, 0);
-        input.setLayoutParams(lp);
-        container.addView(input);
-
-        new AlertDialog.Builder(getContext())
-                .setTitle("Nhập địa điểm")
-                .setView(container)
-                .setPositiveButton("Lưu", (d, w) -> {
-                    String loc = input.getText().toString().trim();
-                    if (!loc.isEmpty()) {
-                        selectedLocation = loc;
-                        ((TextView) addLocationRow.findViewById(R.id.action_text)).setText(selectedLocation);
-                    }
-                })
-                .setNegativeButton("Hủy", null)
-                .show();
-    }
-
-    private void openPeopleTagger() {
-        ArrayList<String> currentIds = new ArrayList<>();
-        for (com.example.social_app.data.model.User u : taggedPeople) {
-            currentIds.add(u.getId());
-        }
-        
-        TagPeopleFragment tagFragment = TagPeopleFragment.newInstance(currentIds);
-        tagFragment.setOnPeopleTaggedListener(users -> {
-            this.taggedPeople = users;
-            renderTaggedPeople();
-        });
-        
-        getParentFragmentManager().beginTransaction()
-                .replace(R.id.nav_host_fragment, tagFragment)
-                .addToBackStack(null)
-                .commit();
-    }
-
-    private void renderTaggedPeople() {
-        if (taggedUsersChipGroup == null) return;
-        
-        taggedUsersChipGroup.removeAllViews();
-        
-        TextView tagText = tagPeopleRow.findViewById(R.id.action_text);
-        if (taggedPeople == null || taggedPeople.isEmpty()) {
-            taggedUsersChipGroup.setVisibility(View.GONE);
-            if (tagText != null) tagText.setText(R.string.tag_people);
-            return;
-        }
-
-        taggedUsersChipGroup.setVisibility(View.VISIBLE);
-        if (tagText != null) tagText.setText("Tagged " + taggedPeople.size() + " people");
-        
-        for (com.example.social_app.data.model.User user : taggedPeople) {
-            com.google.android.material.chip.Chip chip = new com.google.android.material.chip.Chip(requireContext());
-            // Hiển thị Full Name thay vì ID
-            chip.setText(user.getFullName() != null ? user.getFullName() : user.getUsername()); 
-            chip.setCloseIconVisible(true);
-            chip.setChipBackgroundColorResource(android.R.color.transparent);
-            chip.setChipStrokeWidth(1.5f);
-            chip.setChipStrokeColorResource(R.color.primary);
-            chip.setTextColor(getResources().getColor(R.color.primary));
-            chip.setCloseIconTintResource(R.color.primary);
-            
-            chip.setOnCloseIconClickListener(v -> {
-                taggedPeople.remove(user);
-                renderTaggedPeople();
-            });
-            
-            taggedUsersChipGroup.addView(chip);
+        } else if (requestCode == MEDIA_PERMISSION_REQUEST) {
+            loadDeviceMediaItems();
         }
     }
 
@@ -518,14 +361,197 @@ public class NewPostFragment extends Fragment {
             return;
         }
         
-        List<String> taggedIds = new ArrayList<>();
-        for (com.example.social_app.data.model.User u : taggedPeople) taggedIds.add(u.getId());
-
         if (mEditPostId != null) {
-            newPostViewModel.updatePost(mEditPostId, content, selectedMedias, existingUrls, privacyLevel, selectedLocation, taggedIds);
+            newPostViewModel.updatePost(mEditPostId, content, selectedMedias, existingUrls, "Everyone", null, new ArrayList<>());
         } else {
-            newPostViewModel.createPost(content, selectedMedias, selectedLocation, taggedIds, privacyLevel);
+            newPostViewModel.createPost(content, selectedMedias, null, new ArrayList<>(), "Everyone");
         }
+    }
+
+    private void loadDeviceMediaItems() {
+        pickerMediaItems.clear();
+        pickerMediaItems.add(PickerMediaItem.cameraTile());
+
+        List<String> missingMediaPermissions = getMissingMediaPermissions();
+        if (!missingMediaPermissions.isEmpty()) {
+            requestPermissions(missingMediaPermissions.toArray(new String[0]), MEDIA_PERMISSION_REQUEST);
+        }
+
+        if (!hasAnyMediaPermission()) {
+            if (mediaPickerAdapter != null) mediaPickerAdapter.notifyDataSetChanged();
+            return;
+        }
+
+        List<PickerMediaCandidate> candidates = new ArrayList<>();
+        if (canReadImages()) {
+            queryImages(candidates);
+        }
+        if (canReadVideos()) {
+            queryVideos(candidates);
+        }
+        candidates.sort((a, b) -> Long.compare(b.dateAdded, a.dateAdded));
+
+        int maxItems = Math.min(200, candidates.size());
+        for (int i = 0; i < maxItems; i++) {
+            PickerMediaCandidate candidate = candidates.get(i);
+            pickerMediaItems.add(PickerMediaItem.media(candidate.uri, candidate.isVideo, candidate.durationMs));
+        }
+
+        if (mediaPickerAdapter != null) mediaPickerAdapter.notifyDataSetChanged();
+    }
+
+    private boolean hasAnyMediaPermission() {
+        if (android.os.Build.VERSION.SDK_INT >= 34) {
+            boolean hasSelected = androidx.core.content.ContextCompat.checkSelfPermission(
+                    requireContext(),
+                    android.Manifest.permission.READ_MEDIA_VISUAL_USER_SELECTED
+            ) == PackageManager.PERMISSION_GRANTED;
+            return hasSelected || canReadImages() || canReadVideos();
+        }
+        return canReadImages() || canReadVideos();
+    }
+
+    private boolean canReadImages() {
+        if (android.os.Build.VERSION.SDK_INT >= 33) {
+            return androidx.core.content.ContextCompat.checkSelfPermission(
+                    requireContext(),
+                    android.Manifest.permission.READ_MEDIA_IMAGES
+            ) == PackageManager.PERMISSION_GRANTED;
+        }
+        return androidx.core.content.ContextCompat.checkSelfPermission(
+                requireContext(),
+                android.Manifest.permission.READ_EXTERNAL_STORAGE
+        ) == PackageManager.PERMISSION_GRANTED;
+    }
+
+    private boolean canReadVideos() {
+        if (android.os.Build.VERSION.SDK_INT >= 33) {
+            return androidx.core.content.ContextCompat.checkSelfPermission(
+                    requireContext(),
+                    android.Manifest.permission.READ_MEDIA_VIDEO
+            ) == PackageManager.PERMISSION_GRANTED;
+        }
+        return androidx.core.content.ContextCompat.checkSelfPermission(
+                requireContext(),
+                android.Manifest.permission.READ_EXTERNAL_STORAGE
+        ) == PackageManager.PERMISSION_GRANTED;
+    }
+
+    private void requestMediaPermissions() {
+        if (android.os.Build.VERSION.SDK_INT >= 34) {
+            requestPermissions(new String[]{
+                    android.Manifest.permission.READ_MEDIA_IMAGES,
+                    android.Manifest.permission.READ_MEDIA_VIDEO,
+                    android.Manifest.permission.READ_MEDIA_VISUAL_USER_SELECTED
+            }, MEDIA_PERMISSION_REQUEST);
+            return;
+        }
+        if (android.os.Build.VERSION.SDK_INT >= 33) {
+            requestPermissions(new String[]{
+                    android.Manifest.permission.READ_MEDIA_IMAGES,
+                    android.Manifest.permission.READ_MEDIA_VIDEO
+            }, MEDIA_PERMISSION_REQUEST);
+            return;
+        }
+        requestPermissions(new String[]{android.Manifest.permission.READ_EXTERNAL_STORAGE}, MEDIA_PERMISSION_REQUEST);
+    }
+
+    private List<String> getMissingMediaPermissions() {
+        List<String> missing = new ArrayList<>();
+        if (android.os.Build.VERSION.SDK_INT >= 34) {
+            if (androidx.core.content.ContextCompat.checkSelfPermission(
+                    requireContext(),
+                    android.Manifest.permission.READ_MEDIA_IMAGES
+            ) != PackageManager.PERMISSION_GRANTED) {
+                missing.add(android.Manifest.permission.READ_MEDIA_IMAGES);
+            }
+            if (androidx.core.content.ContextCompat.checkSelfPermission(
+                    requireContext(),
+                    android.Manifest.permission.READ_MEDIA_VIDEO
+            ) != PackageManager.PERMISSION_GRANTED) {
+                missing.add(android.Manifest.permission.READ_MEDIA_VIDEO);
+            }
+            if (androidx.core.content.ContextCompat.checkSelfPermission(
+                    requireContext(),
+                    android.Manifest.permission.READ_MEDIA_VISUAL_USER_SELECTED
+            ) != PackageManager.PERMISSION_GRANTED) {
+                missing.add(android.Manifest.permission.READ_MEDIA_VISUAL_USER_SELECTED);
+            }
+            return missing;
+        }
+        if (android.os.Build.VERSION.SDK_INT >= 33) {
+            if (androidx.core.content.ContextCompat.checkSelfPermission(
+                    requireContext(),
+                    android.Manifest.permission.READ_MEDIA_IMAGES
+            ) != PackageManager.PERMISSION_GRANTED) {
+                missing.add(android.Manifest.permission.READ_MEDIA_IMAGES);
+            }
+            if (androidx.core.content.ContextCompat.checkSelfPermission(
+                    requireContext(),
+                    android.Manifest.permission.READ_MEDIA_VIDEO
+            ) != PackageManager.PERMISSION_GRANTED) {
+                missing.add(android.Manifest.permission.READ_MEDIA_VIDEO);
+            }
+            return missing;
+        }
+        if (androidx.core.content.ContextCompat.checkSelfPermission(
+                requireContext(),
+                android.Manifest.permission.READ_EXTERNAL_STORAGE
+        ) != PackageManager.PERMISSION_GRANTED) {
+            missing.add(android.Manifest.permission.READ_EXTERNAL_STORAGE);
+        }
+        return missing;
+    }
+
+    private void queryImages(List<PickerMediaCandidate> out) {
+        String[] projection = new String[]{
+                MediaStore.Images.Media._ID,
+                MediaStore.Images.Media.DATE_ADDED
+        };
+        Cursor cursor = requireContext().getContentResolver().query(
+                MediaStore.Images.Media.EXTERNAL_CONTENT_URI,
+                projection,
+                null,
+                null,
+                MediaStore.Images.Media.DATE_ADDED + " DESC"
+        );
+        if (cursor == null) return;
+        int idColumn = cursor.getColumnIndexOrThrow(MediaStore.Images.Media._ID);
+        int dateAddedColumn = cursor.getColumnIndexOrThrow(MediaStore.Images.Media.DATE_ADDED);
+        while (cursor.moveToNext()) {
+            long id = cursor.getLong(idColumn);
+            long dateAdded = cursor.getLong(dateAddedColumn);
+            Uri uri = Uri.withAppendedPath(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, String.valueOf(id));
+            out.add(new PickerMediaCandidate(uri, false, dateAdded, 0L));
+        }
+        cursor.close();
+    }
+
+    private void queryVideos(List<PickerMediaCandidate> out) {
+        String[] projection = new String[]{
+                MediaStore.Video.Media._ID,
+                MediaStore.Video.Media.DATE_ADDED,
+                MediaStore.Video.Media.DURATION
+        };
+        Cursor cursor = requireContext().getContentResolver().query(
+                MediaStore.Video.Media.EXTERNAL_CONTENT_URI,
+                projection,
+                null,
+                null,
+                MediaStore.Video.Media.DATE_ADDED + " DESC"
+        );
+        if (cursor == null) return;
+        int idColumn = cursor.getColumnIndexOrThrow(MediaStore.Video.Media._ID);
+        int dateAddedColumn = cursor.getColumnIndexOrThrow(MediaStore.Video.Media.DATE_ADDED);
+        int durationColumn = cursor.getColumnIndexOrThrow(MediaStore.Video.Media.DURATION);
+        while (cursor.moveToNext()) {
+            long id = cursor.getLong(idColumn);
+            long dateAdded = cursor.getLong(dateAddedColumn);
+            long durationMs = cursor.getLong(durationColumn);
+            Uri uri = Uri.withAppendedPath(MediaStore.Video.Media.EXTERNAL_CONTENT_URI, String.valueOf(id));
+            out.add(new PickerMediaCandidate(uri, true, dateAdded, durationMs));
+        }
+        cursor.close();
     }
 
     private void handleCancel() {
@@ -545,6 +571,22 @@ public class NewPostFragment extends Fragment {
         if (getFragmentManager() != null) {
             getFragmentManager().popBackStack();
         }
+    }
+
+    @Override
+    public void onResume() {
+        super.onResume();
+        if (getActivity() instanceof MainActivity) {
+            ((MainActivity) getActivity()).setBottomNavigationHiddenForOverlay(true);
+        }
+    }
+
+    @Override
+    public void onDestroyView() {
+        if (getActivity() instanceof MainActivity) {
+            ((MainActivity) getActivity()).setBottomNavigationHiddenForOverlay(false);
+        }
+        super.onDestroyView();
     }
 
     private boolean hasUnsavedChanges() {
@@ -633,11 +675,10 @@ public class NewPostFragment extends Fragment {
     }
 
     /**
-     * Render media preview separated by type
+     * Render media preview in selected order
      */
     private void renderMediaPreview() {
-        photoPreviewContainer.removeAllViews();
-        videoPreviewContainer.removeAllViews();
+        mediaPreviewContainer.removeAllViews();
         
         LayoutInflater inflater = LayoutInflater.from(getContext());
         
@@ -647,7 +688,7 @@ public class NewPostFragment extends Fragment {
                 String url = existingUrls.get(i);
                 boolean isVideo = url.contains("video/upload") || url.toLowerCase().endsWith(".mp4");
                 
-                View mediaItem = inflater.inflate(R.layout.item_media_preview, isVideo ? videoPreviewContainer : photoPreviewContainer, false);
+                View mediaItem = inflater.inflate(R.layout.item_media_preview, mediaPreviewContainer, false);
                 ImageView imgMedia = mediaItem.findViewById(R.id.media_preview_image);
                 ImageButton btnRemove = mediaItem.findViewById(R.id.media_remove_button);
                 ImageView playIcon = mediaItem.findViewById(R.id.ic_play);
@@ -659,9 +700,7 @@ public class NewPostFragment extends Fragment {
 
                 int idx = i;
                 btnRemove.setOnClickListener(v -> newPostViewModel.removeExistingMedia(idx));
-                
-                if (isVideo) videoPreviewContainer.addView(mediaItem);
-                else photoPreviewContainer.addView(mediaItem);
+                mediaPreviewContainer.addView(mediaItem);
             }
         }
 
@@ -670,12 +709,12 @@ public class NewPostFragment extends Fragment {
             String mimeType = getMimeType(mediaUri);
             boolean isVideo = (mimeType != null && mimeType.startsWith("video/")) || mediaUri.toString().toLowerCase().contains("video");
 
-            View mediaItem = inflater.inflate(R.layout.item_media_preview, isVideo ? videoPreviewContainer : photoPreviewContainer, false);
+            View mediaItem = inflater.inflate(R.layout.item_media_preview, mediaPreviewContainer, false);
             ImageView imgMedia = mediaItem.findViewById(R.id.media_preview_image);
             ImageButton btnRemove = mediaItem.findViewById(R.id.media_remove_button);
             ImageView playIcon = mediaItem.findViewById(R.id.ic_play);
 
-            imgMedia.setImageURI(mediaUri);
+            Glide.with(this).load(mediaUri).into(imgMedia);
             playIcon.setVisibility(isVideo ? View.VISIBLE : View.GONE);
 
             imgMedia.setOnClickListener(v -> showMediaFullscreen(mediaUri.toString(), isVideo));
@@ -687,18 +726,11 @@ public class NewPostFragment extends Fragment {
                 updatePostButtonState();
             });
 
-            if (isVideo) videoPreviewContainer.addView(mediaItem);
-            else photoPreviewContainer.addView(mediaItem);
+            mediaPreviewContainer.addView(mediaItem);
         }
 
-        // Update Visibility of sections
-        boolean hasPhotos = photoPreviewContainer.getChildCount() > 0;
-        boolean hasVideos = videoPreviewContainer.getChildCount() > 0;
-        
-        photoSectionTitle.setVisibility(hasPhotos ? View.VISIBLE : View.GONE);
-        photoScrollView.setVisibility(hasPhotos ? View.VISIBLE : View.GONE);
-        videoSectionTitle.setVisibility(hasVideos ? View.VISIBLE : View.GONE);
-        videoScrollView.setVisibility(hasVideos ? View.VISIBLE : View.GONE);
+        boolean hasMedia = mediaPreviewContainer.getChildCount() > 0;
+        mediaScrollView.setVisibility(hasMedia ? View.VISIBLE : View.GONE);
     }
 
     private void showMediaFullscreen(String mediaUrl, boolean isVideo) {
@@ -742,6 +774,132 @@ public class NewPostFragment extends Fragment {
 
         btnClose.setOnClickListener(v -> dialog.dismiss());
         dialog.show();
+    }
+
+    private static final class PickerMediaItem {
+        final Uri uri;
+        final boolean isVideo;
+        final boolean isCameraTile;
+        final long durationMs;
+
+        private PickerMediaItem(@Nullable Uri uri, boolean isVideo, boolean isCameraTile, long durationMs) {
+            this.uri = uri;
+            this.isVideo = isVideo;
+            this.isCameraTile = isCameraTile;
+            this.durationMs = durationMs;
+        }
+
+        static PickerMediaItem cameraTile() {
+            return new PickerMediaItem(null, false, true, 0L);
+        }
+
+        static PickerMediaItem media(@NonNull Uri uri, boolean isVideo, long durationMs) {
+            return new PickerMediaItem(uri, isVideo, false, durationMs);
+        }
+    }
+
+    private static final class PickerMediaCandidate {
+        final Uri uri;
+        final boolean isVideo;
+        final long dateAdded;
+        final long durationMs;
+
+        PickerMediaCandidate(@NonNull Uri uri, boolean isVideo, long dateAdded, long durationMs) {
+            this.uri = uri;
+            this.isVideo = isVideo;
+            this.dateAdded = dateAdded;
+            this.durationMs = durationMs;
+        }
+    }
+
+    private interface OnPickerItemClickListener {
+        void onItemClick(PickerMediaItem item, int position);
+    }
+
+    private final class MediaPickerAdapter extends RecyclerView.Adapter<MediaPickerAdapter.MediaVH> {
+        private final Set<Uri> stagedSelected;
+        private final OnPickerItemClickListener listener;
+
+        MediaPickerAdapter(Set<Uri> stagedSelected, OnPickerItemClickListener listener) {
+            this.stagedSelected = stagedSelected;
+            this.listener = listener;
+        }
+
+        @NonNull
+        @Override
+        public MediaVH onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
+            View view = LayoutInflater.from(parent.getContext())
+                    .inflate(R.layout.item_new_post_media_picker, parent, false);
+            return new MediaVH(view);
+        }
+
+        @Override
+        public void onBindViewHolder(@NonNull MediaVH holder, int position) {
+            PickerMediaItem item = pickerMediaItems.get(position);
+            if (item.isCameraTile) {
+                holder.thumb.setImageResource(R.drawable.ic_camera);
+                holder.thumb.setScaleType(ImageView.ScaleType.CENTER);
+                holder.thumb.setBackgroundColor(androidx.core.content.ContextCompat.getColor(requireContext(), R.color.avatar_background));
+                holder.thumb.setColorFilter(androidx.core.content.ContextCompat.getColor(requireContext(), android.R.color.black));
+                holder.videoBadge.setVisibility(View.GONE);
+                holder.videoDuration.setVisibility(View.GONE);
+                holder.selectedOverlay.setVisibility(View.GONE);
+                holder.selectedCheck.setVisibility(View.GONE);
+            } else {
+                holder.thumb.setScaleType(ImageView.ScaleType.CENTER_CROP);
+                holder.thumb.setBackgroundColor(androidx.core.content.ContextCompat.getColor(requireContext(), R.color.avatar_background));
+                holder.thumb.clearColorFilter();
+                Glide.with(NewPostFragment.this)
+                        .load(item.uri)
+                        .thumbnail(0.2f)
+                        .centerCrop()
+                        .into(holder.thumb);
+                holder.videoBadge.setVisibility(item.isVideo ? View.VISIBLE : View.GONE);
+                if (item.isVideo) {
+                    holder.videoDuration.setText(formatVideoDuration(item.durationMs));
+                    holder.videoDuration.setVisibility(View.VISIBLE);
+                } else {
+                    holder.videoDuration.setVisibility(View.GONE);
+                }
+                boolean isSelected = item.uri != null && stagedSelected.contains(item.uri);
+                holder.selectedOverlay.setVisibility(isSelected ? View.VISIBLE : View.GONE);
+                holder.selectedCheck.setVisibility(isSelected ? View.VISIBLE : View.GONE);
+            }
+            holder.itemView.setOnClickListener(v -> listener.onItemClick(item, holder.getBindingAdapterPosition()));
+        }
+
+        @Override
+        public int getItemCount() {
+            return pickerMediaItems.size();
+        }
+
+        final class MediaVH extends RecyclerView.ViewHolder {
+            private final ImageView thumb;
+            private final ImageView videoBadge;
+            private final TextView videoDuration;
+            private final View selectedOverlay;
+            private final ImageView selectedCheck;
+
+            MediaVH(@NonNull View itemView) {
+                super(itemView);
+                thumb = itemView.findViewById(R.id.media_picker_thumb);
+                videoBadge = itemView.findViewById(R.id.media_picker_video_badge);
+                videoDuration = itemView.findViewById(R.id.media_picker_video_duration);
+                selectedOverlay = itemView.findViewById(R.id.media_picker_selected_overlay);
+                selectedCheck = itemView.findViewById(R.id.media_picker_selected_check);
+            }
+        }
+    }
+
+    private String formatVideoDuration(long durationMs) {
+        long totalSeconds = Math.max(0L, durationMs / 1000L);
+        long hours = totalSeconds / 3600L;
+        long minutes = (totalSeconds % 3600L) / 60L;
+        long seconds = totalSeconds % 60L;
+        if (hours > 0L) {
+            return String.format(Locale.getDefault(), "%d:%02d:%02d", hours, minutes, seconds);
+        }
+        return String.format(Locale.getDefault(), "%02d:%02d", minutes, seconds);
     }
     // endregion
 }

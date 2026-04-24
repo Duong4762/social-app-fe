@@ -12,12 +12,10 @@ import android.view.LayoutInflater;
 import android.view.MotionEvent;
 import android.view.View;
 import android.view.ViewGroup;
-import android.widget.ArrayAdapter;
 import android.widget.EditText;
 import android.widget.ImageButton;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
-import android.widget.Spinner;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -49,10 +47,9 @@ public class CommentFragment extends Fragment implements CommentAdapter.OnCommen
 
     private RecyclerView commentsRecyclerView;
     private EditText commentInput;
-    private ImageButton sendButton, emojiButton, gifButton, attachMediaButton;
+    private ImageButton sendButton, emojiButton, attachMediaButton;
     private ImageView composeAvatar;
     private TextView charCountText;
-    private Spinner sortSpinner;
     private SwipeRefreshLayout swipeRefresh;
     private LinearLayout actionButtonsSection;
 
@@ -119,7 +116,6 @@ public class CommentFragment extends Fragment implements CommentAdapter.OnCommen
 
     private void initializeViews(View view) {
         commentsRecyclerView = view.findViewById(R.id.comments_recycler_view);
-        sortSpinner = view.findViewById(R.id.comment_sort_spinner);
         swipeRefresh = view.findViewById(R.id.swipe_refresh_layout);
 
         composeAvatar = view.findViewById(R.id.compose_avatar);
@@ -128,7 +124,6 @@ public class CommentFragment extends Fragment implements CommentAdapter.OnCommen
 
         actionButtonsSection = view.findViewById(R.id.compose_action_buttons_section);
         attachMediaButton = view.findViewById(R.id.compose_attach_media_button);
-        gifButton = view.findViewById(R.id.compose_gif_button);
         emojiButton = view.findViewById(R.id.compose_emoji_button);
         sendButton = view.findViewById(R.id.compose_send_button);
 
@@ -137,20 +132,8 @@ public class CommentFragment extends Fragment implements CommentAdapter.OnCommen
         }
         updateCharacterCount(0);
 
-        setupSortSpinner();
-
         layoutManager = new LinearLayoutManager(getContext());
         commentsRecyclerView.setLayoutManager(layoutManager);
-    }
-
-    private void setupSortSpinner() {
-        ArrayAdapter<CharSequence> adapter = ArrayAdapter.createFromResource(
-                getContext(),
-                R.array.comment_sort_options,
-                android.R.layout.simple_spinner_item
-        );
-        adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
-        sortSpinner.setAdapter(adapter);
     }
 
     private void setupAdapters() {
@@ -213,7 +196,6 @@ public class CommentFragment extends Fragment implements CommentAdapter.OnCommen
             sendButton.setEnabled(false);
         }
         if (emojiButton != null) emojiButton.setOnClickListener(v -> openEmojiPicker());
-        if (gifButton != null) gifButton.setOnClickListener(v -> openGifPicker());
         if (attachMediaButton != null) attachMediaButton.setOnClickListener(v -> openFileChooser());
         if (commentInput != null) {
             commentInput.addTextChangedListener(new TextWatcher() {
@@ -266,10 +248,6 @@ public class CommentFragment extends Fragment implements CommentAdapter.OnCommen
 
     private void openEmojiPicker() {
         Toast.makeText(getContext(), "Emoji picker - Coming soon", Toast.LENGTH_SHORT).show();
-    }
-
-    private void openGifPicker() {
-        Toast.makeText(getContext(), "GIF picker - Coming soon", Toast.LENGTH_SHORT).show();
     }
 
     private void openFileChooser() {

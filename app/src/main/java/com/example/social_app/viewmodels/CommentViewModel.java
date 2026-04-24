@@ -96,6 +96,28 @@ public class CommentViewModel extends ViewModel {
                 .addOnFailureListener(e -> error.setValue("Lỗi gửi bình luận: " + e.getMessage()));
     }
 
+    public void sendCommentWithMedia(String postId, String contentUrl, String mediaUrl, String mediaType) {
+        String userId = firebaseManager.getAuth().getUid();
+        if (userId == null) {
+            error.setValue("Vui lòng đăng nhập");
+            return;
+        }
+
+        String commentId = UUID.randomUUID().toString();
+        Comment newComment = new Comment(commentId, postId, userId, null, contentUrl, 0);
+        newComment.setMediaUrl(mediaUrl);
+        newComment.setMediaType(mediaType);
+
+        db.collection(FirebaseManager.COLLECTION_COMMENTS).document(commentId)
+                .set(newComment)
+                .addOnSuccessListener(aVoid -> {
+                    db.collection(FirebaseManager.COLLECTION_POSTS).document(postId)
+                            .update("commentCount", com.google.firebase.firestore.FieldValue.increment(1));
+                    loadComments(postId);
+                })
+                .addOnFailureListener(e -> error.setValue("Lỗi gửi bình luận: " + e.getMessage()));
+    }
+
     /**
      * Toggle like status for a comment.
      */

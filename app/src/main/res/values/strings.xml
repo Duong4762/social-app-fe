@@ -92,12 +92,9 @@
     <string name="media_upload">Media Upload</string>
     <string name="upload_image">Upload Image</string>
     <string name="upload_video">Upload Video</string>
-    <string name="audience">Audience:</string>
-    <string name="add_location">Add Location</string>
-    <string name="tag_people">Tag People</string>
-    <string name="current_location">Current Location</string>
-    <string name="search_location">Search Location</string>
-    <string name="custom_location">Custom Location</string>
+    <string name="choose_media_source">Choose media source</string>
+    <string name="capture_photo">Capture photo</string>
+    <string name="record_video">Record video</string>
     <string name="discard_post_question">Discard Post?</string>
     <string name="discard_post_confirm">Are you sure you want to discard this post?</string>
     <string name="discard">Discard</string>

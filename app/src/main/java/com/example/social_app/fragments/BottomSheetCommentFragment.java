@@ -4,12 +4,10 @@ import android.os.Bundle;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
-import android.widget.ArrayAdapter;
 import android.widget.EditText;
 import android.widget.ImageButton;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
-import android.widget.Spinner;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -28,6 +26,7 @@ import com.example.social_app.utils.MockDataGenerator;
 import com.example.social_app.viewmodels.CommentViewModel;
 import com.google.android.material.bottomsheet.BottomSheetDialogFragment;
 import com.google.android.material.bottomsheet.BottomSheetBehavior;
+import com.google.android.material.button.MaterialButton;
 
 public class BottomSheetCommentFragment extends BottomSheetDialogFragment implements CommentAdapter.OnCommentActionListener {
 
@@ -37,12 +36,12 @@ public class BottomSheetCommentFragment extends BottomSheetDialogFragment implem
 
     private RecyclerView commentsRecyclerView;
     private EditText commentInput;
-    private ImageButton sendButton, emojiButton, gifButton, attachMediaButton;
+    private ImageButton sendButton, emojiButton, attachMediaButton;
     private ImageView composeAvatar;
-    private Spinner sortSpinner;
     private SwipeRefreshLayout swipeRefresh;
     private TextView charCountText;
     private LinearLayout actionButtonsSection;
+    private MaterialButton mediaSendButton;
     private android.net.Uri selectedMediaUri;
     private String selectedMediaType;
 
@@ -87,7 +86,6 @@ public class BottomSheetCommentFragment extends BottomSheetDialogFragment implem
     private void initializeViews(View view) {
         // Comment list
         commentsRecyclerView = view.findViewById(R.id.comments_recycler_view);
-        sortSpinner = view.findViewById(R.id.comment_sort_spinner);
         swipeRefresh = view.findViewById(R.id.swipe_refresh_layout);
 
         // Compose
@@ -98,9 +96,9 @@ public class BottomSheetCommentFragment extends BottomSheetDialogFragment implem
         // Action buttons
         actionButtonsSection = view.findViewById(R.id.compose_action_buttons_section);
         attachMediaButton = view.findViewById(R.id.compose_attach_media_button);
-        gifButton = view.findViewById(R.id.compose_gif_button);
         emojiButton = view.findViewById(R.id.compose_emoji_button);
         sendButton = view.findViewById(R.id.compose_send_button);
+        mediaSendButton = view.findViewById(R.id.media_send_button);
 
         if (composeAvatar != null) {
             UserAvatarLoader.load(composeAvatar, null);
@@ -108,25 +106,12 @@ public class BottomSheetCommentFragment extends BottomSheetDialogFragment implem
         if (charCountText != null) {
             updateCharacterCount(0);
         }
-        if (sortSpinner != null) {
-            setupSortSpinner();
-        }
         // RecyclerView - maximize vertical space
         if (commentsRecyclerView != null && layoutManager == null) {
             layoutManager = new LinearLayoutManager(getContext(), LinearLayoutManager.VERTICAL, false);
             commentsRecyclerView.setLayoutManager(layoutManager);
             commentsRecyclerView.setClipToPadding(false);  // Allow content to scroll without padding
         }
-    }
-
-    private void setupSortSpinner() {
-        ArrayAdapter<CharSequence> adapter = ArrayAdapter.createFromResource(
-                getContext(),
-                R.array.comment_sort_options,
-                android.R.layout.simple_spinner_item
-        );
-        adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
-        sortSpinner.setAdapter(adapter);
     }
 
     private void setupAdapters() {
@@ -158,8 +143,10 @@ public class BottomSheetCommentFragment extends BottomSheetDialogFragment implem
             sendButton.setOnClickListener(v -> sendComment());
             sendButton.setEnabled(false);
         }
+        if (mediaSendButton != null) {
+            mediaSendButton.setOnClickListener(v -> sendComment());
+        }
         if (emojiButton != null) emojiButton.setOnClickListener(v -> openEmojiPicker());
-        if (gifButton != null) gifButton.setOnClickListener(v -> openGifPicker());
         if (attachMediaButton != null) attachMediaButton.setOnClickListener(v -> openFileChooser());
 
         if (commentInput != null) {
@@ -290,18 +277,12 @@ public class BottomSheetCommentFragment extends BottomSheetDialogFragment implem
                 new com.example.social_app.utils.CloudinaryUploadUtil.UploadCallback() {
                     @Override
                     public void onSuccess(String secureUrl, String publicId) {
-                        String commentText = replyingToUserId != null
-                                ? text.replace("@" + replyingToUserId + " ", "").trim()
-                                : text;
-                        
-                        // Need to update CommentViewModel to support media
-                        // For now, we'll just log and reset
-                        android.util.Log.d("CommentFragment", "Media uploaded: " + secureUrl);
-                        
-                        // If Comment model was updated, we would send it here
-                        // For this task, I'll assume CommentViewModel.sendComment can handle or be updated
-                        commentViewModel.sendComment(postId, commentText + (commentText.isEmpty() ? "" : " ") + secureUrl);
-                        
+                        commentViewModel.sendCommentWithMedia(
+                                postId,
+                                secureUrl,
+                                secureUrl,
+                                "image"
+                        );
                         resetCommentInput();
                     }
 
@@ -369,18 +350,10 @@ public class BottomSheetCommentFragment extends BottomSheetDialogFragment implem
         
         dialog.show();
     }
-    private void openGifPicker() {
-        // Implement GIF picker (e.g., using Giphy SDK or a simple search)
-        // For now, let's use a mock implementation that picks a sample GIF
-        selectedMediaUri = android.net.Uri.parse("https://media.giphy.com/media/v1.Y2lkPTc5MGI3NjExNHJidmZ3Z3R3Z3R3Z3R3Z3R3Z3R3Z3R3Z3R3Z3R3Z3R3JlcD1ndm1fYnlfaWQmY3Q9Zw/3o7TKMGpxP5OqP6V9u/giphy.gif");
-        selectedMediaType = "gif";
-        updateSendButtonState();
-        Toast.makeText(getContext(), "GIF selected", Toast.LENGTH_SHORT).show();
-    }
-
     private void openFileChooser() {
-        android.content.Intent intent = new android.content.Intent(android.content.Intent.ACTION_PICK);
+        android.content.Intent intent = new android.content.Intent(android.content.Intent.ACTION_GET_CONTENT);
         intent.setType("image/*");
+        intent.addCategory(android.content.Intent.CATEGORY_OPENABLE);
         mediaPickerLauncher.launch(intent);
     }
 
@@ -399,7 +372,12 @@ public class BottomSheetCommentFragment extends BottomSheetDialogFragment implem
         if (sendButton == null || commentInput == null) return;
         boolean hasText = commentInput.getText().toString().trim().length() > 0;
         boolean hasMedia = selectedMediaUri != null;
-        sendButton.setEnabled(hasText || hasMedia);
+        sendButton.setEnabled(hasText);
+        sendButton.setVisibility(hasMedia ? View.GONE : View.VISIBLE);
+        if (mediaSendButton != null) {
+            mediaSendButton.setVisibility(hasMedia ? View.VISIBLE : View.GONE);
+            mediaSendButton.setEnabled(hasMedia);
+        }
     }
 
     @Override

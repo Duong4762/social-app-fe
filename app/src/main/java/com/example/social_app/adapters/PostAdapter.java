@@ -1,18 +1,26 @@
 package com.example.social_app.adapters;
 
 import android.content.Context;
+import android.graphics.Color;
+import android.graphics.drawable.ColorDrawable;
+import android.net.Uri;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.view.Window;
+import android.widget.FrameLayout;
 import android.widget.ImageButton;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
+import android.widget.MediaController;
 import android.widget.TextView;
+import android.widget.VideoView;
 
 import androidx.annotation.NonNull;
 import androidx.recyclerview.widget.RecyclerView;
-import androidx.viewpager2.widget.ViewPager2;
+import androidx.constraintlayout.widget.ConstraintLayout;
 
+import com.bumptech.glide.Glide;
 import com.example.social_app.R;
 import com.example.social_app.data.model.PostMedia;
 import com.example.social_app.data.model.User;
@@ -21,6 +29,7 @@ import com.example.social_app.firebase.FirebaseManager;
 import com.example.social_app.utils.MockDataGenerator;
 import com.example.social_app.utils.UserAvatarLoader;
 import com.google.firebase.firestore.FirebaseFirestore;
+import com.google.firebase.firestore.ListenerRegistration;
 
 import java.util.ArrayList;
 import java.util.HashSet;
@@ -40,13 +49,10 @@ public class PostAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
     private Context context;
     private OnPostActionListener actionListener;
     private final Set<String> likedPostIds = new HashSet<>();
-    private final Set<String> bookmarkedPostIds = new HashSet<>();
 
     public interface OnPostActionListener {
         void onLikeClicked(Post post, int position);
         void onCommentClicked(Post post);
-        void onShareClicked(Post post);
-        void onBookmarkClicked(Post post);
         void onComposerPostClicked(String content);
         void onComposerClicked();  // NEW: Handle composer clicks to open new post creation
         void onComposerImageClicked(); // NEW: Handle image button clicks to pick image
@@ -80,10 +86,6 @@ public class PostAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
     public void setEngagementData(Set<String> likedIds, Set<String> bookmarkedIds) {
         this.likedPostIds.clear();
         if (likedIds != null) this.likedPostIds.addAll(likedIds);
-        
-        this.bookmarkedPostIds.clear();
-        if (bookmarkedIds != null) this.bookmarkedPostIds.addAll(bookmarkedIds);
-        
         notifyDataSetChanged();
     }
 
@@ -135,6 +137,14 @@ public class PostAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
         return posts.size() + 1;
     }
 
+    @Override
+    public void onViewRecycled(@NonNull RecyclerView.ViewHolder holder) {
+        if (holder instanceof PostViewHolder) {
+            ((PostViewHolder) holder).clearRealtimeLikeListeners();
+        }
+        super.onViewRecycled(holder);
+    }
+
     /**
      * ViewHolder for the post composer item at the top of the feed.
      */
@@ -184,46 +194,38 @@ public class PostAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
         private ImageView userAvatar;
         private TextView username;
         private TextView timestamp;
-        private TextView location;
         private TextView postContent;
-        private ImageView postImage;
         private ImageView likeIcon;
         private TextView likeCount;
         private ImageView commentIcon;
         private TextView commentCount;
-        private ImageView shareIcon;
-        private TextView shareCount;
-        private ImageView bookmarkIcon;
         private LinearLayout likeContainer;
         private LinearLayout commentContainer;
-        private LinearLayout shareContainer;
-        private ViewPager2 postViewPager;
-        private TextView mediaIndicator;
-        private View postMediaContainer;
+        private FrameLayout postMediaContainer;
+        private Post boundPost;
+        private int boundPosition;
+        private ListenerRegistration likeCountRegistration;
+        private ListenerRegistration likeStatusRegistration;
 
         PostViewHolder(@NonNull View itemView) {
             super(itemView);
             userAvatar = itemView.findViewById(R.id.post_user_avatar);
             username = itemView.findViewById(R.id.post_username);
             timestamp = itemView.findViewById(R.id.post_timestamp);
-            location = itemView.findViewById(R.id.post_location);
             postContent = itemView.findViewById(R.id.post_content);
             likeIcon = itemView.findViewById(R.id.post_like_icon);
             likeCount = itemView.findViewById(R.id.post_like_count);
             commentIcon = itemView.findViewById(R.id.post_comment_icon);
             commentCount = itemView.findViewById(R.id.post_comment_count);
-            shareIcon = itemView.findViewById(R.id.post_share_icon);
-            shareCount = itemView.findViewById(R.id.post_share_count);
-            bookmarkIcon = itemView.findViewById(R.id.post_bookmark_icon);
             likeContainer = itemView.findViewById(R.id.post_like_container);
             commentContainer = itemView.findViewById(R.id.post_comment_container);
-            shareContainer = itemView.findViewById(R.id.post_share_container);
-            postViewPager = itemView.findViewById(R.id.post_view_pager);
-            mediaIndicator = itemView.findViewById(R.id.media_indicator);
             postMediaContainer = itemView.findViewById(R.id.post_media_container);
         }
 
         void bind(Post post, int position) {
+            clearRealtimeLikeListeners();
+            this.boundPost = post;
+            this.boundPosition = position;
             // Set user info
             User postUser = MockDataGenerator.getUserById(post.getUserId());
             if (postUser != null) {
@@ -258,32 +260,21 @@ public class PostAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
                     : System.currentTimeMillis();
             timestamp.setText(MockDataGenerator.getTimeDifferenceString(createdAt));
 
-            // Set location
-            if (post.getLocation() != null && !post.getLocation().isEmpty()) {
-                location.setVisibility(View.VISIBLE);
-                location.setText(post.getLocation());
-            } else {
-                location.setVisibility(View.GONE);
-            }
-
             // Set post content
             postContent.setText(post.getCaption());
 
             UserAvatarLoader.load(userAvatar, postUser != null ? postUser.getAvatarUrl() : null);
 
             // Load media from Firestore
-            loadPostMedia(post.getId());
+            loadPostMedia(post.getId(), post);
 
             // Set engagement counts
             likeCount.setText(String.valueOf(post.getLikeCount()));
             commentCount.setText(String.valueOf(post.getCommentCount()));
-            shareCount.setText(String.valueOf(post.getShareCount()));
 
             // Update like icon based on liked state
             updateLikeIcon(post);
-
-            // Update bookmark icon based on bookmark state
-            updateBookmarkIcon(post);
+            setupRealtimeLike(post);
 
             // Setup more options click listener
             ImageView moreOptions = itemView.findViewById(R.id.post_more_options);
@@ -312,6 +303,14 @@ public class PostAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
 
             // Set up click listeners - ONLY ONCE
             likeContainer.setOnClickListener(v -> {
+                String postId = post.getId();
+                if (postId != null) {
+                    boolean isLikedNow = toggleLiked(postId);
+                    long nextCount = isLikedNow ? post.getLikeCount() + 1 : Math.max(0, post.getLikeCount() - 1);
+                    post.setLikeCount(nextCount);
+                    likeCount.setText(String.valueOf(nextCount));
+                    updateLikeIcon(post);
+                }
                 if (actionListener != null) {
                     actionListener.onLikeClicked(post, position);
                 }
@@ -323,31 +322,9 @@ public class PostAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
                     actionListener.onCommentClicked(post);
                 }
             });
-
-            shareContainer.setOnClickListener(v -> {
-                if (actionListener != null) {
-                    actionListener.onShareClicked(post);
-                }
-            });
-
-            bookmarkIcon.setOnClickListener(v -> {
-                if (actionListener != null) {
-                    actionListener.onBookmarkClicked(post);
-                }
-                // Toggle bookmark state locally for immediate feedback
-                String postId = post.getId();
-                if (postId != null) {
-                    if (bookmarkedPostIds.contains(postId)) {
-                        bookmarkedPostIds.remove(postId);
-                    } else {
-                        bookmarkedPostIds.add(postId);
-                    }
-                }
-                updateBookmarkIcon(post);
-            });
         }
 
-        private void loadPostMedia(String postId) {
+        private void loadPostMedia(String postId, Post post) {
             if (postId == null) {
                 postMediaContainer.setVisibility(View.GONE);
                 return;
@@ -366,35 +343,9 @@ public class PostAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
                         List<PostMedia> mediaList = queryDocumentSnapshots.toObjects(PostMedia.class);
                         
                         if (!mediaList.isEmpty()) {
-                            // Sắp xếp: IMAGE trước, VIDEO sau, sau đó theo field 'order'
-                            mediaList.sort((m1, m2) -> {
-                                boolean isM1Video = "VIDEO".equalsIgnoreCase(m1.getMediaType());
-                                boolean isM2Video = "VIDEO".equalsIgnoreCase(m2.getMediaType());
-                                
-                                if (isM1Video != isM2Video) {
-                                    return isM1Video ? 1 : -1;
-                                }
-                                return Integer.compare(m1.getOrder(), m2.getOrder());
-                            });
-
+                            mediaList.sort((m1, m2) -> Integer.compare(m1.getOrder(), m2.getOrder()));
                             postMediaContainer.setVisibility(View.VISIBLE);
-                            postViewPager.setVisibility(View.VISIBLE);
-                            
-                            PostMediaAdapter mediaAdapter = new PostMediaAdapter(mediaList);
-                            postViewPager.setAdapter(mediaAdapter);
-                            
-                            if (mediaList.size() > 1) {
-                                mediaIndicator.setVisibility(View.VISIBLE);
-                                mediaIndicator.setText("1/" + mediaList.size());
-                                postViewPager.registerOnPageChangeCallback(new ViewPager2.OnPageChangeCallback() {
-                                    @Override
-                                    public void onPageSelected(int position) {
-                                        mediaIndicator.setText((position + 1) + "/" + mediaList.size());
-                                    }
-                                });
-                            } else {
-                                mediaIndicator.setVisibility(View.GONE);
-                            }
+                            renderMediaCollage(mediaList, post);
                         } else {
                             postMediaContainer.setVisibility(View.GONE);
                         }
@@ -406,11 +357,319 @@ public class PostAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
                     });
         }
 
+        private void setupRealtimeLike(Post post) {
+            if (post == null || post.getId() == null) return;
+
+            String postId = post.getId();
+            String currentUserId = FirebaseManager.getInstance().getAuth().getUid();
+
+            likeCountRegistration = FirebaseFirestore.getInstance()
+                    .collection(FirebaseManager.COLLECTION_POSTS)
+                    .document(postId)
+                    .addSnapshotListener((snapshot, e) -> {
+                        if (e != null || snapshot == null || !snapshot.exists()) return;
+                        Long likeCountValue = snapshot.getLong("likeCount");
+                        if (likeCountValue == null) likeCountValue = 0L;
+                        post.setLikeCount(likeCountValue);
+                        likeCount.setText(String.valueOf(likeCountValue));
+                    });
+
+            if (currentUserId != null) {
+                String likeDocId = postId + "_" + currentUserId;
+                likeStatusRegistration = FirebaseFirestore.getInstance()
+                        .collection(FirebaseManager.COLLECTION_POST_LIKES)
+                        .document(likeDocId)
+                        .addSnapshotListener((snapshot, e) -> {
+                            if (e != null) return;
+                            boolean isLiked = snapshot != null && snapshot.exists();
+                            if (isLiked) likedPostIds.add(postId);
+                            else likedPostIds.remove(postId);
+                            updateLikeIcon(post);
+                        });
+            }
+        }
+
+        private void clearRealtimeLikeListeners() {
+            if (likeCountRegistration != null) {
+                likeCountRegistration.remove();
+                likeCountRegistration = null;
+            }
+            if (likeStatusRegistration != null) {
+                likeStatusRegistration.remove();
+                likeStatusRegistration = null;
+            }
+        }
+
+        private void renderMediaCollage(List<PostMedia> mediaList, Post post) {
+            postMediaContainer.removeAllViews();
+            if (mediaList == null || mediaList.isEmpty()) {
+                postMediaContainer.setVisibility(View.GONE);
+                return;
+            }
+            postMediaContainer.post(() -> {
+                int width = postMediaContainer.getWidth();
+                if (width <= 0) return;
+                int count = mediaList.size();
+                int visibleCount = Math.min(4, count);
+                int height;
+                if (visibleCount == 1) height = width;
+                else if (visibleCount == 2) height = width / 2;
+                else height = width;
+
+                ViewGroup.LayoutParams lp = postMediaContainer.getLayoutParams();
+                lp.height = height;
+                postMediaContainer.setLayoutParams(lp);
+
+                if (visibleCount == 1) {
+                    postMediaContainer.addView(createTile(post, mediaList.get(0), count > 4 ? count - 4 : 0));
+                } else if (visibleCount == 2) {
+                    LinearLayout row = new LinearLayout(context);
+                    row.setOrientation(LinearLayout.HORIZONTAL);
+                    row.setLayoutParams(new FrameLayout.LayoutParams(
+                            FrameLayout.LayoutParams.MATCH_PARENT,
+                            FrameLayout.LayoutParams.MATCH_PARENT
+                    ));
+                    row.addView(createWeightedTile(post, mediaList.get(0), 1f, 0));
+                    row.addView(createSpacer(2, 0));
+                    row.addView(createWeightedTile(post, mediaList.get(1), 1f, 0));
+                    postMediaContainer.addView(row);
+                } else if (visibleCount == 3) {
+                    LinearLayout root = new LinearLayout(context);
+                    root.setOrientation(LinearLayout.HORIZONTAL);
+                    root.setLayoutParams(new FrameLayout.LayoutParams(
+                            FrameLayout.LayoutParams.MATCH_PARENT,
+                            FrameLayout.LayoutParams.MATCH_PARENT
+                    ));
+
+                    LinearLayout left = new LinearLayout(context);
+                    left.setOrientation(LinearLayout.VERTICAL);
+                    left.setLayoutParams(new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.MATCH_PARENT, 1f));
+                    left.addView(createWeightedTile(post, mediaList.get(0), 1f, 0));
+                    left.addView(createSpacer(0, 2));
+                    left.addView(createWeightedTile(post, mediaList.get(1), 1f, 0));
+
+                    FrameLayout right = new FrameLayout(context);
+                    right.setLayoutParams(new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.MATCH_PARENT, 1f));
+                    right.addView(createTile(post, mediaList.get(2), 0));
+
+                    root.addView(left);
+                    root.addView(createSpacer(2, 0));
+                    root.addView(right);
+                    postMediaContainer.addView(root);
+                } else {
+                    LinearLayout root = new LinearLayout(context);
+                    root.setOrientation(LinearLayout.VERTICAL);
+                    root.setLayoutParams(new FrameLayout.LayoutParams(
+                            FrameLayout.LayoutParams.MATCH_PARENT,
+                            FrameLayout.LayoutParams.MATCH_PARENT
+                    ));
+
+                    LinearLayout top = new LinearLayout(context);
+                    top.setOrientation(LinearLayout.HORIZONTAL);
+                    top.setLayoutParams(new LinearLayout.LayoutParams(
+                            LinearLayout.LayoutParams.MATCH_PARENT, 0, 1f
+                    ));
+                    top.addView(createWeightedTile(post, mediaList.get(0), 1f, 0));
+                    top.addView(createSpacer(2, 0));
+                    top.addView(createWeightedTile(post, mediaList.get(1), 1f, 0));
+
+                    LinearLayout bottom = new LinearLayout(context);
+                    bottom.setOrientation(LinearLayout.HORIZONTAL);
+                    bottom.setLayoutParams(new LinearLayout.LayoutParams(
+                            LinearLayout.LayoutParams.MATCH_PARENT, 0, 1f
+                    ));
+                    bottom.addView(createWeightedTile(post, mediaList.get(2), 1f, 0));
+                    bottom.addView(createSpacer(2, 0));
+                    int remaining = count > 4 ? (count - 4) : 0;
+                    bottom.addView(createWeightedTile(post, mediaList.get(3), 1f, remaining));
+
+                    root.addView(top);
+                    root.addView(createSpacer(0, 2));
+                    root.addView(bottom);
+                    postMediaContainer.addView(root);
+                }
+            });
+        }
+
+        private View createWeightedTile(Post post, PostMedia media, float weight, int moreCount) {
+            FrameLayout tile = createTile(post, media, moreCount);
+            LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.MATCH_PARENT, weight);
+            tile.setLayoutParams(lp);
+            return tile;
+        }
+
+        private View createSpacer(int widthPx, int heightPx) {
+            View spacer = new View(context);
+            LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(
+                    widthPx > 0 ? widthPx : LinearLayout.LayoutParams.MATCH_PARENT,
+                    heightPx > 0 ? heightPx : LinearLayout.LayoutParams.MATCH_PARENT
+            );
+            if (widthPx > 0) lp = new LinearLayout.LayoutParams(widthPx, LinearLayout.LayoutParams.MATCH_PARENT);
+            if (heightPx > 0) lp = new LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, heightPx);
+            spacer.setLayoutParams(lp);
+            return spacer;
+        }
+
+        private FrameLayout createTile(Post post, PostMedia media, int moreCount) {
+            FrameLayout tile = new FrameLayout(context);
+            FrameLayout.LayoutParams tileLp = new FrameLayout.LayoutParams(
+                    FrameLayout.LayoutParams.MATCH_PARENT,
+                    FrameLayout.LayoutParams.MATCH_PARENT
+            );
+            tile.setLayoutParams(tileLp);
+
+            ImageView image = new ImageView(context);
+            image.setLayoutParams(new FrameLayout.LayoutParams(
+                    FrameLayout.LayoutParams.MATCH_PARENT,
+                    FrameLayout.LayoutParams.MATCH_PARENT
+            ));
+            image.setScaleType(ImageView.ScaleType.CENTER_CROP);
+            Glide.with(context).load(media.getMediaUrl()).centerCrop().into(image);
+            tile.addView(image);
+
+            boolean isVideo = media.getMediaType() != null && media.getMediaType().equalsIgnoreCase("VIDEO");
+            if (isVideo) {
+                ImageView play = new ImageView(context);
+                FrameLayout.LayoutParams playLp = new FrameLayout.LayoutParams(
+                        (int) (28 * context.getResources().getDisplayMetrics().density),
+                        (int) (28 * context.getResources().getDisplayMetrics().density)
+                );
+                playLp.gravity = android.view.Gravity.CENTER;
+                play.setLayoutParams(playLp);
+                play.setImageResource(R.drawable.ic_play);
+                play.setColorFilter(Color.WHITE);
+                tile.addView(play);
+            }
+
+            if (moreCount > 0) {
+                TextView overlay = new TextView(context);
+                overlay.setLayoutParams(new FrameLayout.LayoutParams(
+                        FrameLayout.LayoutParams.MATCH_PARENT,
+                        FrameLayout.LayoutParams.MATCH_PARENT
+                ));
+                overlay.setBackgroundColor(0x88000000);
+                overlay.setTextColor(Color.WHITE);
+                overlay.setTextSize(24f);
+                overlay.setText("+" + moreCount);
+                overlay.setGravity(android.view.Gravity.CENTER);
+                tile.addView(overlay);
+            }
+
+            tile.setOnClickListener(v -> showMediaPopupWithActions(post, media));
+            return tile;
+        }
+
+        private void showMediaPopupWithActions(Post post, PostMedia media) {
+            android.app.Dialog dialog = new android.app.Dialog(context, android.R.style.Theme_Black_NoTitleBar_Fullscreen);
+            dialog.requestWindowFeature(Window.FEATURE_NO_TITLE);
+            dialog.setContentView(R.layout.dialog_post_media_overlay);
+            if (dialog.getWindow() != null) {
+                dialog.getWindow().setBackgroundDrawable(new ColorDrawable(Color.BLACK));
+            }
+
+            ImageView imageView = dialog.findViewById(R.id.overlay_fullscreen_image);
+            VideoView videoView = dialog.findViewById(R.id.overlay_fullscreen_video);
+            ImageView btnClose = dialog.findViewById(R.id.overlay_btn_close);
+            ImageView playIcon = dialog.findViewById(R.id.overlay_ic_play_video);
+            View likeContainer = dialog.findViewById(R.id.overlay_like_container);
+            View commentContainer = dialog.findViewById(R.id.overlay_comment_container);
+            ImageView likeIcon = dialog.findViewById(R.id.overlay_like_icon);
+            TextView likeCountText = dialog.findViewById(R.id.overlay_like_count);
+            TextView commentCountText = dialog.findViewById(R.id.overlay_comment_count);
+
+            long displayedLikeCount;
+            try {
+                displayedLikeCount = Long.parseLong(this.likeCount.getText().toString());
+            } catch (Exception ignored) {
+                displayedLikeCount = post.getLikeCount();
+            }
+            final long[] overlayLikeCount = new long[]{displayedLikeCount};
+            final boolean[] overlayLiked = new boolean[]{Boolean.TRUE.equals(this.likeIcon.getTag())};
+            updateOverlayLikeUi(likeIcon, likeCountText, overlayLiked[0], overlayLikeCount[0]);
+            commentCountText.setText(String.valueOf(post.getCommentCount()));
+
+            boolean isVideo = media.getMediaType() != null && media.getMediaType().equalsIgnoreCase("VIDEO");
+            if (isVideo) {
+                imageView.setVisibility(View.GONE);
+                videoView.setVisibility(View.VISIBLE);
+                playIcon.setVisibility(View.VISIBLE);
+                MediaController controller = new MediaController(context);
+                controller.setAnchorView(videoView);
+                videoView.setMediaController(controller);
+                videoView.setVideoURI(Uri.parse(media.getMediaUrl()));
+                playIcon.setOnClickListener(v -> {
+                    playIcon.setVisibility(View.GONE);
+                    videoView.start();
+                });
+                videoView.setOnPreparedListener(mp -> playIcon.setVisibility(View.VISIBLE));
+                videoView.setOnCompletionListener(mp -> playIcon.setVisibility(View.VISIBLE));
+                videoView.setOnClickListener(v -> {
+                    if (videoView.isPlaying()) {
+                        videoView.pause();
+                        playIcon.setVisibility(View.VISIBLE);
+                    } else {
+                        videoView.start();
+                        playIcon.setVisibility(View.GONE);
+                    }
+                });
+            } else {
+                videoView.setVisibility(View.GONE);
+                playIcon.setVisibility(View.GONE);
+                imageView.setVisibility(View.VISIBLE);
+                Glide.with(context).load(media.getMediaUrl()).into(imageView);
+            }
+
+            likeContainer.setOnClickListener(v -> {
+                // Keep popup UI in sync immediately with current state.
+                overlayLiked[0] = !overlayLiked[0];
+                if (overlayLiked[0]) {
+                    overlayLikeCount[0] = overlayLikeCount[0] + 1;
+                } else {
+                    overlayLikeCount[0] = Math.max(0, overlayLikeCount[0] - 1);
+                }
+                updateOverlayLikeUi(likeIcon, likeCountText, overlayLiked[0], overlayLikeCount[0]);
+                this.likeCount.setText(String.valueOf(overlayLikeCount[0]));
+                this.likeIcon.setTag(overlayLiked[0]);
+                if (overlayLiked[0]) {
+                    this.likeIcon.setImageResource(R.drawable.ic_heart_filled);
+                    this.likeIcon.setColorFilter(context.getResources().getColor(R.color.accent_red, null));
+                } else {
+                    this.likeIcon.setImageResource(R.drawable.ic_heart);
+                    this.likeIcon.clearColorFilter();
+                }
+
+                if (actionListener != null && boundPost != null) {
+                    actionListener.onLikeClicked(boundPost, boundPosition);
+                }
+            });
+            commentContainer.setOnClickListener(v -> {
+                if (actionListener != null && boundPost != null) {
+                    actionListener.onCommentClicked(boundPost);
+                }
+            });
+
+            btnClose.setOnClickListener(v -> dialog.dismiss());
+            dialog.show();
+        }
+
+        private void updateOverlayLikeUi(ImageView likeIcon, TextView likeCountText, boolean isLiked, long likeCount) {
+            likeCountText.setText(String.valueOf(likeCount));
+            if (isLiked) {
+                likeIcon.setImageResource(R.drawable.ic_heart_filled);
+                likeIcon.setColorFilter(context.getResources().getColor(R.color.accent_red, null));
+            } else {
+                likeIcon.setImageResource(R.drawable.ic_heart);
+                likeIcon.setColorFilter(context.getResources().getColor(android.R.color.white, null));
+            }
+        }
+
         /**
          * Updates the like icon visual state.
          */
         private void updateLikeIcon(Post post) {
-            if (likedPostIds.contains(post.getId())) {
+            boolean isLiked = likedPostIds.contains(post.getId());
+            likeIcon.setTag(isLiked);
+            if (isLiked) {
                 likeIcon.setImageResource(R.drawable.ic_heart_filled);
                 likeIcon.setColorFilter(context.getResources().getColor(R.color.accent_red, null));
             } else {
@@ -420,19 +679,6 @@ public class PostAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
             }
         }
 
-        /**
-         * Updates the bookmark icon visual state.
-         */
-        private void updateBookmarkIcon(Post post) {
-            if (bookmarkedPostIds.contains(post.getId())) {
-                bookmarkIcon.setImageResource(R.drawable.ic_bookmark_filled);
-                // Có thể thêm setColorFilter nếu muốn màu đặc biệt
-                // bookmarkIcon.setColorFilter(context.getResources().getColor(R.color.accent_purple, null));
-            } else {
-                bookmarkIcon.setImageResource(R.drawable.ic_bookmark);
-                bookmarkIcon.clearColorFilter();
-            }
-        }
     }
 }
 

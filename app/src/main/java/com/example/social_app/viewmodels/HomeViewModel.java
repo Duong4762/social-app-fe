@@ -94,7 +94,6 @@ public class HomeViewModel extends ViewModel {
 
         if (isLiking) {
             likedPostIds.add(postId);
-            post.setLikeCount(post.getLikeCount() + 1);
             
             // Add to post_likes collection
             java.util.Map<String, Object> likeData = new java.util.HashMap<>();
@@ -104,12 +103,10 @@ public class HomeViewModel extends ViewModel {
             db.collection(FirebaseManager.COLLECTION_POST_LIKES).document(postId + "_" + userId).set(likeData);
         } else {
             likedPostIds.remove(postId);
-            post.setLikeCount(Math.max(0, post.getLikeCount() - 1));
             
             // Remove from post_likes collection
             db.collection(FirebaseManager.COLLECTION_POST_LIKES).document(postId + "_" + userId).delete();
         }
-        posts.setValue(posts.getValue()); // Notify UI
 
         // Update Firestore
         db.collection(FirebaseManager.COLLECTION_POSTS).document(postId)

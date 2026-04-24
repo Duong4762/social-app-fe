@@ -223,6 +223,14 @@ public class MainActivity extends AppCompatActivity {
                 .start();
     }
 
+    public void setBottomNavigationHiddenForOverlay(boolean hidden) {
+        if (hidden) {
+            hideBottomNavigation();
+        } else {
+            showBottomNavigation();
+        }
+    }
+
     /**
      * Mở chat toàn màn hình chồng lên nội dung + bottom nav; bấm back trên hệ thống để đóng.
      */
