@@ -81,6 +81,8 @@
     <!-- Transparent -->
     <color name="transparent">#00000000</color>
 
+    <color name="call_accept_green">#43A047</color>
+    <color name="call_decline_red">#E53935</color>
     <color name="story_ring_green">#22C55E</color>
     <color name="story_ring_gray">#94A3B8</color>
 </resources>
