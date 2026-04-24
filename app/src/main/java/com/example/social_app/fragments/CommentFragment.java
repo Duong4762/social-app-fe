@@ -38,6 +38,7 @@ import com.example.social_app.viewmodels.CommentViewModel;
 
 import java.util.ArrayList;
 import java.util.List;
+import com.example.social_app.firebase.FirebaseManager;
 
 public class CommentFragment extends Fragment implements CommentAdapter.OnCommentActionListener {
 
@@ -286,22 +287,7 @@ public class CommentFragment extends Fragment implements CommentAdapter.OnCommen
     }
 
     // ==================== CommentAdapter.OnCommentActionListener Callbacks ====================
-    @Override
-    public void onUserClicked(String userId) {
-        if (userId == null || userId.trim().isEmpty()) return;
-        String currentUserId = com.example.social_app.firebase.FirebaseManager.getInstance().getAuth().getUid();
-        androidx.fragment.app.Fragment fragment;
-        if (userId.equals(currentUserId)) {
-            fragment = new ProfileFragment();
-        } else {
-            fragment = OtherProfileFragment.newInstance(userId);
-        }
-        requireActivity().getSupportFragmentManager()
-                .beginTransaction()
-                .replace(R.id.nav_host_fragment, fragment)
-                .addToBackStack(null)
-                .commit();
-    }
+
 
     @Override
     public void onLikeClicked(Comment comment, int position) {
@@ -405,6 +391,25 @@ public class CommentFragment extends Fragment implements CommentAdapter.OnCommen
     public void onViewCreated(@NonNull View view, @Nullable Bundle savedInstanceState) {
         super.onViewCreated(view, savedInstanceState);
         // Đo chiều cao các view nếu cần debug
+    }
+    @Override
+    public void onUserClicked(String userId) {
+        if (userId == null || userId.isEmpty()) return;
+
+        String currentUserId = FirebaseManager.getInstance().getAuth().getUid();
+        androidx.fragment.app.Fragment fragment;
+
+        if (userId.equals(currentUserId)) {
+            fragment = new ProfileFragment();
+        } else {
+            fragment = OtherProfileFragment.newInstance(userId);
+        }
+
+        requireActivity().getSupportFragmentManager()
+                .beginTransaction()
+                .replace(R.id.nav_host_fragment, fragment)
+                .addToBackStack(null)
+                .commit();
     }
 
 }

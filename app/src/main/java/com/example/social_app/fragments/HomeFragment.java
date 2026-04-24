@@ -1,38 +1,40 @@
 package com.example.social_app.fragments;
 
+import android.content.ClipData;
+import android.content.ClipboardManager;
+import android.content.Context;
+import android.content.Intent;
 import android.os.Bundle;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.EditText;
 import android.widget.LinearLayout;
+import android.widget.PopupMenu;
 import android.widget.ProgressBar;
 import android.widget.Toast;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
+import androidx.appcompat.app.AlertDialog;
 import androidx.fragment.app.Fragment;
+import androidx.lifecycle.Observer;
+import androidx.lifecycle.ViewModelProvider;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
+import androidx.swiperefreshlayout.widget.SwipeRefreshLayout;
 
 import com.example.social_app.R;
-import com.example.social_app.utils.UserAvatarLoader;
-import com.google.android.material.imageview.ShapeableImageView;
-import com.example.social_app.firebase.FirebaseManager;
-import androidx.swiperefreshlayout.widget.SwipeRefreshLayout;
 import com.example.social_app.adapters.PostAdapter;
-import com.example.social_app.fragments.OtherProfileFragment;
 import com.example.social_app.data.model.Post;
+import com.example.social_app.firebase.FirebaseManager;
+import com.example.social_app.utils.UserAvatarLoader;
 import com.example.social_app.viewmodels.HomeViewModel;
 import com.example.social_app.viewmodels.NewPostViewModel;
+import com.google.android.material.imageview.ShapeableImageView;
 
 import java.util.List;
 
-import androidx.lifecycle.ViewModelProvider;
-
-/**
- * HomeFragment displays the social media feed with posts and post composer.
- * Implements infinite scroll functionality and manages feed state.
- */
 public class HomeFragment extends Fragment implements PostAdapter.OnPostActionListener {
 
     private RecyclerView feedRecyclerView;
@@ -46,42 +48,22 @@ public class HomeFragment extends Fragment implements PostAdapter.OnPostActionLi
 
     private boolean isLoading = false;
     private boolean hasMorePosts = true;
-    private int currentPage = 0;
 
     private ScrollListenerCallback scrollListenerCallback;
 
-    /**
-     * Callback interface for scroll listener setup.
-     */
     public interface ScrollListenerCallback {
         void setupScrollListener(RecyclerView recyclerView);
     }
 
-    /**
-     * Sets the scroll listener callback from MainActivity.
-     */
     public void setBottomNavigationCallback(ScrollListenerCallback callback) {
         this.scrollListenerCallback = callback;
     }
 
-    public static HomeFragment newInstance(String postId) {
-        HomeFragment fragment = new HomeFragment();
-        if (postId != null) {
-            Bundle args = new Bundle();
-            args.putString("target_post_id", postId);
-            fragment.setArguments(args);
-        }
-        return fragment;
-    }
-
-    public HomeFragment() {
-        // Required empty public constructor
-    }
+    public HomeFragment() {}
 
     @Override
     public View onCreateView(LayoutInflater inflater, ViewGroup container,
                              Bundle savedInstanceState) {
-        // Inflate the layout for this fragment
         return inflater.inflate(R.layout.fragment_home, container, false);
     }
 
@@ -93,46 +75,22 @@ public class HomeFragment extends Fragment implements PostAdapter.OnPostActionLi
         homeViewModel = new ViewModelProvider(this).get(HomeViewModel.class);
         setupObservers();
 
-        // Initialize views
         feedRecyclerView = view.findViewById(R.id.feed_recycler_view);
         swipeRefreshLayout = view.findViewById(R.id.swipe_refresh_layout);
         loadingIndicator = view.findViewById(R.id.loading_indicator);
         emptyState = view.findViewById(R.id.empty_state);
         errorState = view.findViewById(R.id.error_state);
 
-        // Set up RecyclerView
         setupRecyclerView();
-
-        // Load current user avatar
         loadCurrentUserAvatar(view);
-
-        // Load initial posts
         loadPosts();
 
-        // Set up retry button
         view.findViewById(R.id.retry_button).setOnClickListener(v -> {
             errorState.setVisibility(View.GONE);
             loadPosts();
         });
 
-        // Set up SwipeRefreshLayout
-        swipeRefreshLayout.setOnRefreshListener(() -> {
-            homeViewModel.loadPosts(true);
-        });
-
-        // Handle deep-link to post comments
-        if (getArguments() != null && getArguments().containsKey("target_post_id")) {
-            String targetPostId = getArguments().getString("target_post_id");
-            if (targetPostId != null) {
-                // Delay slightly to ensure fragment is ready
-                view.postDelayed(() -> {
-                    if (isAdded()) {
-                        BottomSheetCommentFragment bottomSheet = BottomSheetCommentFragment.newInstance(targetPostId);
-                        bottomSheet.show(getParentFragmentManager(), "comments_bottom_sheet");
-                    }
-                }, 500);
-            }
-        }
+        swipeRefreshLayout.setOnRefreshListener(() -> homeViewModel.loadPosts(true));
     }
 
     private void setupObservers() {
@@ -149,8 +107,11 @@ public class HomeFragment extends Fragment implements PostAdapter.OnPostActionLi
         });
 
         homeViewModel.getIsLoading().observe(getViewLifecycleOwner(), loading -> {
-            this.isLoading = loading;
-            showLoading(loading);
+            isLoading = loading;
+            if (!loading) {
+                swipeRefreshLayout.setRefreshing(false);
+            }
+            loadingIndicator.setVisibility(loading && !swipeRefreshLayout.isRefreshing() ? View.VISIBLE : View.GONE);
         });
 
         homeViewModel.getError().observe(getViewLifecycleOwner(), errorMsg -> {
@@ -161,9 +122,9 @@ public class HomeFragment extends Fragment implements PostAdapter.OnPostActionLi
         });
 
         newPostViewModel.getPostSuccess().observe(getViewLifecycleOwner(), success -> {
-            if (success) {
-                Toast.makeText(requireContext(), R.string.action_success, Toast.LENGTH_SHORT).show();
-                homeViewModel.loadPosts(true); // Reload feed từ Firestore
+            if (success != null && success) {
+                Toast.makeText(requireContext(), "Thao tác thành công!", Toast.LENGTH_SHORT).show();
+                homeViewModel.loadPosts(true);
                 newPostViewModel.resetPostSuccess();
             }
         });
@@ -175,9 +136,6 @@ public class HomeFragment extends Fragment implements PostAdapter.OnPostActionLi
         });
     }
 
-    /**
-     * Sets up the RecyclerView with layout manager and adapter.
-     */
     private void setupRecyclerView() {
         LinearLayoutManager layoutManager = new LinearLayoutManager(requireContext());
         feedRecyclerView.setLayoutManager(layoutManager);
@@ -185,24 +143,20 @@ public class HomeFragment extends Fragment implements PostAdapter.OnPostActionLi
         postAdapter = new PostAdapter(requireContext(), this);
         feedRecyclerView.setAdapter(postAdapter);
 
-        // Set up scroll listener callback for bottom navigation hide/show behavior
         if (scrollListenerCallback != null) {
             scrollListenerCallback.setupScrollListener(feedRecyclerView);
         }
 
-        // Set up infinite scroll
         feedRecyclerView.addOnScrollListener(new RecyclerView.OnScrollListener() {
             @Override
             public void onScrolled(@NonNull RecyclerView recyclerView, int dx, int dy) {
                 super.onScrolled(recyclerView, dx, dy);
-
                 LinearLayoutManager manager = (LinearLayoutManager) recyclerView.getLayoutManager();
                 if (manager != null) {
                     int visibleItemCount = manager.getChildCount();
                     int totalItemCount = manager.getItemCount();
                     int firstVisibleItemPosition = manager.findFirstVisibleItemPosition();
 
-                    // Check if we should load more data
                     if (!isLoading && hasMorePosts &&
                             (visibleItemCount + firstVisibleItemPosition) >= (totalItemCount - 5)) {
                         loadMorePosts();
@@ -212,18 +166,10 @@ public class HomeFragment extends Fragment implements PostAdapter.OnPostActionLi
         });
     }
 
-    /**
-     * Loads the initial batch of posts.
-     */
-    private void loadPosts() {
-        homeViewModel.loadPosts(true);
-    }
-
     private void loadCurrentUserAvatar(View view) {
         ShapeableImageView ivUserAvatar = view.findViewById(R.id.iv_user_avatar);
         String uid = FirebaseManager.getInstance().getAuth().getUid();
-        
-        // Load placeholder first
+
         if (ivUserAvatar != null) {
             ivUserAvatar.setImageResource(R.drawable.avatar_placeholder);
         }
@@ -242,81 +188,57 @@ public class HomeFragment extends Fragment implements PostAdapter.OnPostActionLi
                             if (postAdapter != null) {
                                 postAdapter.setCurrentUserAvatarUrl(avatarUrl);
                             }
-                        } else if (isAdded() && ivUserAvatar != null) {
-                            // Fallback to default if not found in Firestore
-                            UserAvatarLoader.load(ivUserAvatar, null);
-                        }
-                    })
-                    .addOnFailureListener(e -> {
-                        if (isAdded() && ivUserAvatar != null) {
-                            UserAvatarLoader.load(ivUserAvatar, null);
                         }
                     });
         }
     }
 
-    /**
-     * Loads more posts for infinite scroll.
-     */
+    private void loadPosts() {
+        homeViewModel.loadPosts(true);
+    }
+
     private void loadMorePosts() {
         homeViewModel.loadPosts(false);
     }
 
-    /**
-     * Shows the loading indicator.
-     */
-    private void showLoading(boolean show) {
-        if (!show) {
-            swipeRefreshLayout.setRefreshing(false);
-        }
-        loadingIndicator.setVisibility(show && !swipeRefreshLayout.isRefreshing() ? View.VISIBLE : View.GONE);
-    }
-
-    /**
-     * Shows the feed with posts.
-     */
     private void showFeed() {
         feedRecyclerView.setVisibility(View.VISIBLE);
         emptyState.setVisibility(View.GONE);
         errorState.setVisibility(View.GONE);
     }
 
-    /**
-     * Shows the empty state message.
-     */
     private void showEmptyState() {
         feedRecyclerView.setVisibility(View.VISIBLE);
         emptyState.setVisibility(View.VISIBLE);
         errorState.setVisibility(View.GONE);
     }
 
-    /**
-     * Shows the error state message.
-     */
     private void showErrorState() {
         feedRecyclerView.setVisibility(View.GONE);
         emptyState.setVisibility(View.GONE);
         errorState.setVisibility(View.VISIBLE);
     }
 
+    // ==================== PostAdapter.OnPostActionListener ====================
+
     @Override
     public void onUserClicked(String userId) {
         if (userId == null || userId.isEmpty()) return;
-
         String currentUserId = FirebaseManager.getInstance().getAuth().getUid();
-        androidx.fragment.app.Fragment fragment;
 
         if (userId.equals(currentUserId)) {
-            fragment = new ProfileFragment();
+            requireActivity().getSupportFragmentManager()
+                    .beginTransaction()
+                    .replace(R.id.nav_host_fragment, new ProfileFragment())
+                    .addToBackStack(null)
+                    .commit();
         } else {
-            fragment = OtherProfileFragment.newInstance(userId);
+            requireActivity().getSupportFragmentManager()
+                    .beginTransaction()
+                    .replace(R.id.nav_host_fragment, OtherProfileFragment.newInstance(userId))
+                    .addToBackStack(null)
+                    .commit();
         }
-
-        requireActivity().getSupportFragmentManager()
-                .beginTransaction()
-                .replace(R.id.nav_host_fragment, fragment)
-                .addToBackStack(null)
-                .commit();
     }
 
     @Override
@@ -326,39 +248,38 @@ public class HomeFragment extends Fragment implements PostAdapter.OnPostActionLi
 
     @Override
     public void onCommentClicked(Post post) {
-        // Prevent multiple bottom sheets from opening
         if (getParentFragmentManager().findFragmentByTag("comments_bottom_sheet") != null) {
             return;
         }
-        
-        // Open comments in a bottom sheet with swipe-to-dismiss gesture
-        BottomSheetCommentFragment bottomSheetCommentFragment = BottomSheetCommentFragment.newInstance(post.getId());
-        bottomSheetCommentFragment.show(getParentFragmentManager(), "comments_bottom_sheet");
+        BottomSheetCommentFragment bottomSheet = BottomSheetCommentFragment.newInstance(post.getId());
+        bottomSheet.show(getParentFragmentManager(), "comments_bottom_sheet");
+    }
+
+    @Override
+    public void onShareClicked(Post post) {
+        Intent shareIntent = new Intent(Intent.ACTION_SEND);
+        shareIntent.setType("text/plain");
+        String shareBody = post.getCaption() != null ? post.getCaption() : "Check out this post on Social App!";
+        shareIntent.putExtra(Intent.EXTRA_TEXT, shareBody);
+        startActivity(Intent.createChooser(shareIntent, "Share post"));
+    }
+
+    @Override
+    public void onBookmarkClicked(Post post) {
+        homeViewModel.toggleBookmark(post);
     }
 
     @Override
     public void onComposerPostClicked(String content) {
         if (content.trim().isEmpty()) {
-            Toast.makeText(requireContext(), R.string.please_enter_content, Toast.LENGTH_SHORT).show();
+            Toast.makeText(requireContext(), "Vui lòng nhập nội dung", Toast.LENGTH_SHORT).show();
             return;
         }
-        
-        // Tạo bài viết nhanh (text-only) với privacy mặc định PUBLIC.
-        // Signature: createPost(content, mediaUris, location, taggedPeople, privacyLevel)
-        newPostViewModel.createPost(
-                content,
-                new java.util.ArrayList<>(),
-                null,
-                new java.util.ArrayList<>(),
-                "PUBLIC"
-        );
+        newPostViewModel.createPost(content, new java.util.ArrayList<>(), null, new java.util.ArrayList<>(), "PUBLIC");
     }
 
     @Override
     public void onComposerClicked() {
-        android.util.Log.d("HomeFragment", "Composer clicked - opening NewPostFragment");
-
-        // Open NewPostFragment
         NewPostFragment newPostFragment = NewPostFragment.newInstance();
         requireActivity().getSupportFragmentManager()
                 .beginTransaction()
@@ -389,56 +310,73 @@ public class HomeFragment extends Fragment implements PostAdapter.OnPostActionLi
 
     @Override
     public void onDeletePostClicked(Post post) {
-        new androidx.appcompat.app.AlertDialog.Builder(requireContext())
-                .setTitle(getString(R.string.delete_post_title))
-                .setMessage(getString(R.string.delete_post_confirm))
-                .setPositiveButton(getString(R.string.delete), (dialog, which) -> {
-                    newPostViewModel.deletePost(post.getId());
-                })
-                .setNegativeButton(getString(R.string.cancel_action), null)
+        new AlertDialog.Builder(requireContext())
+                .setTitle("Xóa bài viết")
+                .setMessage("Bạn có chắc chắn muốn xóa bài viết này?")
+                .setPositiveButton("Xóa", (dialog, which) -> newPostViewModel.deletePost(post.getId()))
+                .setNegativeButton("Hủy", null)
                 .show();
     }
+
+    // ==================== REPORT BÀI VIẾT ====================
 
     @Override
     public void onReportPostClicked(Post post) {
+        showReportDialog(post);
+    }
+
+    private void showReportDialog(Post post) {
+        String currentUserId = FirebaseManager.getInstance().getAuth().getUid();
+        if (currentUserId == null) {
+            Toast.makeText(requireContext(), "Vui lòng đăng nhập để báo cáo", Toast.LENGTH_SHORT).show();
+            return;
+        }
+
+        if (currentUserId.equals(post.getUserId())) {
+            Toast.makeText(requireContext(), "Bạn không thể báo cáo bài viết của chính mình", Toast.LENGTH_SHORT).show();
+            return;
+        }
+
         String[] reasons = {
-                getString(R.string.report_reason_inappropriate),
-                getString(R.string.report_reason_spam),
-                getString(R.string.report_reason_harassment),
-                getString(R.string.report_reason_false_info),
-                getString(R.string.report_reason_other)
+                "Nội dung không phù hợp",
+                "Spam",
+                "Quấy rối",
+                "Thông tin sai sự thật",
+                "Lý do khác"
         };
-        new androidx.appcompat.app.AlertDialog.Builder(requireContext())
-                .setTitle(getString(R.string.report_post_title))
+
+        new AlertDialog.Builder(requireContext())
+                .setTitle("Báo cáo bài viết")
                 .setItems(reasons, (dialog, which) -> {
                     String selectedReason = reasons[which];
-                    showReportDetailDialog(post, selectedReason);
+
+                    // CHỈ khi chọn "Lý do khác" (index 4) mới hiện dialog nhập chi tiết
+                    if (which == 4) {
+                        showDetailInputDialog(post, selectedReason);
+                    } else {
+                        homeViewModel.reportPost(post, selectedReason);
+                        Toast.makeText(requireContext(), "Cảm ơn bạn đã báo cáo. Chúng tôi sẽ xem xét.", Toast.LENGTH_LONG).show();
+                    }
                 })
-                .setNegativeButton(getString(R.string.cancel_action), null)
+                .setNegativeButton("Hủy", null)
                 .show();
     }
 
-    private void showReportDetailDialog(Post post, String baseReason) {
-        android.widget.EditText input = new android.widget.EditText(requireContext());
-        input.setHint(R.string.report_reason_hint);
-        int padding = (int) (16 * getResources().getDisplayMetrics().density);
-        android.widget.FrameLayout container = new android.widget.FrameLayout(requireContext());
-        container.addView(input);
-        input.setPadding(padding, padding, padding, padding);
+    private void showDetailInputDialog(Post post, String baseReason) {
+        EditText input = new EditText(requireContext());
+        input.setHint("Nhập chi tiết lý do");
+        input.setPadding(40, 20, 40, 20);
 
-        new androidx.appcompat.app.AlertDialog.Builder(requireContext())
-                .setTitle(R.string.report_reason_title)
-                .setView(container)
-                .setPositiveButton(R.string.report_submit, (dialog, which) -> {
+        new AlertDialog.Builder(requireContext())
+                .setTitle("Nhập chi tiết lý do báo cáo")
+                .setView(input)
+                .setPositiveButton("Gửi", (dialog, which) -> {
                     String detail = input.getText().toString().trim();
                     String finalReason = detail.isEmpty() ? baseReason : baseReason + ": " + detail;
                     homeViewModel.reportPost(post, finalReason);
-                    Toast.makeText(requireContext(), getString(R.string.report_thanks), Toast.LENGTH_SHORT).show();
+                    Toast.makeText(requireContext(), "Cảm ơn bạn đã báo cáo. Chúng tôi sẽ xem xét.", Toast.LENGTH_LONG).show();
                 })
-                .setNegativeButton(R.string.cancel_action, null)
+                .setNegativeButton("Hủy", null)
                 .show();
     }
 }
-
-
-

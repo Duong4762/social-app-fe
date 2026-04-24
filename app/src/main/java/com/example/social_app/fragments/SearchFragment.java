@@ -21,9 +21,7 @@ import androidx.recyclerview.widget.RecyclerView;
 
 import com.example.social_app.R;
 import com.example.social_app.adapters.PostAdapter;
-import com.example.social_app.fragments.OtherProfileFragment;
 import com.example.social_app.adapters.UserSearchAdapter;
-import com.example.social_app.data.model.Follow;
 import com.example.social_app.data.model.Post;
 import com.example.social_app.data.model.User;
 import com.example.social_app.firebase.FirebaseManager;
@@ -31,17 +29,22 @@ import com.example.social_app.viewmodels.HomeViewModel;
 import com.example.social_app.viewmodels.NewPostViewModel;
 import com.google.android.material.tabs.TabLayout;
 import com.google.firebase.firestore.FirebaseFirestore;
+import com.google.firebase.firestore.FieldValue;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
 import androidx.lifecycle.ViewModelProvider;
-
+import com.google.firebase.firestore.FieldValue;
+import java.util.HashMap;
+import java.util.Map;
 public class SearchFragment extends Fragment implements PostAdapter.OnPostActionListener {
 
     private EditText searchInput;
@@ -67,11 +70,11 @@ public class SearchFragment extends Fragment implements PostAdapter.OnPostAction
     private List<User> filteredUsers = new ArrayList<>();
     private List<Post> filteredPosts = new ArrayList<>();
 
+    private Set<String> followedUserIds = new HashSet<>();
+
     private ExecutorService executor = Executors.newSingleThreadExecutor();
     private Handler mainHandler = new Handler(Looper.getMainLooper());
     private FirebaseFirestore firestore;
-    private String currentUserId;
-    private final Set<String> myFollowingUserIds = new HashSet<>();
 
     private boolean isSearchMode = false;
     private String lastSearchQuery = "";
@@ -93,6 +96,7 @@ public class SearchFragment extends Fragment implements PostAdapter.OnPostAction
         loadSearchData();
     }
 
+
     private void initViews(View view) {
         searchInput = view.findViewById(R.id.etSearch);
         suggestedLabel = view.findViewById(R.id.suggested_label);
@@ -110,11 +114,8 @@ public class SearchFragment extends Fragment implements PostAdapter.OnPostAction
         tabLayout.addTab(tabLayout.newTab().setText(getString(R.string.tab_posts)));
     }
 
-    private void setupRecyclerViews() {
-        currentUserId = FirebaseManager.getInstance().getAuth().getCurrentUser() != null
-                ? FirebaseManager.getInstance().getAuth().getCurrentUser().getUid()
-                : null;
 
+    private void setupRecyclerViews() {
         // Suggested users adapter (dùng chung UserSearchAdapter)
         suggestedUsersRecycler.setLayoutManager(new LinearLayoutManager(requireContext()));
         suggestedAdapter = new UserSearchAdapter(requireContext(), new UserSearchAdapter.OnUserActionListener() {
@@ -125,11 +126,9 @@ public class SearchFragment extends Fragment implements PostAdapter.OnPostAction
 
             @Override
             public void onFollowClicked(User user, int position) {
-                toggleFollow(user);
+                handleFollowClick(user, position, suggestedAdapter);
             }
         });
-        suggestedAdapter.setCurrentUserId(currentUserId);
-        suggestedAdapter.setHideFollowButtonForSelf(true);
         suggestedUsersRecycler.setAdapter(suggestedAdapter);
 
         // Search users adapter
@@ -142,11 +141,9 @@ public class SearchFragment extends Fragment implements PostAdapter.OnPostAction
 
             @Override
             public void onFollowClicked(User user, int position) {
-                toggleFollow(user);
+                handleFollowClick(user, position, userSearchAdapter);
             }
         });
-        userSearchAdapter.setCurrentUserId(currentUserId);
-        userSearchAdapter.setHideFollowButtonForSelf(true);
         usersRecyclerView.setAdapter(userSearchAdapter);
 
         // Search posts adapter
@@ -170,6 +167,80 @@ public class SearchFragment extends Fragment implements PostAdapter.OnPostAction
                 updateResultTabVisibility(tab.getPosition());
             }
         });
+    }
+
+    private void handleFollowClick(User user, int position, UserSearchAdapter adapter) {
+        String currentUserId = FirebaseManager.getInstance().getAuth().getUid();
+        if (currentUserId == null || user == null || user.getId() == null) {
+            Toast.makeText(requireContext(), "Vui lòng đăng nhập", Toast.LENGTH_SHORT).show();
+            return;
+        }
+
+        if (currentUserId.equals(user.getId())) {
+            Toast.makeText(requireContext(), "Không thể theo dõi chính mình", Toast.LENGTH_SHORT).show();
+            return;
+        }
+
+        boolean isFollowing = followedUserIds.contains(user.getId());
+        String followDocId = currentUserId + "_" + user.getId();
+
+        if (isFollowing) {
+            // Unfollow
+            firestore.collection(FirebaseManager.COLLECTION_FOLLOWS)
+                    .document(followDocId)
+                    .delete()
+                    .addOnSuccessListener(aVoid -> {
+                        followedUserIds.remove(user.getId());
+                        updateAllAdaptersFollowState();
+                        Toast.makeText(requireContext(), "Đã bỏ theo dõi", Toast.LENGTH_SHORT).show();
+                    })
+                    .addOnFailureListener(e -> {
+                        Toast.makeText(requireContext(), "Lỗi khi bỏ theo dõi", Toast.LENGTH_SHORT).show();
+                    });
+        } else {
+            // Follow
+            Map<String, Object> followData = new HashMap<>();
+            followData.put("followerId", currentUserId);
+            followData.put("followingId", user.getId());
+            followData.put("createdAt", FieldValue.serverTimestamp());
+
+            firestore.collection(FirebaseManager.COLLECTION_FOLLOWS)
+                    .document(followDocId)
+                    .set(followData)
+                    .addOnSuccessListener(aVoid -> {
+                        followedUserIds.add(user.getId());
+                        updateAllAdaptersFollowState();
+                        Toast.makeText(requireContext(), "Đã theo dõi", Toast.LENGTH_SHORT).show();
+                        createFollowNotification(user.getId(), currentUserId);
+                    })
+                    .addOnFailureListener(e -> {
+                        Toast.makeText(requireContext(), "Lỗi khi theo dõi", Toast.LENGTH_SHORT).show();
+                    });
+        }
+    }
+
+    private void updateAllAdaptersFollowState() {
+        if (suggestedAdapter != null) {
+            suggestedAdapter.setFollowedUserIds(followedUserIds);
+        }
+        if (userSearchAdapter != null) {
+            userSearchAdapter.setFollowedUserIds(followedUserIds);
+        }
+    }
+
+    private void createFollowNotification(String targetUserId, String followerId) {
+        String notificationId = "follow_" + followerId + "_" + targetUserId;
+        Map<String, Object> notification = new HashMap<>();
+        notification.put("id", notificationId);
+        notification.put("userId", targetUserId);
+        notification.put("type", "FOLLOW");
+        notification.put("referenceId", followerId);
+        notification.put("isRead", false);
+        notification.put("createdAt", FieldValue.serverTimestamp());
+
+        firestore.collection(FirebaseManager.COLLECTION_NOTIFICATIONS)
+                .document(notificationId)
+                .set(notification);
     }
 
     private void setupSearchListener() {
@@ -209,7 +280,6 @@ public class SearchFragment extends Fragment implements PostAdapter.OnPostAction
     private void loadSearchData() {
         loadUsersFromFirebase();
         loadPostsFromFirebase();
-        loadFollowingState();
     }
 
     private void loadPostsFromFirebase() {
@@ -244,6 +314,10 @@ public class SearchFragment extends Fragment implements PostAdapter.OnPostAction
 
     private void loadUsersFromFirebase() {
         setGlobalLoading(true);
+        String currentUid = FirebaseManager.getInstance().getAuth().getCurrentUser() != null
+                ? FirebaseManager.getInstance().getAuth().getCurrentUser().getUid()
+                : null;
+
         firestore.collection(FirebaseManager.COLLECTION_USERS)
                 .get()
                 .addOnSuccessListener(queryDocumentSnapshots -> {
@@ -258,10 +332,10 @@ public class SearchFragment extends Fragment implements PostAdapter.OnPostAction
                             user.setId(document.getId());
                         }
 
-                        if (currentUserId != null && currentUserId.equals(user.getId())) {
+                        if (currentUid != null && currentUid.equals(user.getId())) {
                             continue;
                         }
-                        if (!isNormalUser(user)) {
+                        if (isAdminUser(user)) {
                             continue;
                         }
                         users.add(user);
@@ -277,6 +351,7 @@ public class SearchFragment extends Fragment implements PostAdapter.OnPostAction
                     } else {
                         showSuggestedMode();
                     }
+                    loadFollowingList();
                 })
                 .addOnFailureListener(e -> {
                     if (!isAdded()) {
@@ -289,75 +364,23 @@ public class SearchFragment extends Fragment implements PostAdapter.OnPostAction
                 });
     }
 
-    private void loadFollowingState() {
-        if (currentUserId == null || currentUserId.trim().isEmpty()) {
-            myFollowingUserIds.clear();
-            syncFollowStateToAdapters();
-            return;
-        }
+    private void loadFollowingList() {
+        String currentUserId = FirebaseManager.getInstance().getAuth().getUid();
+        if (currentUserId == null) return;
+
         firestore.collection(FirebaseManager.COLLECTION_FOLLOWS)
                 .whereEqualTo("followerId", currentUserId)
                 .get()
-                .addOnSuccessListener(queryDocumentSnapshots -> {
-                    myFollowingUserIds.clear();
-                    for (com.google.firebase.firestore.DocumentSnapshot doc : queryDocumentSnapshots.getDocuments()) {
+                .addOnSuccessListener(query -> {
+                    followedUserIds.clear();
+                    for (var doc : query.getDocuments()) {
                         String followingId = doc.getString("followingId");
-                        if (followingId != null && !followingId.trim().isEmpty()) {
-                            myFollowingUserIds.add(followingId);
+                        if (followingId != null) {
+                            followedUserIds.add(followingId);
                         }
                     }
-                    syncFollowStateToAdapters();
-                })
-                .addOnFailureListener(e -> {
-                    myFollowingUserIds.clear();
-                    syncFollowStateToAdapters();
+                    updateAllAdaptersFollowState();
                 });
-    }
-
-    private void syncFollowStateToAdapters() {
-        if (suggestedAdapter != null) {
-            suggestedAdapter.setFollowedUserIds(myFollowingUserIds);
-        }
-        if (userSearchAdapter != null) {
-            userSearchAdapter.setFollowedUserIds(myFollowingUserIds);
-        }
-    }
-
-    private void toggleFollow(@Nullable User user) {
-        if (user == null || user.getId() == null || user.getId().trim().isEmpty()) {
-            return;
-        }
-        if (currentUserId == null || currentUserId.trim().isEmpty()) {
-            Toast.makeText(requireContext(), "Vui long dang nhap de theo doi", Toast.LENGTH_SHORT).show();
-            return;
-        }
-        String targetUserId = user.getId();
-        boolean isFollowing = myFollowingUserIds.contains(targetUserId);
-        String followDocId = currentUserId + "_" + targetUserId;
-
-        if (isFollowing) {
-            firestore.collection(FirebaseManager.COLLECTION_FOLLOWS)
-                    .document(followDocId)
-                    .delete()
-                    .addOnSuccessListener(unused -> {
-                        myFollowingUserIds.remove(targetUserId);
-                        syncFollowStateToAdapters();
-                    })
-                    .addOnFailureListener(e ->
-                            Toast.makeText(requireContext(), getString(R.string.follow_action_failed), Toast.LENGTH_SHORT).show());
-            return;
-        }
-
-        Follow follow = new Follow(followDocId, currentUserId, targetUserId);
-        firestore.collection(FirebaseManager.COLLECTION_FOLLOWS)
-                .document(followDocId)
-                .set(follow)
-                .addOnSuccessListener(unused -> {
-                    myFollowingUserIds.add(targetUserId);
-                    syncFollowStateToAdapters();
-                })
-                .addOnFailureListener(e ->
-                        Toast.makeText(requireContext(), getString(R.string.follow_action_failed), Toast.LENGTH_SHORT).show());
     }
 
     private void showSuggestedMode() {
@@ -365,6 +388,7 @@ public class SearchFragment extends Fragment implements PostAdapter.OnPostAction
 
         // Hiển thị TẤT CẢ user trong danh sách Suggested
         suggestedAdapter.setUsers(allUsers);
+        suggestedAdapter.setFollowedUserIds(followedUserIds);
 
         suggestedLabel.setVisibility(View.VISIBLE);
         suggestedUsersRecycler.setVisibility(View.VISIBLE);
@@ -415,6 +439,7 @@ public class SearchFragment extends Fragment implements PostAdapter.OnPostAction
                 filteredPosts = posts;
 
                 userSearchAdapter.setUsers(filteredUsers);
+                userSearchAdapter.setFollowedUserIds(followedUserIds);
                 postSearchAdapter.setPosts(filteredPosts);
 
                 searchLoadingProgress.setVisibility(View.GONE);
@@ -474,8 +499,6 @@ public class SearchFragment extends Fragment implements PostAdapter.OnPostAction
         androidx.fragment.app.Fragment fragment;
 
         if (userId.equals(currentUserId)) {
-            // Thay vì replace bằng ProfileFragment mới, có thể chuyển sang tab Profile nếu cần, 
-            // nhưng ở đây ta cứ replace để đồng bộ flow OtherProfile.
             fragment = new ProfileFragment();
         } else {
             fragment = OtherProfileFragment.newInstance(userId);
@@ -493,11 +516,11 @@ public class SearchFragment extends Fragment implements PostAdapter.OnPostAction
         onUserClicked(user.getId());
     }
 
-    private boolean isNormalUser(@Nullable User user) {
+    private boolean isAdminUser(@Nullable User user) {
         if (user == null || user.getRole() == null) {
             return false;
         }
-        return "USER".equalsIgnoreCase(user.getRole().trim());
+        return "ADMIN".equalsIgnoreCase(user.getRole().trim());
     }
 
     @Override
@@ -557,41 +580,56 @@ public class SearchFragment extends Fragment implements PostAdapter.OnPostAction
 
     @Override
     public void onReportPostClicked(Post post) {
+        String currentUserId = FirebaseManager.getInstance().getAuth().getUid();
+        if (currentUserId == null) {
+            Toast.makeText(requireContext(), "Vui lòng đăng nhập để báo cáo", Toast.LENGTH_SHORT).show();
+            return;
+        }
+
+        if (currentUserId.equals(post.getUserId())) {
+            Toast.makeText(requireContext(), "Bạn không thể báo cáo bài viết của chính mình", Toast.LENGTH_SHORT).show();
+            return;
+        }
+
         String[] reasons = {
-                getString(R.string.report_reason_inappropriate),
-                getString(R.string.report_reason_spam),
-                getString(R.string.report_reason_harassment),
-                getString(R.string.report_reason_false_info),
-                getString(R.string.report_reason_other)
+                "Nội dung không phù hợp",
+                "Spam",
+                "Quấy rối",
+                "Thông tin sai sự thật",
+                "Lý do khác"
         };
+
         new androidx.appcompat.app.AlertDialog.Builder(requireContext())
-                .setTitle(getString(R.string.report_post_title))
+                .setTitle("Báo cáo bài viết")
                 .setItems(reasons, (dialog, which) -> {
                     String selectedReason = reasons[which];
-                    showReportDetailDialog(post, selectedReason);
+
+                    if (which == 4) {
+                        showPostReportDetailDialog(post, selectedReason);
+                    } else {
+                        homeViewModel.reportPost(post, selectedReason);
+                        Toast.makeText(requireContext(), "Cảm ơn bạn đã báo cáo. Chúng tôi sẽ xem xét.", Toast.LENGTH_LONG).show();
+                    }
                 })
-                .setNegativeButton(getString(R.string.cancel_action), null)
+                .setNegativeButton("Hủy", null)
                 .show();
     }
 
-    private void showReportDetailDialog(Post post, String baseReason) {
+    private void showPostReportDetailDialog(Post post, String baseReason) {
         android.widget.EditText input = new android.widget.EditText(requireContext());
-        input.setHint(R.string.report_reason_hint);
-        int padding = (int) (16 * getResources().getDisplayMetrics().density);
-        android.widget.FrameLayout container = new android.widget.FrameLayout(requireContext());
-        container.addView(input);
-        input.setPadding(padding, padding, padding, padding);
+        input.setHint("Nhập chi tiết lý do");
+        input.setPadding(40, 20, 40, 20);
 
         new androidx.appcompat.app.AlertDialog.Builder(requireContext())
-                .setTitle(R.string.report_reason_title)
-                .setView(container)
-                .setPositiveButton(R.string.report_submit, (dialog, which) -> {
+                .setTitle("Nhập chi tiết lý do báo cáo")
+                .setView(input)
+                .setPositiveButton("Gửi", (dialog, which) -> {
                     String detail = input.getText().toString().trim();
                     String finalReason = detail.isEmpty() ? baseReason : baseReason + ": " + detail;
                     homeViewModel.reportPost(post, finalReason);
-                    Toast.makeText(requireContext(), getString(R.string.report_thanks), Toast.LENGTH_SHORT).show();
+                    Toast.makeText(requireContext(), "Cảm ơn bạn đã báo cáo. Chúng tôi sẽ xem xét.", Toast.LENGTH_LONG).show();
                 })
-                .setNegativeButton(R.string.cancel_action, null)
+                .setNegativeButton("Hủy", null)
                 .show();
     }
 }

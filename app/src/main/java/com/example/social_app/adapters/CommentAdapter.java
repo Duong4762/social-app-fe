@@ -5,7 +5,6 @@ import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
-import android.widget.ImageButton;
 import android.widget.ImageView;
 import android.widget.TextView;
 
@@ -26,66 +25,43 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
-/**
- * RecyclerView Adapter for displaying comments.
- * Supports nested replies with indentation.
- * Handles like, reply, and view more replies interactions.
- * Facebook-like comment display with proper UI.
- */
 public class CommentAdapter extends RecyclerView.Adapter<CommentAdapter.CommentViewHolder> {
 
     private List<Comment> comments;
     private Context context;
     private OnCommentActionListener actionListener;
     private final Set<String> likedCommentIds = new HashSet<>();
-    private static final String TAG = "CommentAdapter";
 
-    /**
-     * Interface for handling comment interactions.
-     */
     public interface OnCommentActionListener {
-        void onUserClicked(String userId);
         void onLikeClicked(Comment comment, int position);
         void onReplyClicked(Comment comment, String userName);
         void onViewMoreRepliesClicked(Comment comment);
         void onCommentLongPressed(Comment comment, int position);
+        void onUserClicked(String userId);
     }
 
-    /**
-     * Constructor for CommentAdapter.
-     *
-     * @param context Android context
-     * @param actionListener Listener for comment actions
-     */
     public CommentAdapter(Context context, OnCommentActionListener actionListener) {
         this.context = context;
         this.comments = new ArrayList<>();
         this.actionListener = actionListener;
     }
 
-    /**
-     * Updates the adapter with a new list of comments.
-     * @param comments New list of comments
-     */
     public void setComments(List<Comment> comments) {
         this.comments.clear();
         if (comments != null) {
-            // Lấy tất cả bình luận gốc
             List<Comment> rootComments = new ArrayList<>();
             for (Comment c : comments) {
                 if (c.getParentId() == null) {
                     rootComments.add(c);
                 }
             }
-            
-            // Sắp xếp bình luận gốc: Mới nhất lên đầu
+
             rootComments.sort((c1, c2) -> {
                 long t1 = c1.getCreatedAt() != null ? c1.getCreatedAt().getTime() : 0;
                 long t2 = c2.getCreatedAt() != null ? c2.getCreatedAt().getTime() : 0;
                 return Long.compare(t2, t1);
             });
 
-            // Xây dựng cây bình luận
             for (Comment root : rootComments) {
                 this.comments.add(root);
                 addRepliesRecursively(root.getId(), comments, 1);
@@ -101,8 +77,7 @@ public class CommentAdapter extends RecyclerView.Adapter<CommentAdapter.CommentV
                 replies.add(c);
             }
         }
-        
-        // Sắp xếp reply: Cũ nhất lên đầu để đọc theo luồng
+
         replies.sort((c1, c2) -> {
             long t1 = c1.getCreatedAt() != null ? c1.getCreatedAt().getTime() : 0;
             long t2 = c2.getCreatedAt() != null ? c2.getCreatedAt().getTime() : 0;
@@ -115,19 +90,11 @@ public class CommentAdapter extends RecyclerView.Adapter<CommentAdapter.CommentV
         }
     }
 
-    /**
-     * Adds a single comment to the top of the list.
-     * @param comment Comment to add
-     */
     public void addComment(Comment comment) {
         this.comments.add(0, comment);
         notifyItemInserted(0);
     }
 
-    /**
-     * Removes a comment at the specified position.
-     * @param position Position to remove
-     */
     public void removeComment(int position) {
         if (position >= 0 && position < comments.size()) {
             this.comments.remove(position);
@@ -135,11 +102,6 @@ public class CommentAdapter extends RecyclerView.Adapter<CommentAdapter.CommentV
         }
     }
 
-    /**
-     * Updates a comment at the specified position.
-     * @param position Position to update
-     * @param comment Updated comment
-     */
     public void updateComment(int position, Comment comment) {
         if (position >= 0 && position < comments.size()) {
             this.comments.set(position, comment);
@@ -150,37 +112,21 @@ public class CommentAdapter extends RecyclerView.Adapter<CommentAdapter.CommentV
     @NonNull
     @Override
     public CommentViewHolder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
-        android.util.Log.d("CommentAdapter", "═══ onCreateViewHolder() CALLED ═══");
-        android.util.Log.d("CommentAdapter", "Parent: " + parent.getClass().getSimpleName());
-        android.util.Log.d("CommentAdapter", "Parent width: " + parent.getWidth() + "px");
-
         View view = LayoutInflater.from(context).inflate(R.layout.item_comment, parent, false);
-
-        android.util.Log.d("CommentAdapter", "View inflated: " + view.getClass().getSimpleName());
-        android.util.Log.d("CommentAdapter", "View width: " + view.getWidth() + "px");
-        android.util.Log.d("CommentAdapter", "View height: " + view.getHeight() + "px");
-        android.util.Log.d("CommentAdapter", "═══ ViewHolder created ═══");
-
         return new CommentViewHolder(view);
     }
 
     @Override
     public void onBindViewHolder(@NonNull CommentViewHolder holder, int position) {
-        android.util.Log.d("CommentAdapter", "onBindViewHolder() at position " + position);
         if (position >= 0 && position < comments.size()) {
             Comment comment = comments.get(position);
             holder.bind(comment, position);
-            android.util.Log.d("CommentAdapter", "✅ Binding complete for position " + position);
-        } else {
-            android.util.Log.w("CommentAdapter", "❌ Invalid position: " + position);
         }
     }
 
     @Override
     public int getItemCount() {
-        int count = comments.size();
-        android.util.Log.d("CommentAdapter", "getItemCount() returning: " + count);
-        return count;
+        return comments.size();
     }
 
     class CommentViewHolder extends RecyclerView.ViewHolder {
@@ -204,13 +150,9 @@ public class CommentAdapter extends RecyclerView.Adapter<CommentAdapter.CommentV
             commentText = itemView.findViewById(R.id.comment_text);
             timestamp = itemView.findViewById(R.id.comment_timestamp);
             commentBubble = itemView.findViewById(R.id.comment_bubble);
-
-            // Media views
             mediaContainer = itemView.findViewById(R.id.comment_media_container);
             mediaImage = itemView.findViewById(R.id.comment_media_image);
             gifIndicator = itemView.findViewById(R.id.comment_gif_indicator);
-
-            // Interaction views
             likeCount = itemView.findViewById(R.id.comment_like_count);
             likeButtonText = itemView.findViewById(R.id.comment_like_button_text);
             replyButtonText = itemView.findViewById(R.id.comment_reply_button_text);
@@ -226,7 +168,7 @@ public class CommentAdapter extends RecyclerView.Adapter<CommentAdapter.CommentV
             if (pid != null) {
                 level = 1;
                 String currentPid = pid;
-                int maxDepth = 4; // Facebook thường không thụt lề quá sâu
+                int maxDepth = 4;
                 int depth = 1;
                 while (currentPid != null && depth < maxDepth) {
                     boolean foundParent = false;
@@ -244,7 +186,7 @@ public class CommentAdapter extends RecyclerView.Adapter<CommentAdapter.CommentV
                     if (!foundParent) break;
                 }
             }
-            
+
             int marginStart = (int) (level * 36 * context.getResources().getDisplayMetrics().density);
             ViewGroup.MarginLayoutParams params = (ViewGroup.MarginLayoutParams) itemView.getLayoutParams();
             if (params != null) {
@@ -274,13 +216,35 @@ public class CommentAdapter extends RecyclerView.Adapter<CommentAdapter.CommentV
                         });
             }
 
-            View.OnClickListener userClickListener = v -> {
-                if (actionListener != null && comment.getUserId() != null && !comment.getUserId().trim().isEmpty()) {
-                    actionListener.onUserClicked(comment.getUserId());
-                }
-            };
-            if (avatar != null) avatar.setOnClickListener(userClickListener);
-            if (username != null) username.setOnClickListener(userClickListener);
+            // Cách 1: Click trực tiếp vào avatar
+            if (avatar != null) {
+                avatar.setOnClickListener(v -> {
+                    Log.d("CommentAdapter", "Avatar clicked! userId: " + comment.getUserId());
+                    if (actionListener != null && comment.getUserId() != null) {
+                        actionListener.onUserClicked(comment.getUserId());
+                    } else {
+                        Log.e("CommentAdapter", "actionListener null or userId null");
+                    }
+                });
+            }
+
+            // Cách 2: Click trực tiếp vào username
+            if (username != null) {
+                username.setOnClickListener(v -> {
+                    Log.d("CommentAdapter", "Username clicked! userId: " + comment.getUserId());
+                    if (actionListener != null && comment.getUserId() != null) {
+                        actionListener.onUserClicked(comment.getUserId());
+                    } else {
+                        Log.e("CommentAdapter", "actionListener null or userId null");
+                    }
+                });
+            }
+
+            // Cách 3: Click vào itemView và kiểm tra tọa độ click (dự phòng)
+            itemView.setOnClickListener(v -> {
+                Log.d("CommentAdapter", "ItemView clicked");
+                // Mặc định không làm gì, chỉ để debug
+            });
 
             if (commentText != null) {
                 String mediaType = comment.getMediaType();
@@ -298,22 +262,18 @@ public class CommentAdapter extends RecyclerView.Adapter<CommentAdapter.CommentV
                     commentText.setText(content != null ? content : "");
                 }
             }
+
             bindCommentMedia(comment);
             bindLikeInteraction(comment, position);
-            
+
             if (replyButtonText != null) {
                 replyButtonText.setOnClickListener(v -> {
                     if (actionListener != null) {
-                        String name = username.getText().toString();
+                        String name = username != null ? username.getText().toString() : "User";
                         actionListener.onReplyClicked(comment, name);
                     }
                 });
             }
-
-            itemView.setOnLongClickListener(v -> {
-                if (actionListener != null) actionListener.onCommentLongPressed(comment, position);
-                return true;
-            });
         }
 
         private void bindUserInfo(String userName, long timestampMillis) {
@@ -339,7 +299,7 @@ public class CommentAdapter extends RecyclerView.Adapter<CommentAdapter.CommentV
 
         private void bindLikeInteraction(Comment comment, int position) {
             boolean isLiked = likedCommentIds.contains(comment.getId());
-            
+
             if (likeButtonText != null) {
                 likeButtonText.setText(isLiked ? context.getString(R.string.liked) : context.getString(R.string.like));
                 likeButtonText.setTextColor(context.getResources().getColor(
@@ -374,7 +334,3 @@ public class CommentAdapter extends RecyclerView.Adapter<CommentAdapter.CommentV
         }
     }
 }
-
-
-
-

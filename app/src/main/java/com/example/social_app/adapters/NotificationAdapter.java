@@ -1,7 +1,6 @@
 package com.example.social_app.adapters;
 
 import android.content.Context;
-import android.text.format.DateUtils;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -9,24 +8,30 @@ import android.widget.ImageView;
 import android.widget.TextView;
 
 import androidx.annotation.NonNull;
+import androidx.core.content.ContextCompat;
 import androidx.recyclerview.widget.RecyclerView;
 
+import com.bumptech.glide.Glide;
 import com.example.social_app.R;
 import com.example.social_app.data.model.Notification;
 import com.example.social_app.data.model.User;
 import com.example.social_app.firebase.FirebaseManager;
-import com.example.social_app.utils.UserAvatarLoader;
 import com.google.firebase.firestore.FirebaseFirestore;
 
 import java.util.ArrayList;
 import java.util.Date;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Locale;
+import java.util.Map;
 
 public class NotificationAdapter extends RecyclerView.Adapter<NotificationAdapter.NotificationViewHolder> {
 
     private Context context;
-    private List<Notification> notifications = new ArrayList<>();
+    private List<Notification> notifications;
     private OnNotificationClickListener listener;
+    private FirebaseFirestore db;
+    private Map<String, User> userCache = new HashMap<>();
 
     public interface OnNotificationClickListener {
         void onNotificationClick(Notification notification);
@@ -35,29 +40,104 @@ public class NotificationAdapter extends RecyclerView.Adapter<NotificationAdapte
 
     public NotificationAdapter(Context context, OnNotificationClickListener listener) {
         this.context = context;
+        this.notifications = new ArrayList<>();
         this.listener = listener;
+        this.db = FirebaseFirestore.getInstance();
     }
 
     public void setNotifications(List<Notification> notifications) {
-        this.notifications = notifications;
+        this.notifications = notifications != null ? notifications : new ArrayList<>();
         notifyDataSetChanged();
     }
 
     @NonNull
     @Override
     public NotificationViewHolder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
-        View view = LayoutInflater.from(parent.getContext()).inflate(R.layout.item_notification, parent, false);
+        View view = LayoutInflater.from(context).inflate(R.layout.item_notification, parent, false);
         return new NotificationViewHolder(view);
     }
 
     @Override
     public void onBindViewHolder(@NonNull NotificationViewHolder holder, int position) {
-        holder.bind(notifications.get(position), position);
+        Notification notification = notifications.get(position);
+        holder.bind(notification, position);
     }
 
     @Override
     public int getItemCount() {
         return notifications.size();
+    }
+
+    private void loadUserInfo(String userId, TextView contentText, String type, ImageView avatar) {
+        if (userId == null || userId.isEmpty()) {
+            if (contentText != null) {
+                contentText.setText("Ai đó " + getActionText(type));
+            }
+            return;
+        }
+
+        // Check cache
+        if (userCache.containsKey(userId)) {
+            User user = userCache.get(userId);
+            updateContentText(contentText, user, type);
+            if (avatar != null && user.getAvatarUrl() != null && !user.getAvatarUrl().isEmpty()) {
+                Glide.with(context).load(user.getAvatarUrl()).into(avatar);
+            }
+            return;
+        }
+
+        // Load from Firestore
+        db.collection(FirebaseManager.COLLECTION_USERS)
+                .document(userId)
+                .get()
+                .addOnSuccessListener(documentSnapshot -> {
+                    if (documentSnapshot.exists()) {
+                        User user = documentSnapshot.toObject(User.class);
+                        if (user != null) {
+                            user.setId(documentSnapshot.getId());
+                            userCache.put(userId, user);
+                            updateContentText(contentText, user, type);
+                            if (avatar != null && user.getAvatarUrl() != null && !user.getAvatarUrl().isEmpty()) {
+                                Glide.with(context).load(user.getAvatarUrl()).into(avatar);
+                            } else if (avatar != null) {
+                                avatar.setImageResource(R.drawable.avatar_placeholder);
+                            }
+                        }
+                    } else {
+                        if (contentText != null) {
+                            contentText.setText("Người dùng " + getActionText(type));
+                        }
+                    }
+                })
+                .addOnFailureListener(e -> {
+                    if (contentText != null) {
+                        contentText.setText("Ai đó " + getActionText(type));
+                    }
+                });
+    }
+
+    private void updateContentText(TextView contentText, User user, String type) {
+        if (contentText == null) return;
+        String name = user.getFullName() != null && !user.getFullName().isEmpty()
+                ? user.getFullName()
+                : (user.getUsername() != null ? user.getUsername() : "Người dùng");
+        contentText.setText(name + " " + getActionText(type));
+    }
+
+    private String getActionText(String type) {
+        if (type == null) return context.getString(R.string.notification_message);
+        switch (type.toUpperCase()) {
+            case "LIKE":
+                return context.getString(R.string.notification_like);
+            case "COMMENT":
+                return context.getString(R.string.notification_comment);
+            case "FOLLOW":
+                return context.getString(R.string.notification_follow);
+            case "MESSAGE":
+                return context.getString(R.string.notification_message);
+            default:
+                return context.getString(R.string.notification_message);
+        }
     }
 
     class NotificationViewHolder extends RecyclerView.ViewHolder {
@@ -67,137 +147,105 @@ public class NotificationAdapter extends RecyclerView.Adapter<NotificationAdapte
         ImageView typeIcon;
         View unreadIndicator;
 
-        public NotificationViewHolder(@NonNull View itemView) {
+        NotificationViewHolder(@NonNull View itemView) {
             super(itemView);
             avatar = itemView.findViewById(R.id.notification_avatar);
             contentText = itemView.findViewById(R.id.notification_content);
             timeText = itemView.findViewById(R.id.notification_time);
             typeIcon = itemView.findViewById(R.id.notification_type_icon);
             unreadIndicator = itemView.findViewById(R.id.unread_indicator);
+        }
 
+        void bind(Notification notification, int position) {
+            String type = notification.getType();
+            String referenceId = notification.getReferenceId();
+
+            // Load user info from referenceId (người tạo ra hành động)
+            loadUserInfo(referenceId, contentText, type, avatar);
+
+            // Format thời gian
+            String timeStr = formatTime(notification.getCreatedAt());
+            timeText.setText(timeStr);
+
+            // Set icon dựa trên type
+            setTypeIcon(type);
+
+            // Hiển thị unread indicator
+            if (unreadIndicator != null) {
+                unreadIndicator.setVisibility(notification.isRead() ? View.GONE : View.VISIBLE);
+            }
+
+            // Click listener
             itemView.setOnClickListener(v -> {
-                int pos = getAdapterPosition();
-                if (pos != RecyclerView.NO_POSITION && listener != null) {
-                    listener.onNotificationClick(notifications.get(pos));
+                if (listener != null) {
+                    listener.onNotificationClick(notification);
+                    if (!notification.isRead()) {
+                        listener.onMarkAsRead(notification, position);
+                    }
                 }
             });
 
+            // Long press to mark as read
             itemView.setOnLongClickListener(v -> {
-                int pos = getAdapterPosition();
-                if (pos != RecyclerView.NO_POSITION && listener != null) {
-                    listener.onMarkAsRead(notifications.get(pos), pos);
+                if (!notification.isRead() && listener != null) {
+                    listener.onMarkAsRead(notification, position);
                 }
                 return true;
             });
         }
 
-        void bind(Notification notification, int position) {
-            if (notification == null) return;
-
-            // Reset UI state
-            avatar.setImageResource(R.drawable.avatar_placeholder);
-            contentText.setText("...");
-            
-            String type = notification.getType() != null ? notification.getType() : "";
-            String actorId = notification.getActorId();
-
-            if (actorId != null && !actorId.isEmpty()) {
-                FirebaseFirestore.getInstance().collection(FirebaseManager.COLLECTION_USERS)
-                        .document(actorId)
-                        .get()
-                        .addOnSuccessListener(documentSnapshot -> {
-                            if (context == null || itemView.getParent() == null) return;
-                            
-                            try {
-                                if (documentSnapshot.exists()) {
-                                    User actor = documentSnapshot.toObject(User.class);
-                                    if (actor != null) {
-                                        String name = (actor.getFullName() != null && !actor.getFullName().isEmpty()) 
-                                                ? actor.getFullName() : actor.getUsername();
-                                        contentText.setText(buildContent(name, type));
-                                        UserAvatarLoader.load(avatar, actor.getAvatarUrl());
-                                    }
-                                } else {
-                                    contentText.setText(buildContent("Người dùng", type));
-                                }
-                            } catch (Exception ignored) {}
-                        })
-                        .addOnFailureListener(e -> {
-                            if (contentText != null) contentText.setText(buildContent("Người dùng", type));
-                        });
-            } else {
-                contentText.setText(buildContent("Hệ thống", type));
-            }
-
-            try {
-                timeText.setText(formatTime(notification.getCreatedAt()));
-                unreadIndicator.setVisibility(notification.isRead() ? View.GONE : View.VISIBLE);
-                setIcon(type);
-            } catch (Exception ignored) {}
-        }
-
-        private String buildContent(String name, String type) {
-            if (type == null) return name + " đã tương tác với bạn";
-            switch (type.toUpperCase()) {
-                case "LIKE": return name + " đã thích bài viết của bạn";
-                case "COMMENT": return name + " đã bình luận về bài viết";
-                case "FOLLOW": return name + " đã bắt đầu theo dõi bạn";
-                case "MESSAGE": return name + " đã gửi một tin nhắn";
-                case "LIKE_COMMENT": return name + " đã thích bình luận của bạn";
-                case "REPLY_COMMENT": return name + " đã trả lời bình luận";
-                default: return name + " đã gửi một thông báo";
-            }
-        }
-
-        private void setIcon(String type) {
+        private void setTypeIcon(String type) {
             if (typeIcon == null) return;
-            int resId = R.drawable.ic_heart_filled; // Mặc định là tim
-            try {
-                switch (type.toUpperCase()) {
-                    case "LIKE":
-                    case "LIKE_COMMENT":
-                        resId = R.drawable.ic_heart_filled;
-                        break;
-                    case "COMMENT":
-                    case "REPLY_COMMENT":
-                        resId = R.drawable.ic_comment; 
-                        break;
-                    case "FOLLOW":
-                        resId = R.drawable.ic_follow;
-                        break;
-                    case "MESSAGE":
-                        resId = R.drawable.ic_message;
-                        if (typeIcon != null) {
-                            typeIcon.setColorFilter(context.getResources().getColor(R.color.primary_blue, context.getTheme()));
-                        }
-                        break;
-                }
-                typeIcon.setImageResource(resId);
-                
-                // Reset color filter for other types if needed, or set specific colors
-                if (!"MESSAGE".equalsIgnoreCase(type)) {
-                    typeIcon.clearColorFilter();
-                }
-                
-                if ("LIKE".equalsIgnoreCase(type) || "LIKE_COMMENT".equalsIgnoreCase(type)) {
-                    typeIcon.setColorFilter(android.graphics.Color.RED);
-                } else if ("FOLLOW".equalsIgnoreCase(type)) {
-                    typeIcon.setColorFilter(context.getResources().getColor(R.color.accent_purple, context.getTheme()));
-                }
-            } catch (Exception e) {
-                // Nếu vẫn lỗi thì dùng icon hệ thống an toàn nhất
-                typeIcon.setImageResource(android.R.drawable.ic_dialog_info);
+
+            if (type == null) {
+                typeIcon.setImageResource(R.drawable.ic_notification);
+                return;
+            }
+
+            switch (type.toUpperCase()) {
+                case "LIKE":
+                    typeIcon.setImageResource(R.drawable.ic_heart_filled);
+                    typeIcon.setColorFilter(ContextCompat.getColor(context, R.color.accent_red));
+                    break;
+                case "COMMENT":
+                    typeIcon.setImageResource(R.drawable.ic_comment);
+                    typeIcon.setColorFilter(ContextCompat.getColor(context, R.color.primary));
+                    break;
+                case "FOLLOW":
+                    typeIcon.setImageResource(R.drawable.ic_follow);
+                    typeIcon.setColorFilter(ContextCompat.getColor(context, R.color.primary));
+                    break;
+                case "MESSAGE":
+                    typeIcon.setImageResource(R.drawable.ic_message);
+                    typeIcon.setColorFilter(ContextCompat.getColor(context, R.color.primary));
+                    break;
+                default:
+                    typeIcon.setImageResource(R.drawable.ic_notification);
+                    break;
             }
         }
 
         private String formatTime(Date date) {
-            if (date == null) return context.getString(R.string.just_now);
-            long diff = System.currentTimeMillis() - date.getTime();
-            if (diff < 60000) { // Dưới 1 phút
+            if (date == null) {
                 return context.getString(R.string.just_now);
             }
-            return (String) DateUtils.getRelativeTimeSpanString(date.getTime(), 
-                    System.currentTimeMillis(), DateUtils.MINUTE_IN_MILLIS);
+
+            long now = System.currentTimeMillis();
+            long diff = now - date.getTime();
+
+            long minutes = diff / 60000;
+            long hours = minutes / 60;
+            long days = hours / 24;
+
+            if (days > 0) {
+                return context.getString(R.string.days_ago, (int) days);
+            } else if (hours > 0) {
+                return context.getString(R.string.hours_ago, (int) hours);
+            } else if (minutes > 0) {
+                return context.getString(R.string.minutes_ago, (int) minutes);
+            } else {
+                return context.getString(R.string.just_now);
+            }
         }
     }
 }
