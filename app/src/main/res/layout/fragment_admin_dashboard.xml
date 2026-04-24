@@ -3,7 +3,7 @@
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="@color/bg">
+    android:background="?attr/colorSurface">
 
     <TextView
         android:id="@+id/tvAdminDashboardTitle"
@@ -11,8 +11,8 @@
         android:layout_height="wrap_content"
         android:layout_marginStart="12dp"
         android:layout_marginTop="12dp"
-        android:text="Admin Dashboard"
-        android:textColor="@color/text"
+        android:text="@string/admin_title"
+        android:textColor="?attr/colorOnSurface"
         android:textSize="22sp"
         android:textStyle="bold"
         app:layout_constraintTop_toTopOf="parent"
@@ -37,7 +37,7 @@
         android:layout_height="72dp"
         android:layout_marginHorizontal="12dp"
         android:layout_marginTop="8dp"
-        app:cardBackgroundColor="@color/white"
+        app:cardBackgroundColor="?attr/colorSurface"
         app:cardCornerRadius="14dp"
         app:cardElevation="1dp"
         app:strokeColor="@color/divider"
@@ -58,7 +58,7 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:text="0"
-                android:textColor="@color/text"
+                android:textColor="?attr/colorOnSurface"
                 android:textSize="28sp"
                 android:textStyle="bold" />
 
@@ -66,8 +66,8 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_marginStart="8dp"
-                android:text="Báo cáo chưa xử lý"
-                android:textColor="@color/muted"
+                android:text="@string/admin_pending_reports_label"
+                android:textColor="?attr/colorOnSurfaceVariant"
                 android:textSize="13sp" />
         </LinearLayout>
     </com.google.android.material.card.MaterialCardView>
@@ -92,7 +92,7 @@
                 android:id="@+id/tabNewReports"
                 android:layout_width="wrap_content"
                 android:layout_height="36dp"
-                android:text="Báo cáo mới"
+                android:text="@string/admin_tab_new_reports"
                 android:textAllCaps="false"
                 android:textColor="@color/white"
                 app:backgroundTint="@color/primary_purple"
@@ -103,10 +103,10 @@
                 android:layout_width="wrap_content"
                 android:layout_height="36dp"
                 android:layout_marginStart="8dp"
-                android:text="Đã xử lý"
+                android:text="@string/admin_tab_processed"
                 android:textAllCaps="false"
-                android:textColor="@color/text"
-                app:backgroundTint="@color/white"
+                android:textColor="?attr/colorOnSurface"
+                app:backgroundTint="?attr/colorSurface"
                 app:cornerRadius="18dp"
                 app:strokeColor="@color/divider"
                 app:strokeWidth="1dp" />
@@ -116,10 +116,10 @@
                 android:layout_width="wrap_content"
                 android:layout_height="36dp"
                 android:layout_marginStart="8dp"
-                android:text="Người dùng bị ban"
+                android:text="@string/admin_tab_banned_users"
                 android:textAllCaps="false"
-                android:textColor="@color/text"
-                app:backgroundTint="@color/white"
+                android:textColor="?attr/colorOnSurface"
+                app:backgroundTint="?attr/colorSurface"
                 app:cornerRadius="18dp"
                 app:strokeColor="@color/divider"
                 app:strokeWidth="1dp" />
@@ -156,7 +156,7 @@
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:text="@string/admin_empty"
-        android:textColor="@color/muted"
+        android:textColor="?attr/colorOnSurfaceVariant"
         android:textSize="14sp"
         android:visibility="gone"
         app:layout_constraintTop_toTopOf="@id/rvReportedUsers"

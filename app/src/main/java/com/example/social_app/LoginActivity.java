@@ -52,12 +52,13 @@ public class LoginActivity extends BaseActivity {
 
         initViews();
         setupListeners();
-        initializeDefaultAdminUser();
 
         // Nếu đã đăng nhập rồi, bỏ qua màn hình login
         FirebaseUser currentUser = firebaseManager.getAuth().getCurrentUser();
         if (currentUser != null) {
             resolveLoginDestination(currentUser);
+        } else {
+            initializeDefaultAdminUser();
         }
     }
 
@@ -182,6 +183,6 @@ public class LoginActivity extends BaseActivity {
     }
 
     private void initializeDefaultAdminUser() {
-        new AdminUserInitializer(firebaseManager.getFirestore()).ensureAdminUserExists();
+        new AdminUserInitializer(firebaseManager.getAuth(), firebaseManager.getFirestore()).ensureAdminUserExists();
     }
 }

@@ -330,12 +330,18 @@ public class AdminDashboardFragment extends Fragment {
             return;
         }
         button.setStrokeWidth(active ? 0 : 1);
-        int bgColor = requireContext().getColor(active ? R.color.primary_purple : R.color.white);
-        int textColor = requireContext().getColor(active ? R.color.white : R.color.text);
+        int bgColor = active ? requireContext().getColor(R.color.primary_purple) : resolveThemeColor(com.google.android.material.R.attr.colorSurface);
+        int textColor = active ? requireContext().getColor(R.color.white) : resolveThemeColor(com.google.android.material.R.attr.colorOnSurface);
         int strokeColor = requireContext().getColor(R.color.divider);
         button.setBackgroundTintList(android.content.res.ColorStateList.valueOf(bgColor));
         button.setTextColor(textColor);
         button.setStrokeColor(android.content.res.ColorStateList.valueOf(strokeColor));
+    }
+
+    private int resolveThemeColor(int attrResId) {
+        android.util.TypedValue typedValue = new android.util.TypedValue();
+        requireContext().getTheme().resolveAttribute(attrResId, typedValue, true);
+        return typedValue.data;
     }
 
     private void setLoading(boolean loading) {

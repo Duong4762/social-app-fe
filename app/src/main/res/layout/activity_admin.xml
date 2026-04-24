@@ -4,7 +4,7 @@
     android:id="@+id/adminRoot"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="@color/bg">
+    android:background="?attr/colorSurface">
 
     <androidx.fragment.app.FragmentContainerView
         android:id="@+id/adminFragmentContainer"
@@ -19,7 +19,7 @@
         android:id="@+id/adminBottomNav"
         android:layout_width="0dp"
         android:layout_height="wrap_content"
-        android:background="@color/white"
+        android:background="?attr/colorSurface"
         android:elevation="12dp"
         android:minHeight="64dp"
         app:itemIconTint="@color/admin_bottom_nav_color"

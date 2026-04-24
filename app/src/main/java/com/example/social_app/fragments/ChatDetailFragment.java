@@ -36,7 +36,7 @@ import com.example.social_app.data.model.Message;
 import com.example.social_app.repository.ConversationRepository;
 import com.example.social_app.utils.CloudinaryUploadUtil;
 import com.example.social_app.utils.UserAvatarLoader;
-import com.google.android.material.floatingactionbutton.FloatingActionButton;
+import com.google.android.material.button.MaterialButton;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseUser;
 import com.google.firebase.firestore.ListenerRegistration;
@@ -69,7 +69,7 @@ public class ChatDetailFragment extends Fragment {
     private View headerOnlineDot;
     private View mediaPickerSheet;
     private RecyclerView mediaPickerList;
-    private FloatingActionButton sendImageFab;
+    private MaterialButton sendImageButton;
     private View chatInputContainer;
     private View chatTypingRow;
     private Uri selectedImageUri;
@@ -167,13 +167,13 @@ public class ChatDetailFragment extends Fragment {
         ImageButton attachBtn = view.findViewById(R.id.btn_chat_attach);
         mediaPickerSheet = view.findViewById(R.id.chat_media_picker_sheet);
         mediaPickerList = view.findViewById(R.id.chat_media_picker_list);
-        sendImageFab = view.findViewById(R.id.btn_chat_send_image);
+        sendImageButton = view.findViewById(R.id.btn_chat_send_image);
         chatInputContainer = view.findViewById(R.id.chat_input_container);
         chatTypingRow = view.findViewById(R.id.chat_typing_row);
 
         setupMediaPicker();
         attachBtn.setOnClickListener(v -> toggleMediaPicker());
-        sendImageFab.setOnClickListener(v -> uploadAndSendSelectedImage());
+        sendImageButton.setOnClickListener(v -> uploadAndSendSelectedImage());
 
         Runnable sendAction = () -> {
             String text = input.getText() != null ? input.getText().toString().trim() : "";
@@ -411,12 +411,12 @@ public class ChatDetailFragment extends Fragment {
     }
 
     private void updateSendImageFabState() {
-        if (sendImageFab == null) {
+        if (sendImageButton == null) {
             return;
         }
-        sendImageFab.setVisibility(selectedImageUri != null ? View.VISIBLE : View.GONE);
-        sendImageFab.setEnabled(selectedImageUri != null && !isUploadingImage);
-        sendImageFab.setAlpha(sendImageFab.isEnabled() ? 1f : 0.5f);
+        sendImageButton.setVisibility(selectedImageUri != null ? View.VISIBLE : View.GONE);
+        sendImageButton.setEnabled(selectedImageUri != null && !isUploadingImage);
+        sendImageButton.setAlpha(sendImageButton.isEnabled() ? 1f : 0.5f);
     }
 
     private void startListening(@Nullable String peerAvatar) {
