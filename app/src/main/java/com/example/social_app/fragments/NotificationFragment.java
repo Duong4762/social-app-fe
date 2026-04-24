@@ -15,11 +15,13 @@ import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 import androidx.swiperefreshlayout.widget.SwipeRefreshLayout;
 
+import com.example.social_app.MainActivity;
 import com.example.social_app.R;
 import com.example.social_app.adapters.NotificationAdapter;
 import com.example.social_app.data.model.Notification;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.Date;
 import java.util.List;
 import java.util.concurrent.ExecutorService;
@@ -32,6 +34,7 @@ public class NotificationFragment extends Fragment {
     private SwipeRefreshLayout swipeRefresh;
     private ProgressBar loadingProgress;
     private TextView emptyStateText;
+    private TextView btnMarkAllRead;
 
     private List<Notification> notifications = new ArrayList<>();
     private ExecutorService executorService = Executors.newSingleThreadExecutor();
@@ -42,6 +45,12 @@ public class NotificationFragment extends Fragment {
     }
 
     @Override
+    public void onResume() {
+        super.onResume();
+        loadNotifications();
+    }
+
+    @Override
     public void onViewCreated(@NonNull View view, @Nullable Bundle savedInstanceState) {
         super.onViewCreated(view, savedInstanceState);
 
@@ -49,58 +58,138 @@ public class NotificationFragment extends Fragment {
         swipeRefresh = view.findViewById(R.id.swipe_refresh);
         loadingProgress = view.findViewById(R.id.loading_progress);
         emptyStateText = view.findViewById(R.id.empty_state_text);
+        btnMarkAllRead = view.findViewById(R.id.btn_mark_all_read);
 
+        btnMarkAllRead.setOnClickListener(v -> markAllAsRead());
+        
         setupRecyclerView();
         setupSwipeRefresh();
-        loadNotifications();
     }
 
     private void setupRecyclerView() {
-        notificationRecyclerView.setLayoutManager(new LinearLayoutManager(requireContext()));
-        notificationAdapter = new NotificationAdapter(requireContext(), new NotificationAdapter.OnNotificationClickListener() {
+        if (getContext() == null) return;
+        
+        notificationRecyclerView.setLayoutManager(new LinearLayoutManager(getContext()));
+        notificationAdapter = new NotificationAdapter(getContext(), new NotificationAdapter.OnNotificationClickListener() {
             @Override
             public void onNotificationClick(Notification notification) {
-                handleNotificationClick(notification);
+                if (isAdded()) {
+                    handleNotificationClick(notification);
+                }
             }
 
             @Override
             public void onMarkAsRead(Notification notification, int position) {
-                notification.setRead(true);
-                notificationAdapter.notifyItemChanged(position);
-                Toast.makeText(requireContext(), R.string.marked_as_read, Toast.LENGTH_SHORT).show();
+                if (notification.getId() == null) return;
+                
+                com.example.social_app.firebase.FirebaseManager.getInstance().getFirestore()
+                        .collection(com.example.social_app.firebase.FirebaseManager.COLLECTION_NOTIFICATIONS)
+                        .document(notification.getId())
+                        .update("isRead", true)
+                        .addOnSuccessListener(aVoid -> {
+                            if (!isAdded() || getContext() == null) return;
+                            notification.setRead(true);
+                            notificationAdapter.notifyItemChanged(position);
+                            try {
+                                Toast.makeText(getContext(), R.string.marked_as_read, Toast.LENGTH_SHORT).show();
+                            } catch (Exception ignored) {}
+                        })
+                        .addOnFailureListener(e -> {
+                            if (isAdded() && getContext() != null) {
+                                try {
+                                    Toast.makeText(getContext(), "Failed to update status", Toast.LENGTH_SHORT).show();
+                                } catch (Exception ignored) {}
+                            }
+                        });
             }
         });
         notificationRecyclerView.setAdapter(notificationAdapter);
     }
 
     private void handleNotificationClick(Notification notification) {
+        if (!isAdded() || getActivity() == null) return;
+
         String type = notification.getType();
 
+        // Mark as read when clicked
+        if (!notification.isRead() && notification.getId() != null) {
+            com.example.social_app.firebase.FirebaseManager.getInstance().getFirestore()
+                    .collection(com.example.social_app.firebase.FirebaseManager.COLLECTION_NOTIFICATIONS)
+                    .document(notification.getId())
+                    .update("isRead", true);
+        }
+
         if (type == null) {
-            Toast.makeText(requireContext(), R.string.notification_clicked, Toast.LENGTH_SHORT).show();
+            Toast.makeText(getContext(), R.string.notification_clicked, Toast.LENGTH_SHORT).show();
             return;
         }
 
-        switch (type.toUpperCase()) {
-            case "LIKE":
-            case "COMMENT":
-                Toast.makeText(requireContext(), getString(R.string.open_post_id, notification.getReferenceId()), Toast.LENGTH_SHORT).show();
-                break;
-            case "FOLLOW":
-                Toast.makeText(requireContext(), getString(R.string.open_profile_id, notification.getUserId()), Toast.LENGTH_SHORT).show();
-                break;
-            case "MESSAGE":
-                Toast.makeText(requireContext(), R.string.open_chat, Toast.LENGTH_SHORT).show();
-                break;
-            default:
-                Toast.makeText(requireContext(), R.string.notification_clicked, Toast.LENGTH_SHORT).show();
-                break;
+        if (getActivity() instanceof MainActivity) {
+            MainActivity mainActivity = (MainActivity) getActivity();
+            switch (type.toUpperCase()) {
+                case "LIKE":
+                case "COMMENT":
+                case "REPLY_COMMENT":
+                case "LIKE_COMMENT":
+                    com.example.social_app.fragments.HomeFragment homeFragment = com.example.social_app.fragments.HomeFragment.newInstance(notification.getReferenceId());
+                    homeFragment.setBottomNavigationCallback(mainActivity::setupScrollListener);
+                    mainActivity.loadFragment(homeFragment);
+                    break;
+                case "FOLLOW":
+                    if (notification.getActorId() != null) {
+                        mainActivity.openOtherProfile(notification.getActorId());
+                    }
+                    break;
+                case "MESSAGE":
+                    if (notification.getActorId() != null && notification.getReferenceId() != null) {
+                        // Fetch actor info to open chat detail
+                        com.example.social_app.firebase.FirebaseManager.getInstance().getFirestore()
+                                .collection(com.example.social_app.firebase.FirebaseManager.COLLECTION_USERS)
+                                .document(notification.getActorId())
+                                .get()
+                                .addOnSuccessListener(doc -> {
+                                    if (!isAdded() || getActivity() == null) return;
+                                    String name = "Người dùng";
+                                    String avatar = null;
+                                    if (doc.exists()) {
+                                        name = doc.getString("fullName");
+                                        if (name == null || name.isEmpty()) name = doc.getString("username");
+                                        avatar = doc.getString("avatarUrl");
+                                    }
+                                    mainActivity.openChatDetail(notification.getReferenceId(), name, avatar, notification.getActorId());
+                                })
+                                .addOnFailureListener(e -> {
+                                    if (isAdded()) mainActivity.loadFragment(new com.example.social_app.fragments.MessagesFragment());
+                                });
+                    } else {
+                        mainActivity.loadFragment(new com.example.social_app.fragments.MessagesFragment());
+                    }
+                    break;
+                default:
+                    Toast.makeText(getContext(), R.string.notification_clicked, Toast.LENGTH_SHORT).show();
+                    break;
+            }
+        }
+    }
+
+    private void markAllAsRead() {
+        if (getActivity() instanceof MainActivity) {
+            ((MainActivity) getActivity()).markAllNotificationsAsRead();
+            // Cập nhật UI ngay lập tức
+            for (Notification n : notifications) {
+                n.setRead(true);
+            }
+            if (notificationAdapter != null) {
+                notificationAdapter.notifyDataSetChanged();
+            }
         }
     }
 
     private void setupSwipeRefresh() {
         swipeRefresh.setOnRefreshListener(this::loadNotifications);
     }
+
+    private com.google.firebase.firestore.ListenerRegistration notificationListener;
 
     private void loadNotifications() {
         showLoading(true);
@@ -111,58 +200,86 @@ public class NotificationFragment extends Fragment {
             return;
         }
 
-        com.example.social_app.firebase.FirebaseManager.getInstance().getFirestore()
+        if (notificationListener != null) {
+            notificationListener.remove();
+        }
+
+        notificationListener = com.example.social_app.firebase.FirebaseManager.getInstance().getFirestore()
                 .collection(com.example.social_app.firebase.FirebaseManager.COLLECTION_NOTIFICATIONS)
                 .whereEqualTo("userId", currentUserId)
-                .get()
-                .addOnSuccessListener(queryDocumentSnapshots -> {
-                    notifications = queryDocumentSnapshots.toObjects(Notification.class);
-                    
-                    // Sắp xếp thủ công phía Client để tránh lỗi Index Firestore
-                    notifications.sort((n1, n2) -> {
-                        if (n1.getCreatedAt() == null || n2.getCreatedAt() == null) return 0;
-                        return n2.getCreatedAt().compareTo(n1.getCreatedAt());
-                    });
-
-                    notificationAdapter.setNotifications(notifications);
-
-                    if (notifications.isEmpty()) {
-                        emptyStateText.setVisibility(View.VISIBLE);
-                    } else {
-                        emptyStateText.setVisibility(View.GONE);
+                .addSnapshotListener((queryDocumentSnapshots, e) -> {
+                    if (!isAdded() || getView() == null) {
+                        if (notificationListener != null) {
+                            notificationListener.remove();
+                            notificationListener = null;
+                        }
+                        return;
                     }
 
+                    if (e != null) {
+                        android.util.Log.e("NotificationFragment", "Error loading notifications", e);
+                        showLoading(false);
+                        swipeRefresh.setRefreshing(false);
+                        return;
+                    }
+
+                    if (queryDocumentSnapshots != null) {
+                        List<Notification> loadedNotifications = new ArrayList<>();
+                        for (com.google.firebase.firestore.DocumentSnapshot doc : queryDocumentSnapshots.getDocuments()) {
+                            try {
+                                Notification n = doc.toObject(Notification.class);
+                                if (n != null) {
+                                    n.setId(doc.getId());
+                                    loadedNotifications.add(n);
+                                }
+                            } catch (Exception ex) {
+                                android.util.Log.e("NotificationFragment", "Error parsing notification: " + doc.getId(), ex);
+                            }
+                        }
+                        notifications = loadedNotifications;
+                        
+                        // Sắp xếp an toàn
+                        Collections.sort(notifications, (n1, n2) -> {
+                            Date d1 = n1.getCreatedAt();
+                            Date d2 = n2.getCreatedAt();
+                            if (d1 == null && d2 == null) return 0;
+                            if (d1 == null) return 1;
+                            if (d2 == null) return -1;
+                            return d2.compareTo(d1);
+                        });
+
+                        if (notificationAdapter != null) {
+                            notificationAdapter.setNotifications(notifications);
+                        }
+
+                        if (notifications.isEmpty()) {
+                            emptyStateText.setVisibility(View.VISIBLE);
+                        } else {
+                            emptyStateText.setVisibility(View.GONE);
+                        }
+                    }
                     showLoading(false);
                     swipeRefresh.setRefreshing(false);
-                })
-                .addOnFailureListener(e -> {
-                    android.util.Log.e("NotificationFragment", "Error loading notifications", e);
-                    showLoading(false);
-                    swipeRefresh.setRefreshing(false);
-                    Toast.makeText(requireContext(), "Lỗi tải thông báo: " + e.getMessage(), Toast.LENGTH_SHORT).show();
                 });
     }
 
     private List<Notification> generateMockNotifications() {
-        List<Notification> list = new ArrayList<>();
-        String[] types = {"LIKE", "COMMENT", "FOLLOW", "MESSAGE"};
-
-        for (int i = 0; i < 12; i++) {
-            Notification notification = new Notification();
-            notification.setId("notif_" + i);
-            notification.setUserId("user_" + i);
-            notification.setType(types[i % types.length]);
-            notification.setReferenceId("ref_" + i);
-            notification.setRead(i % 3 == 0);
-            notification.setCreatedAt(new Date(System.currentTimeMillis() - (i * 60000 * 10)));
-            list.add(notification);
-        }
-
-        return list;
+        return new ArrayList<>();
     }
 
     private void showLoading(boolean show) {
-        loadingProgress.setVisibility(show ? View.VISIBLE : View.GONE);
+        if (loadingProgress != null) {
+            loadingProgress.setVisibility(show ? View.VISIBLE : View.GONE);
+        }
+    }
+
+    @Override
+    public void onDestroyView() {
+        if (notificationListener != null) {
+            notificationListener.remove();
+            notificationListener = null;
+        }
+        super.onDestroyView();
     }
 
     @Override

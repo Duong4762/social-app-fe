@@ -21,6 +21,7 @@ import androidx.recyclerview.widget.RecyclerView;
 
 import com.example.social_app.R;
 import com.example.social_app.adapters.PostAdapter;
+import com.example.social_app.fragments.OtherProfileFragment;
 import com.example.social_app.adapters.UserSearchAdapter;
 import com.example.social_app.data.model.Follow;
 import com.example.social_app.data.model.Post;

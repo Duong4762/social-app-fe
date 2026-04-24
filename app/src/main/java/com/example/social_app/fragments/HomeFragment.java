@@ -20,6 +20,7 @@ import com.google.android.material.imageview.ShapeableImageView;
 import com.example.social_app.firebase.FirebaseManager;
 import androidx.swiperefreshlayout.widget.SwipeRefreshLayout;
 import com.example.social_app.adapters.PostAdapter;
+import com.example.social_app.fragments.OtherProfileFragment;
 import com.example.social_app.data.model.Post;
 import com.example.social_app.viewmodels.HomeViewModel;
 import com.example.social_app.viewmodels.NewPostViewModel;
@@ -61,6 +62,16 @@ public class HomeFragment extends Fragment implements PostAdapter.OnPostActionLi
      */
     public void setBottomNavigationCallback(ScrollListenerCallback callback) {
         this.scrollListenerCallback = callback;
+    }
+
+    public static HomeFragment newInstance(String postId) {
+        HomeFragment fragment = new HomeFragment();
+        if (postId != null) {
+            Bundle args = new Bundle();
+            args.putString("target_post_id", postId);
+            fragment.setArguments(args);
+        }
+        return fragment;
     }
 
     public HomeFragment() {
@@ -108,6 +119,20 @@ public class HomeFragment extends Fragment implements PostAdapter.OnPostActionLi
         swipeRefreshLayout.setOnRefreshListener(() -> {
             homeViewModel.loadPosts(true);
         });
+
+        // Handle deep-link to post comments
+        if (getArguments() != null && getArguments().containsKey("target_post_id")) {
+            String targetPostId = getArguments().getString("target_post_id");
+            if (targetPostId != null) {
+                // Delay slightly to ensure fragment is ready
+                view.postDelayed(() -> {
+                    if (isAdded()) {
+                        BottomSheetCommentFragment bottomSheet = BottomSheetCommentFragment.newInstance(targetPostId);
+                        bottomSheet.show(getParentFragmentManager(), "comments_bottom_sheet");
+                    }
+                }, 500);
+            }
+        }
     }
 
     private void setupObservers() {
