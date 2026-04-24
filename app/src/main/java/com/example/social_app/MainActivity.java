@@ -3,7 +3,6 @@ package com.example.social_app;
 import android.app.NotificationChannel;
 import android.app.NotificationManager;
 import android.content.Context;
-import android.content.Intent;
 import android.os.Bundle;
 import android.util.Log;
 import android.view.View;
@@ -12,6 +11,7 @@ import android.widget.ImageButton;
 import androidx.activity.EdgeToEdge;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
+import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.graphics.Insets;
 import androidx.core.view.ViewCompat;
 import androidx.core.view.WindowInsetsCompat;
@@ -107,13 +107,13 @@ public class MainActivity extends BaseActivity {
     }
 
     @Override
-    protected void onNewIntent(Intent intent) {
+    protected void onNewIntent(android.content.Intent intent) {
         super.onNewIntent(intent);
         setIntent(intent);
         handleIntent(intent);
     }
 
-    private void handleIntent(Intent intent) {
+    private void handleIntent(android.content.Intent intent) {
         if (intent == null) return;
 
         String type = intent.getStringExtra("NOTIF_TYPE");
@@ -137,7 +137,7 @@ public class MainActivity extends BaseActivity {
                 }
             } else if ("COMMENT".equals(type) || "LIKE".equals(type) || "REPLY_COMMENT".equals(type) || "LIKE_COMMENT".equals(type)) {
                 selectNavButton(navBtnHome);
-                HomeFragment homeFragment = new HomeFragment();
+                HomeFragment homeFragment = new HomeFragment();  // ĐÃ SỬA: không dùng newInstance
                 homeFragment.setBottomNavigationCallback(this::setupScrollListener);
                 loadFragment(homeFragment);
             }
@@ -145,15 +145,6 @@ public class MainActivity extends BaseActivity {
             intent.removeExtra("REF_ID");
             intent.removeExtra("NOTIF_ID");
         }
-
-        // Đưa app lên foreground nếu đang ở background
-        bringAppToForeground();
-    }
-
-    private void bringAppToForeground() {
-        Intent intent = new Intent(this, MainActivity.class);
-        intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_REORDER_TO_FRONT);
-        startActivity(intent);
     }
 
     private void markNotificationAsRead(String notifId) {
@@ -503,8 +494,8 @@ public class MainActivity extends BaseActivity {
             }
         }
 
-        Intent intent = new Intent(this, MainActivity.class);
-        intent.setFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP | Intent.FLAG_ACTIVITY_SINGLE_TOP);
+        android.content.Intent intent = new android.content.Intent(this, MainActivity.class);
+        intent.addFlags(android.content.Intent.FLAG_ACTIVITY_CLEAR_TOP | android.content.Intent.FLAG_ACTIVITY_SINGLE_TOP);
 
         intent.putExtra("NOTIF_TYPE", type);
         intent.putExtra("REF_ID", referenceId);
