@@ -277,6 +277,8 @@ public class ConversationRepository {
                         Exception ex = task.getException();
                         return Tasks.forException(ex != null ? ex : new Exception("send failed"));
                     }
+                    // Gửi thông báo đến người nhận
+                    sendNotification(peerUserId, senderId, "MESSAGE", conversationId);
                     return touchConversationUpdatedAt(conversationId);
                 });
     }
@@ -303,8 +305,22 @@ public class ConversationRepository {
                         Exception ex = task.getException();
                         return Tasks.forException(ex != null ? ex : new Exception("send failed"));
                     }
+                    // Gửi thông báo đến người nhận
+                    sendNotification(peerUserId, senderId, "MESSAGE", conversationId);
                     return touchConversationUpdatedAt(conversationId);
                 });
+    }
+
+    private void sendNotification(String userId, String actorId, String type, String referenceId) {
+        Map<String, Object> notification = new HashMap<>();
+        notification.put("userId", userId);
+        notification.put("actorId", actorId);
+        notification.put("type", type);
+        notification.put("referenceId", referenceId);
+        notification.put("isRead", false); // Dùng isRead để đồng bộ với model Notification
+        notification.put("createdAt", FieldValue.serverTimestamp());
+
+        db.collection(FirebaseManager.COLLECTION_NOTIFICATIONS).add(notification);
     }
 
     @NonNull

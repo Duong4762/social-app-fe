@@ -432,13 +432,13 @@ public class OtherProfileFragment extends Fragment implements PostAdapter.OnPost
         }
 
         String notificationId = buildFollowNotificationId();
-        Notification notification = new Notification(
-                notificationId,
-                targetUserId,
-                "FOLLOW",
-                currentUserId,
-                false
-        );
+        Notification notification = new Notification();
+        notification.setId(notificationId);
+        notification.setUserId(targetUserId);
+        notification.setType("FOLLOW");
+        notification.setActorId(currentUserId);
+        notification.setRead(false);
+        notification.setCreatedAt(new java.util.Date());
 
         FirebaseManager.getInstance().getFirestore()
                 .collection(FirebaseManager.COLLECTION_NOTIFICATIONS)

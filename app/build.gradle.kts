@@ -79,6 +79,7 @@ dependencies {
     implementation(libs.firebase.auth)
     implementation(libs.firebase.firestore)
     implementation(libs.firebase.storage)
+    implementation(libs.firebase.messaging)
     implementation("com.squareup.okhttp3:okhttp:4.12.0")
 
     // Retrofit for Backend API
