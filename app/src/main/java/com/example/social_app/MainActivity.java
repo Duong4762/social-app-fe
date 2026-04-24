@@ -6,6 +6,7 @@ import android.content.Context;
 import android.os.Bundle;
 import android.util.Log;
 import android.view.View;
+import android.view.animation.TranslateAnimation;
 import android.widget.ImageButton;
 
 import androidx.activity.EdgeToEdge;
@@ -30,6 +31,12 @@ import com.example.social_app.fragments.OtherProfileFragment;
 import com.example.social_app.fragments.ProfileFragment;
 import com.example.social_app.fragments.MessagesFragment;
 import com.example.social_app.fragments.SettingsFragment;
+import com.example.social_app.utils.LanguageUtils;
+import com.bumptech.glide.Glide;
+import com.bumptech.glide.request.target.CustomTarget;
+import com.bumptech.glide.request.transition.Transition;
+import android.graphics.Bitmap;
+import android.graphics.drawable.Drawable;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseUser;
 import com.google.firebase.firestore.SetOptions;
@@ -58,6 +65,7 @@ public class MainActivity extends BaseActivity {
     @Override
     protected void onStop() {
         updateCurrentUserActiveStatus(false);
+        // Không dừng listener ở đây để tiếp tục nhận thông báo khi app ở background/màn hình khóa
         super.onStop();
     }
 
@@ -88,12 +96,14 @@ public class MainActivity extends BaseActivity {
             return insets;
         });
 
+        // Initialize views
         fragmentManager = getSupportFragmentManager();
         customBottomNav = findViewById(R.id.custom_bottom_nav);
         initializeNavigationButtons();
 
         fragmentManager.addOnBackStackChangedListener(this::syncChatOverlayVisibility);
 
+        // Load home fragment by default
         if (savedInstanceState == null) {
             HomeFragment homeFragment = new HomeFragment();
             homeFragment.setBottomNavigationCallback(this::setupScrollListener);
@@ -101,8 +111,16 @@ public class MainActivity extends BaseActivity {
             selectNavButton(navBtnHome);
         }
 
+        // Show notification badge on notifications icon (demo)
         showNotificationBadge();
+        
+        // Bắt đầu lắng nghe thông báo Realtime
         setupRealtimeNotificationListener();
+
+        // Lưu Token để nhận thông báo
+        saveFCMToken();
+
+        // Xử lý điều hướng nếu được mở từ thông báo
         handleIntent(getIntent());
     }
 
@@ -115,11 +133,11 @@ public class MainActivity extends BaseActivity {
 
     private void handleIntent(android.content.Intent intent) {
         if (intent == null) return;
-
+        
         String type = intent.getStringExtra("NOTIF_TYPE");
         String refId = intent.getStringExtra("REF_ID");
         String notifId = intent.getStringExtra("NOTIF_ID");
-
+        
         if (notifId != null) {
             markNotificationAsRead(notifId);
         }
@@ -136,11 +154,13 @@ public class MainActivity extends BaseActivity {
                     openOtherProfile(actorId);
                 }
             } else if ("COMMENT".equals(type) || "LIKE".equals(type) || "REPLY_COMMENT".equals(type) || "LIKE_COMMENT".equals(type)) {
+                // Mở Home và tự động hiện comment của bài viết
                 selectNavButton(navBtnHome);
-                HomeFragment homeFragment = new HomeFragment();  // ĐÃ SỬA: không dùng newInstance
+                HomeFragment homeFragment = HomeFragment.newInstance(refId);
                 homeFragment.setBottomNavigationCallback(this::setupScrollListener);
                 loadFragment(homeFragment);
             }
+            // Clear intent extras after handling
             intent.removeExtra("NOTIF_TYPE");
             intent.removeExtra("REF_ID");
             intent.removeExtra("NOTIF_ID");
@@ -176,6 +196,9 @@ public class MainActivity extends BaseActivity {
                 .addOnFailureListener(e -> Log.e("MainActivity", "Error fetching unread notifications", e));
     }
 
+    /**
+     * Initialize and set up click listeners for all navigation buttons.
+     */
     private void initializeNavigationButtons() {
         navBtnHome = customBottomNav.findViewById(R.id.nav_btn_home);
         navBtnSearch = customBottomNav.findViewById(R.id.nav_btn_search);
@@ -185,6 +208,7 @@ public class MainActivity extends BaseActivity {
         navBtnSettings = customBottomNav.findViewById(R.id.nav_btn_settings);
         notificationBadge = customBottomNav.findViewById(R.id.notification_badge);
 
+        // ==================== HOME ====================
         navBtnHome.setOnClickListener(v -> {
             selectNavButton(navBtnHome);
             HomeFragment homeFragment = new HomeFragment();
@@ -205,7 +229,7 @@ public class MainActivity extends BaseActivity {
         navBtnNotifications.setOnClickListener(v -> {
             selectNavButton(navBtnNotifications);
             removeNotificationBadge();
-            markAllNotificationsAsRead();
+            markAllNotificationsAsRead(); // Đánh dấu tất cả đã đọc khi vào tab
             loadFragment(new NotificationFragment());
         });
 
@@ -220,38 +244,59 @@ public class MainActivity extends BaseActivity {
         });
     }
 
+    /**
+     * Select and highlight the specified navigation button.
+     */
     private void selectNavButton(ImageButton button) {
+        // Reset all buttons to normal state
         navBtnHome.setSelected(false);
         navBtnSearch.setSelected(false);
         navBtnMessage.setSelected(false);
         navBtnNotifications.setSelected(false);
         navBtnProfile.setSelected(false);
         navBtnSettings.setSelected(false);
+
+        // Set the selected button
         button.setSelected(true);
         currentSelectedNav = button.getId();
     }
 
+    /**
+     * Shows a notification badge on the notification navigation button.
+     */
     public void showNotificationBadge() {
         if (notificationBadge != null) {
             notificationBadge.setVisibility(View.VISIBLE);
         }
     }
 
+    /**
+     * Removes the notification badge from the notification navigation button.
+     */
     public void removeNotificationBadge() {
         if (notificationBadge != null) {
             notificationBadge.setVisibility(View.GONE);
         }
     }
 
+    /**
+     * Sets up the scroll listener for the RecyclerView to hide/show bottom navigation.
+     *
+     * @param recyclerView The RecyclerView to attach the scroll listener to
+     */
     public void setupScrollListener(RecyclerView recyclerView) {
         if (recyclerView != null && customBottomNav != null) {
             recyclerView.addOnScrollListener(new RecyclerView.OnScrollListener() {
                 @Override
-                public void onScrolled(@NonNull RecyclerView recyclerView, int dx, int dy) {
+                public void onScrolled(RecyclerView recyclerView, int dx, int dy) {
                     super.onScrolled(recyclerView, dx, dy);
+
+                    // If user scrolls down, hide the bottom navigation
                     if (dy > 0 && isBottomNavVisible) {
                         hideBottomNavigation();
-                    } else if (dy < 0 && !isBottomNavVisible) {
+                    }
+                    // If user scrolls up, show the bottom navigation
+                    else if (dy < 0 && !isBottomNavVisible) {
                         showBottomNavigation();
                     }
                 }
@@ -259,9 +304,13 @@ public class MainActivity extends BaseActivity {
         }
     }
 
+    /**
+     * Hides the bottom navigation bar with animation.
+     */
     private void hideBottomNavigation() {
         if (!isBottomNavVisible) return;
         isBottomNavVisible = false;
+        
         customBottomNav.animate()
                 .translationY(customBottomNav.getHeight())
                 .setDuration(300)
@@ -272,9 +321,13 @@ public class MainActivity extends BaseActivity {
                 .start();
     }
 
+    /**
+     * Shows the bottom navigation bar with animation.
+     */
     private void showBottomNavigation() {
         if (isBottomNavVisible) return;
         isBottomNavVisible = true;
+        
         customBottomNav.setVisibility(View.VISIBLE);
         customBottomNav.setClickable(true);
         customBottomNav.animate()
@@ -291,6 +344,9 @@ public class MainActivity extends BaseActivity {
         }
     }
 
+    /**
+     * Mở chat toàn màn hình chồng lên nội dung + bottom nav; bấm back trên hệ thống để đóng.
+     */
     public void openChatDetail(
             @NonNull String conversationId,
             @NonNull String peerName,
@@ -312,7 +368,9 @@ public class MainActivity extends BaseActivity {
 
     private void syncChatOverlayVisibility() {
         View overlay = findViewById(R.id.full_screen_chat_overlay);
-        if (overlay == null) return;
+        if (overlay == null) {
+            return;
+        }
         Fragment f = fragmentManager.findFragmentById(R.id.full_screen_chat_overlay);
         overlay.setVisibility(f != null ? View.VISIBLE : View.GONE);
     }
@@ -325,6 +383,9 @@ public class MainActivity extends BaseActivity {
                 .commit();
     }
 
+    /**
+     * Checks and requests notification permission for Android 13+.
+     */
     private void checkNotificationPermission() {
         if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU) {
             if (ContextCompat.checkSelfPermission(this, android.Manifest.permission.POST_NOTIFICATIONS)
@@ -343,30 +404,45 @@ public class MainActivity extends BaseActivity {
             if (grantResults.length > 0 && grantResults[0] == android.content.pm.PackageManager.PERMISSION_GRANTED) {
                 showToast("Notification permission granted");
             } else {
-                showToast("Notification permission denied");
+                showToast("Notification permission denied. You won't receive push notifications.");
             }
         }
     }
 
+    /**
+     * Loads the specified fragment into the fragment container.
+     *
+     * @param fragment The fragment to load
+     */
     public void loadFragment(Fragment fragment) {
         if (fragment == null) return;
+        
+        // Tránh load lại chính fragment đang hiển thị
         Fragment currentFragment = fragmentManager.findFragmentById(R.id.nav_host_fragment);
         if (currentFragment != null && currentFragment.getClass().equals(fragment.getClass())) {
             return;
         }
+
         fragmentManager.beginTransaction()
                 .replace(R.id.nav_host_fragment, fragment)
                 .addToBackStack(null)
                 .commit();
     }
 
+    /**
+     * Shows a temporary toast message.
+     *
+     * @param message The message to display
+     */
     private void showToast(String message) {
         android.widget.Toast.makeText(this, message, android.widget.Toast.LENGTH_SHORT).show();
     }
 
     private void updateCurrentUserActiveStatus(boolean isActive) {
         FirebaseUser currentUser = FirebaseAuth.getInstance().getCurrentUser();
-        if (currentUser == null) return;
+        if (currentUser == null) {
+            return;
+        }
         Map<String, Object> payload = new HashMap<>();
         payload.put("isActive", isActive);
         payload.put("updatedAt", com.google.firebase.firestore.FieldValue.serverTimestamp());
@@ -380,12 +456,17 @@ public class MainActivity extends BaseActivity {
 
     private boolean isInitialLoad = true;
 
+    /**
+     * Lắng nghe thông báo mới từ Firestore và hiển thị cho người dùng.
+     */
     private void setupRealtimeNotificationListener() {
         FirebaseUser currentUser = FirebaseAuth.getInstance().getCurrentUser();
         if (currentUser == null) return;
+
+        // Nếu đã có listener thì không tạo thêm
         if (notificationListener != null) return;
 
-        isInitialLoad = true;
+        isInitialLoad = true; 
 
         notificationListener = FirebaseManager.getInstance().getFirestore()
                 .collection(FirebaseManager.COLLECTION_NOTIFICATIONS)
@@ -398,30 +479,34 @@ public class MainActivity extends BaseActivity {
                     }
 
                     if (snapshots != null) {
+                        // Cập nhật Badge dựa trên tổng số thông báo chưa đọc
                         if (!snapshots.isEmpty()) {
                             showNotificationBadge();
+                            Log.d("MainActivity", "Có " + snapshots.size() + " thông báo chưa đọc.");
                         } else {
                             removeNotificationBadge();
-                            if (isInitialLoad) {
-                                isInitialLoad = false;
-                            }
-                            return;
                         }
-
+                        
+                        // Xử lý hiển thị thông báo hệ thống (Banner)
                         for (com.google.firebase.firestore.DocumentChange dc : snapshots.getDocumentChanges()) {
                             if (dc.getType() == com.google.firebase.firestore.DocumentChange.Type.ADDED) {
-                                if (isInitialLoad) continue;
+                                // Nếu là lần load đầu tiên (snapshot chứa các thông báo cũ), bỏ qua việc hiện banner
+                                if (isInitialLoad) {
+                                    continue;
+                                }
 
+                                // Chỉ hiện banner cho thông báo thực sự mới phát sinh
                                 com.google.firebase.firestore.QueryDocumentSnapshot doc = dc.getDocument();
                                 String type = doc.getString("type");
                                 String actorId = doc.getString("actorId");
                                 String referenceId = doc.getString("referenceId");
                                 String notifId = doc.getId();
-
+                                
                                 fetchActorAndNotify(actorId, type, referenceId, notifId);
                             }
                         }
-
+                        
+                        // Đánh dấu đã qua lần tải đầu tiên
                         if (isInitialLoad) {
                             isInitialLoad = false;
                         }
@@ -461,22 +546,32 @@ public class MainActivity extends BaseActivity {
 
     private void sendNotificationWithActorName(String actorName, String type, String referenceId, String actorAvatar, String actorId, String notifId) {
         String message;
+        
         if ("LIKE".equals(type)) {
             message = actorName + " " + getString(R.string.notification_like);
         } else if ("COMMENT".equals(type)) {
             message = actorName + " " + getString(R.string.notification_comment);
         } else if ("FOLLOW".equals(type)) {
             message = actorName + " " + getString(R.string.notification_follow);
+        } else if ("LIKE_COMMENT".equals(type)) {
+            message = actorName + " " + getString(R.string.notification_like_comment);
+        } else if ("REPLY_COMMENT".equals(type)) {
+            message = actorName + " " + getString(R.string.notification_reply_comment);
+        } else if ("MESSAGE".equals(type)) {
+            message = actorName + " " + getString(R.string.notification_message);
         } else {
             message = actorName + " " + getString(R.string.action_success);
         }
-
+        
         sendLocalNotification(getString(R.string.app_name), message, type, referenceId, actorName, actorAvatar, actorId, notifId);
     }
 
     private void sendLocalNotification(String title, String body, String type, String referenceId, String actorName, String actorAvatar, String actorId, String notifId) {
         String channelId = "social_notifications";
         NotificationManager notificationManager = (NotificationManager) getSystemService(Context.NOTIFICATION_SERVICE);
+        
+        // Dùng hashCode của notifId để mỗi thông báo là duy nhất, không bị ghi đè khi nhiều người tương tác cùng lúc
+        // Dùng Math.abs để đảm bảo ID không âm
         int notificationId = (notifId != null) ? Math.abs(notifId.hashCode()) : (int) System.currentTimeMillis();
 
         if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
@@ -494,9 +589,10 @@ public class MainActivity extends BaseActivity {
             }
         }
 
+        // Tạo Intent để mở App khi nhấn vào thông báo
         android.content.Intent intent = new android.content.Intent(this, MainActivity.class);
         intent.addFlags(android.content.Intent.FLAG_ACTIVITY_CLEAR_TOP | android.content.Intent.FLAG_ACTIVITY_SINGLE_TOP);
-
+        
         intent.putExtra("NOTIF_TYPE", type);
         intent.putExtra("REF_ID", referenceId);
         intent.putExtra("ACTOR_NAME", actorName);
@@ -508,6 +604,7 @@ public class MainActivity extends BaseActivity {
                 this, notificationId, intent,
                 android.app.PendingIntent.FLAG_UPDATE_CURRENT | android.app.PendingIntent.FLAG_IMMUTABLE);
 
+        // Xây dựng giao diện thông báo
         androidx.core.app.NotificationCompat.Builder builder = new androidx.core.app.NotificationCompat.Builder(this, channelId)
                 .setSmallIcon(R.drawable.ic_notifications)
                 .setContentTitle(title)
@@ -517,8 +614,46 @@ public class MainActivity extends BaseActivity {
                 .setVisibility(androidx.core.app.NotificationCompat.VISIBILITY_PUBLIC)
                 .setDefaults(androidx.core.app.NotificationCompat.DEFAULT_ALL)
                 .setContentIntent(pendingIntent)
+                .setFullScreenIntent(pendingIntent, false) // Tăng khả năng hiển thị banner trên một số dòng máy
                 .setAutoCancel(true);
 
-        notificationManager.notify(notificationId, builder.build());
+        // Hiển thị thông báo với ảnh đại diện người gửi nếu có
+        if (actorAvatar != null && !actorAvatar.isEmpty()) {
+            Glide.with(this)
+                    .asBitmap()
+                    .load(actorAvatar)
+                    .circleCrop()
+                    .into(new CustomTarget<Bitmap>() {
+                        @Override
+                        public void onResourceReady(@NonNull Bitmap resource, @Nullable Transition<? super Bitmap> transition) {
+                            builder.setLargeIcon(resource);
+                            notificationManager.notify(notificationId, builder.build());
+                        }
+
+                        @Override
+                        public void onLoadCleared(@Nullable Drawable placeholder) {
+                        }
+                    });
+        } else {
+            notificationManager.notify(notificationId, builder.build());
+        }
+    }
+
+    private void saveFCMToken() {
+        // Cố gắng lấy token để hỗ trợ Push Notification nếu sau này có Server Key
+        try {
+            com.google.firebase.messaging.FirebaseMessaging.getInstance().getToken()
+                    .addOnSuccessListener(token -> {
+                        String userId = com.example.social_app.firebase.FirebaseManager.getInstance().getAuth().getUid();
+                        if (userId != null) {
+                            com.example.social_app.firebase.FirebaseManager.getInstance().getFirestore()
+                                    .collection(com.example.social_app.firebase.FirebaseManager.COLLECTION_USERS)
+                                    .document(userId)
+                                    .update("fcmToken", token);
+                        }
+                    });
+        } catch (Exception e) {
+            Log.e("MainActivity", "FCM Token error: " + e.getMessage());
+        }
     }
 }

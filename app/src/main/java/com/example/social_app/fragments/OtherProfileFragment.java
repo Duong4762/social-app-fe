@@ -551,7 +551,34 @@ public class OtherProfileFragment extends Fragment implements PostAdapter.OnPost
         FirebaseManager.getInstance().getFirestore()
                 .collection(FirebaseManager.COLLECTION_NOTIFICATIONS)
                 .document(notificationId)
-                .set(notification, SetOptions.merge());
+                .set(notification, SetOptions.merge())
+                .addOnSuccessListener(unused -> {
+                    // Gửi Push Notification
+                    FirebaseManager.getInstance().getFirestore()
+                            .collection(FirebaseManager.COLLECTION_USERS).document(currentUserId).get()
+                            .addOnSuccessListener(userDoc -> {
+                                if (userDoc.exists()) {
+                                    String actorName = userDoc.getString("fullName");
+                                    if (actorName == null || actorName.isEmpty()) actorName = userDoc.getString("username");
+                                    String title = "Người theo dõi mới";
+                                    String body = actorName + " đã bắt đầu theo dõi bạn";
+                                    sendPushNotification(targetUserId, title, body, "FOLLOW", currentUserId);
+                                }
+                            });
+                });
+    }
+
+    private void sendPushNotification(String targetUserId, String title, String body, String type, String refId) {
+        FirebaseManager.getInstance().getFirestore()
+                .collection(FirebaseManager.COLLECTION_USERS).document(targetUserId).get()
+                .addOnSuccessListener(documentSnapshot -> {
+                    if (documentSnapshot.exists()) {
+                        String token = documentSnapshot.getString("fcmToken");
+                        if (token != null && !token.isEmpty()) {
+                            com.example.social_app.firebase.FcmSender.sendNotification(token, title, body, type, refId, targetUserId);
+                        }
+                    }
+                });
     }
 
     private void removeFollowNotification() {
