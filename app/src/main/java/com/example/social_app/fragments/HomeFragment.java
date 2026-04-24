@@ -4,6 +4,7 @@ import android.content.ClipData;
 import android.content.ClipboardManager;
 import android.content.Context;
 import android.content.Intent;
+import android.net.Uri;
 import android.os.Bundle;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -14,6 +15,8 @@ import android.widget.PopupMenu;
 import android.widget.ProgressBar;
 import android.widget.Toast;
 
+import androidx.activity.result.ActivityResultLauncher;
+import androidx.activity.result.contract.ActivityResultContracts;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.appcompat.app.AlertDialog;
@@ -26,11 +29,15 @@ import androidx.swiperefreshlayout.widget.SwipeRefreshLayout;
 
 import com.example.social_app.R;
 import com.example.social_app.adapters.PostAdapter;
+import com.example.social_app.adapters.StoryAdapter;
 import com.example.social_app.data.model.Post;
+import com.example.social_app.data.model.Story;
+import com.example.social_app.data.model.User;
 import com.example.social_app.firebase.FirebaseManager;
 import com.example.social_app.utils.UserAvatarLoader;
 import com.example.social_app.viewmodels.HomeViewModel;
 import com.example.social_app.viewmodels.NewPostViewModel;
+import com.example.social_app.viewmodels.StoryViewModel;
 import com.google.android.material.imageview.ShapeableImageView;
 
 import java.util.List;
@@ -45,6 +52,15 @@ public class HomeFragment extends Fragment implements PostAdapter.OnPostActionLi
     private PostAdapter postAdapter;
     private NewPostViewModel newPostViewModel;
     private HomeViewModel homeViewModel;
+
+    // Story components
+    private RecyclerView storyRecyclerView;
+    private StoryAdapter storyAdapter;
+    private StoryViewModel storyViewModel;
+    private ActivityResultLauncher<String> imagePickerLauncher;
+    private ActivityResultLauncher<String> videoPickerLauncher;
+    private Uri selectedStoryUri;
+    private String selectedStoryType;
 
     private boolean isLoading = false;
     private boolean hasMorePosts = true;
@@ -73,15 +89,20 @@ public class HomeFragment extends Fragment implements PostAdapter.OnPostActionLi
 
         newPostViewModel = new ViewModelProvider(this).get(NewPostViewModel.class);
         homeViewModel = new ViewModelProvider(this).get(HomeViewModel.class);
+        storyViewModel = new ViewModelProvider(this).get(StoryViewModel.class);
+
         setupObservers();
+        setupStoryPickerLaunchers();
 
         feedRecyclerView = view.findViewById(R.id.feed_recycler_view);
         swipeRefreshLayout = view.findViewById(R.id.swipe_refresh_layout);
         loadingIndicator = view.findViewById(R.id.loading_indicator);
         emptyState = view.findViewById(R.id.empty_state);
         errorState = view.findViewById(R.id.error_state);
+        storyRecyclerView = view.findViewById(R.id.storyRecyclerView);
 
         setupRecyclerView();
+        setupStoryRecyclerView();
         loadCurrentUserAvatar(view);
         loadPosts();
 
@@ -90,7 +111,108 @@ public class HomeFragment extends Fragment implements PostAdapter.OnPostActionLi
             loadPosts();
         });
 
-        swipeRefreshLayout.setOnRefreshListener(() -> homeViewModel.loadPosts(true));
+        swipeRefreshLayout.setOnRefreshListener(() -> {
+            homeViewModel.loadPosts(true);
+            if (storyViewModel != null) {
+                storyViewModel.loadStories();
+            }
+        });
+    }
+
+    private void setupStoryPickerLaunchers() {
+        imagePickerLauncher = registerForActivityResult(
+                new ActivityResultContracts.GetContent(),
+                uri -> {
+                    if (uri != null) {
+                        selectedStoryUri = uri;
+                        selectedStoryType = "IMAGE";
+                        uploadStory();
+                    }
+                });
+
+        videoPickerLauncher = registerForActivityResult(
+                new ActivityResultContracts.GetContent(),
+                uri -> {
+                    if (uri != null) {
+                        selectedStoryUri = uri;
+                        selectedStoryType = "VIDEO";
+                        uploadStory();
+                    }
+                });
+    }
+
+    private void setupStoryRecyclerView() {
+        if (storyRecyclerView == null) return;
+
+        storyRecyclerView.setLayoutManager(new LinearLayoutManager(requireContext(), LinearLayoutManager.HORIZONTAL, false));
+        storyAdapter = new StoryAdapter(requireContext(), new StoryAdapter.OnStoryClickListener() {
+            @Override
+            public void onStoryClick(Story story, User user) {
+                StoryDetailFragment fragment = StoryDetailFragment.newInstance(story, user);
+                fragment.show(getParentFragmentManager(), "story_detail");
+            }
+
+            @Override
+            public void onAddStoryClick() {
+                showAddStoryDialog();
+            }
+        });
+        storyRecyclerView.setAdapter(storyAdapter);
+
+        storyViewModel.getStories().observe(getViewLifecycleOwner(), stories -> {
+            if (storyAdapter != null) {
+                storyAdapter.setStories(stories);
+            }
+        });
+        storyViewModel.loadStories();
+        storyViewModel.cleanExpiredStories();
+    }
+
+    private void showAddStoryDialog() {
+        String[] options = {"Chọn ảnh", "Chọn video"};
+        new AlertDialog.Builder(requireContext())
+                .setTitle("Đăng story")
+                .setItems(options, (dialog, which) -> {
+                    if (which == 0) {
+                        imagePickerLauncher.launch("image/*");
+                    } else {
+                        videoPickerLauncher.launch("video/*");
+                    }
+                })
+                .show();
+    }
+
+    private void uploadStory() {
+        if (selectedStoryUri == null) return;
+
+        AlertDialog dialog = new AlertDialog.Builder(requireContext())
+                .setTitle("Đang đăng story...")
+                .setMessage("Vui lòng chờ")
+                .setCancelable(false)
+                .create();
+        dialog.show();
+
+        int duration = "IMAGE".equals(selectedStoryType) ? 30 : 0;
+        storyViewModel.uploadStory(selectedStoryUri, selectedStoryType, duration);
+
+        storyViewModel.getIsUploading().observe(getViewLifecycleOwner(), isUploading -> {
+            if (isUploading != null && !isUploading) {
+                dialog.dismiss();
+            }
+        });
+
+        storyViewModel.getUploadSuccess().observe(getViewLifecycleOwner(), success -> {
+            if (success != null && success) {
+                Toast.makeText(requireContext(), "Đã đăng story", Toast.LENGTH_SHORT).show();
+                storyViewModel.loadStories();
+            }
+        });
+
+        storyViewModel.getError().observe(getViewLifecycleOwner(), error -> {
+            if (error != null && !error.isEmpty()) {
+                Toast.makeText(requireContext(), error, Toast.LENGTH_SHORT).show();
+            }
+        });
     }
 
     private void setupObservers() {
@@ -107,11 +229,11 @@ public class HomeFragment extends Fragment implements PostAdapter.OnPostActionLi
         });
 
         homeViewModel.getIsLoading().observe(getViewLifecycleOwner(), loading -> {
-            isLoading = loading;
-            if (!loading) {
+            isLoading = loading != null && loading;
+            if (!isLoading) {
                 swipeRefreshLayout.setRefreshing(false);
             }
-            loadingIndicator.setVisibility(loading && !swipeRefreshLayout.isRefreshing() ? View.VISIBLE : View.GONE);
+            loadingIndicator.setVisibility(isLoading && !swipeRefreshLayout.isRefreshing() ? View.VISIBLE : View.GONE);
         });
 
         homeViewModel.getError().observe(getViewLifecycleOwner(), errorMsg -> {
@@ -318,8 +440,6 @@ public class HomeFragment extends Fragment implements PostAdapter.OnPostActionLi
                 .show();
     }
 
-    // ==================== REPORT BÀI VIẾT ====================
-
     @Override
     public void onReportPostClicked(Post post) {
         showReportDialog(post);
@@ -350,7 +470,6 @@ public class HomeFragment extends Fragment implements PostAdapter.OnPostActionLi
                 .setItems(reasons, (dialog, which) -> {
                     String selectedReason = reasons[which];
 
-                    // CHỈ khi chọn "Lý do khác" (index 4) mới hiện dialog nhập chi tiết
                     if (which == 4) {
                         showDetailInputDialog(post, selectedReason);
                     } else {

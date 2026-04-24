@@ -4,7 +4,7 @@ import com.google.firebase.firestore.PropertyName;
 import com.google.firebase.firestore.ServerTimestamp;
 
 import java.util.Date;
-
+import java.io.Serializable;
 /**
  * Entity: User (Người dùng)
  * Firestore collection: users
@@ -14,7 +14,7 @@ import java.util.Date;
  *
  * Trường id được dùng làm Document ID trong Firestore (cũng là Firebase Auth UID).
  */
-public class User {
+public class User  implements Serializable {
 
     private String id;
     private String username;

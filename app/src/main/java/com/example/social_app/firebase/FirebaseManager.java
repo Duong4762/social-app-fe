@@ -22,7 +22,7 @@ public class FirebaseManager {
     public static final String COLLECTION_NOTIFICATIONS        = "notifications";
     public static final String COLLECTION_REPORTS              = "reports";
     public static final String COLLECTION_BOOKMARKS            = "bookmarks";
-
+    public static final String COLLECTION_STORIES = "stories";
     // -------------------------------------------------------
     // Firebase Storage Paths
     // -------------------------------------------------------
