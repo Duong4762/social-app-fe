@@ -472,44 +472,59 @@ public class SearchFragment extends Fragment implements PostAdapter.OnPostAction
                 .setNegativeButton(getString(R.string.cancel_action), null)
                 .show();
     }
-
     @Override
     public void onReportPostClicked(Post post) {
+        String currentUserId = FirebaseManager.getInstance().getAuth().getUid();
+        if (currentUserId == null) {
+            Toast.makeText(requireContext(), "Vui lòng đăng nhập để báo cáo", Toast.LENGTH_SHORT).show();
+            return;
+        }
+
+        if (currentUserId.equals(post.getUserId())) {
+            Toast.makeText(requireContext(), "Bạn không thể báo cáo bài viết của chính mình", Toast.LENGTH_SHORT).show();
+            return;
+        }
+
         String[] reasons = {
-                getString(R.string.report_reason_inappropriate),
-                getString(R.string.report_reason_spam),
-                getString(R.string.report_reason_harassment),
-                getString(R.string.report_reason_false_info),
-                getString(R.string.report_reason_other)
+                "Nội dung không phù hợp",
+                "Spam",
+                "Quấy rối",
+                "Thông tin sai sự thật",
+                "Lý do khác"
         };
+
         new androidx.appcompat.app.AlertDialog.Builder(requireContext())
-                .setTitle(getString(R.string.report_post_title))
+                .setTitle("Báo cáo bài viết")
                 .setItems(reasons, (dialog, which) -> {
                     String selectedReason = reasons[which];
-                    showReportDetailDialog(post, selectedReason);
+
+                    // CHỈ khi chọn "Lý do khác" (index 4) mới hiện dialog nhập chi tiết
+                    if (which == 4) {
+                        showPostReportDetailDialog(post, selectedReason);
+                    } else {
+                        homeViewModel.reportPost(post, selectedReason);
+                        Toast.makeText(requireContext(), "Cảm ơn bạn đã báo cáo. Chúng tôi sẽ xem xét.", Toast.LENGTH_LONG).show();
+                    }
                 })
-                .setNegativeButton(getString(R.string.cancel_action), null)
+                .setNegativeButton("Hủy", null)
                 .show();
     }
 
-    private void showReportDetailDialog(Post post, String baseReason) {
+    private void showPostReportDetailDialog(Post post, String baseReason) {
         android.widget.EditText input = new android.widget.EditText(requireContext());
-        input.setHint(R.string.report_reason_hint);
-        int padding = (int) (16 * getResources().getDisplayMetrics().density);
-        android.widget.FrameLayout container = new android.widget.FrameLayout(requireContext());
-        container.addView(input);
-        input.setPadding(padding, padding, padding, padding);
+        input.setHint("Nhập chi tiết lý do");
+        input.setPadding(40, 20, 40, 20);
 
         new androidx.appcompat.app.AlertDialog.Builder(requireContext())
-                .setTitle(R.string.report_reason_title)
-                .setView(container)
-                .setPositiveButton(R.string.report_submit, (dialog, which) -> {
+                .setTitle("Nhập chi tiết lý do báo cáo")
+                .setView(input)
+                .setPositiveButton("Gửi", (dialog, which) -> {
                     String detail = input.getText().toString().trim();
                     String finalReason = detail.isEmpty() ? baseReason : baseReason + ": " + detail;
                     homeViewModel.reportPost(post, finalReason);
-                    Toast.makeText(requireContext(), getString(R.string.report_thanks), Toast.LENGTH_SHORT).show();
+                    Toast.makeText(requireContext(), "Cảm ơn bạn đã báo cáo. Chúng tôi sẽ xem xét.", Toast.LENGTH_LONG).show();
                 })
-                .setNegativeButton(R.string.cancel_action, null)
+                .setNegativeButton("Hủy", null)
                 .show();
     }
 }

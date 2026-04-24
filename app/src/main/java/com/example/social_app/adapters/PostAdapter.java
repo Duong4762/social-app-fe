@@ -13,8 +13,10 @@ import android.widget.ImageButton;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.MediaController;
+import android.widget.PopupMenu;
 import android.widget.TextView;
 import android.widget.VideoView;
+import android.widget.Toast;
 
 import androidx.annotation.NonNull;
 import androidx.recyclerview.widget.RecyclerView;
@@ -36,10 +38,6 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
-/**
- * RecyclerView Adapter for displaying posts in the social feed.
- * Supports multiple view types including post composer and post items.
- */
 public class PostAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
 
     private static final int VIEW_TYPE_COMPOSER = 0;
@@ -59,8 +57,8 @@ public class PostAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
         default void onShareClicked(Post post) {}
         default void onBookmarkClicked(Post post) {}
         void onComposerPostClicked(String content);
-        void onComposerClicked();  // NEW: Handle composer clicks to open new post creation
-        void onComposerImageClicked(); // NEW: Handle image button clicks to pick image
+        void onComposerClicked();
+        void onComposerImageClicked();
         void onEditPostClicked(Post post);
         void onDeletePostClicked(Post post);
         void onReportPostClicked(Post post);
@@ -72,17 +70,11 @@ public class PostAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
         this.actionListener = actionListener;
     }
 
-    /**
-     * Sets the posts data to display.
-     */
     public void setPosts(List<Post> posts) {
         this.posts = posts;
         notifyDataSetChanged();
     }
 
-    /**
-     * Adds more posts (for infinite scroll).
-     */
     public void addPosts(List<Post> newPosts) {
         int previousSize = posts.size();
         posts.addAll(newPosts);
@@ -122,7 +114,6 @@ public class PostAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
         if (useSearchLayout) {
             return VIEW_TYPE_POST;
         }
-        // First item is always the composer
         return position == 0 ? VIEW_TYPE_COMPOSER : VIEW_TYPE_POST;
     }
 
@@ -152,7 +143,6 @@ public class PostAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
 
     @Override
     public int getItemCount() {
-        // In search/profile layout we show only posts (without composer).
         return useSearchLayout ? posts.size() : posts.size() + 1;
     }
 
@@ -164,9 +154,6 @@ public class PostAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
         super.onViewRecycled(holder);
     }
 
-    /**
-     * ViewHolder for the post composer item at the top of the feed.
-     */
     private class ComposerViewHolder extends RecyclerView.ViewHolder {
         private ImageView composerAvatar;
         private com.google.android.material.button.MaterialButton composerInput;
@@ -174,27 +161,17 @@ public class PostAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
 
         ComposerViewHolder(@NonNull View itemView) {
             super(itemView);
-            // Initialize composer views
             composerAvatar = itemView.findViewById(R.id.composer_avatar);
             composerInput = itemView.findViewById(R.id.composer_input);
             composerImageBtn = itemView.findViewById(R.id.composer_image_btn);
 
-            // Set up click listeners for composer
-            setupComposerListeners();
-        }
-
-        private void setupComposerListeners() {
-            // Click listener for "What's new?" input button
             composerInput.setOnClickListener(v -> {
-                android.util.Log.d("PostAdapter", "Composer input clicked - switching to NewPostFragment");
                 if (actionListener != null) {
                     actionListener.onComposerClicked();
                 }
             });
 
-            // Click listener for image button (alternative way to create post)
             composerImageBtn.setOnClickListener(v -> {
-                android.util.Log.d("PostAdapter", "Composer image button clicked - switching to NewPostFragment");
                 if (actionListener != null) {
                     actionListener.onComposerImageClicked();
                 }
@@ -206,9 +183,6 @@ public class PostAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
         }
     }
 
-    /**
-     * ViewHolder for individual post items in the feed.
-     */
     private class PostViewHolder extends RecyclerView.ViewHolder {
         private ImageView userAvatar;
         private TextView username;
@@ -245,13 +219,13 @@ public class PostAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
             clearRealtimeLikeListeners();
             this.boundPost = post;
             this.boundPosition = position;
+
             // Set user info
             User postUser = MockDataGenerator.getUserById(post.getUserId());
             if (postUser != null) {
                 username.setText(postUser.getFullName());
                 UserAvatarLoader.load(userAvatar, postUser.getAvatarUrl());
             } else {
-                // Nếu không có trong Mock, thử lấy từ Firebase
                 username.setText("Loading...");
                 FirebaseFirestore.getInstance().collection(FirebaseManager.COLLECTION_USERS)
                         .document(post.getUserId())
@@ -282,8 +256,6 @@ public class PostAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
             // Set post content
             postContent.setText(post.getCaption());
 
-            UserAvatarLoader.load(userAvatar, postUser != null ? postUser.getAvatarUrl() : null);
-
             // Load media from Firestore
             loadPostMedia(post.getId(), post);
 
@@ -291,25 +263,28 @@ public class PostAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
             likeCount.setText(String.valueOf(post.getLikeCount()));
             commentCount.setText(String.valueOf(post.getCommentCount()));
 
-            // Update like icon based on liked state
+            // Update like icon
             updateLikeIcon(post);
             setupRealtimeLike(post);
 
-            // Setup more options click listener
+            // ==================== NÚT 3 CHẤM (MORE OPTIONS) ====================
             ImageView moreOptions = itemView.findViewById(R.id.post_more_options);
             String currentUserId = FirebaseManager.getInstance().getAuth().getUid();
-            
-            // Chỉ hiển thị dấu ba chấm hoặc chỉ cho phép sửa/xóa nếu là bài viết của mình
+
+            // LUÔN hiển thị nút 3 chấm
+            moreOptions.setVisibility(View.VISIBLE);
+
             if (currentUserId != null && currentUserId.equals(post.getUserId())) {
-                moreOptions.setVisibility(View.VISIBLE);
+                // === BÀI VIẾT CỦA CHÍNH MÌNH: Menu Chỉnh sửa / Xóa ===
                 moreOptions.setOnClickListener(v -> {
-                    android.widget.PopupMenu popup = new android.widget.PopupMenu(context, v);
+                    PopupMenu popup = new PopupMenu(context, v);
                     popup.getMenu().add("Chỉnh sửa");
                     popup.getMenu().add("Xóa");
                     popup.setOnMenuItemClickListener(item -> {
-                        if (item.getTitle().equals("Chỉnh sửa")) {
+                        String title = item.getTitle().toString();
+                        if (title.equals("Chỉnh sửa")) {
                             if (actionListener != null) actionListener.onEditPostClicked(post);
-                        } else if (item.getTitle().equals("Xóa")) {
+                        } else if (title.equals("Xóa")) {
                             if (actionListener != null) actionListener.onDeletePostClicked(post);
                         }
                         return true;
@@ -317,10 +292,22 @@ public class PostAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
                     popup.show();
                 });
             } else {
-                moreOptions.setVisibility(View.GONE);
+                // === BÀI VIẾT CỦA NGƯỜI KHÁC: Menu Báo cáo ===
+                moreOptions.setOnClickListener(v -> {
+                    PopupMenu popup = new PopupMenu(context, v);
+                    popup.getMenu().add("Báo cáo");
+                    popup.setOnMenuItemClickListener(item -> {
+                        String title = item.getTitle().toString();
+                        if (title.equals("Báo cáo")) {
+                            if (actionListener != null) actionListener.onReportPostClicked(post);
+                        }
+                        return true;
+                    });
+                    popup.show();
+                });
             }
 
-            // Set up click listeners - ONLY ONCE
+            // Like button
             likeContainer.setOnClickListener(v -> {
                 String postId = post.getId();
                 if (postId != null) {
@@ -335,10 +322,24 @@ public class PostAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
                 }
             });
 
+            // Comment button
             commentContainer.setOnClickListener(v -> {
-                android.util.Log.d("PostAdapter", "Comment clicked for post: " + post.getId());
                 if (actionListener != null) {
                     actionListener.onCommentClicked(post);
+                }
+            });
+
+            // Avatar click
+            userAvatar.setOnClickListener(v -> {
+                if (actionListener != null) {
+                    actionListener.onUserClicked(post.getUserId());
+                }
+            });
+
+            // Username click
+            username.setOnClickListener(v -> {
+                if (actionListener != null) {
+                    actionListener.onUserClicked(post.getUserId());
                 }
             });
         }
@@ -348,19 +349,17 @@ public class PostAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
                 postMediaContainer.setVisibility(View.GONE);
                 return;
             }
-            
-            // Đặt tag để kiểm tra xem dữ liệu nạp về có đúng cho item này không (tránh lỗi tái sử dụng View của RecyclerView)
+
             postMediaContainer.setTag(postId);
 
             FirebaseFirestore.getInstance().collection(FirebaseManager.COLLECTION_POST_MEDIA)
                     .whereEqualTo("postId", postId)
                     .get()
                     .addOnSuccessListener(queryDocumentSnapshots -> {
-                        // Kiểm tra nếu tag vẫn khớp với postId hiện tại của ViewHolder
                         if (!postId.equals(postMediaContainer.getTag())) return;
 
                         List<PostMedia> mediaList = queryDocumentSnapshots.toObjects(PostMedia.class);
-                        
+
                         if (!mediaList.isEmpty()) {
                             mediaList.sort((m1, m2) -> Integer.compare(m1.getOrder(), m2.getOrder()));
                             postMediaContainer.setVisibility(View.VISIBLE);
@@ -639,7 +638,6 @@ public class PostAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
             }
 
             likeContainer.setOnClickListener(v -> {
-                // Keep popup UI in sync immediately with current state.
                 overlayLiked[0] = !overlayLiked[0];
                 if (overlayLiked[0]) {
                     overlayLikeCount[0] = overlayLikeCount[0] + 1;
@@ -661,6 +659,7 @@ public class PostAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
                     actionListener.onLikeClicked(boundPost, boundPosition);
                 }
             });
+
             commentContainer.setOnClickListener(v -> {
                 if (actionListener != null && boundPost != null) {
                     actionListener.onCommentClicked(boundPost);
@@ -682,9 +681,6 @@ public class PostAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
             }
         }
 
-        /**
-         * Updates the like icon visual state.
-         */
         private void updateLikeIcon(Post post) {
             boolean isLiked = likedPostIds.contains(post.getId());
             likeIcon.setTag(isLiked);
@@ -693,12 +689,8 @@ public class PostAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
                 likeIcon.setColorFilter(context.getResources().getColor(R.color.accent_red, null));
             } else {
                 likeIcon.setImageResource(R.drawable.ic_heart);
-                // Reset to default color
                 likeIcon.clearColorFilter();
             }
         }
-
     }
 }
-
-

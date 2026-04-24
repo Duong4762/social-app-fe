@@ -23,7 +23,7 @@ public class HomeViewModel extends ViewModel {
     private final MutableLiveData<List<Post>> posts = new MutableLiveData<>();
     private final MutableLiveData<Boolean> isLoading = new MutableLiveData<>(false);
     private final MutableLiveData<String> error = new MutableLiveData<>();
-    
+
     private final FirebaseFirestore db;
     private final FirebaseManager firebaseManager;
     private DocumentSnapshot lastVisible;
@@ -48,7 +48,7 @@ public class HomeViewModel extends ViewModel {
         if (!isRefresh && isLastPage) return;
 
         isLoading.setValue(true);
-        
+
         Query query = db.collection(FirebaseManager.COLLECTION_POSTS)
                 .orderBy("createdAt", Query.Direction.DESCENDING)
                 .limit(10);
@@ -60,7 +60,7 @@ public class HomeViewModel extends ViewModel {
         query.get()
                 .addOnSuccessListener(queryDocumentSnapshots -> {
                     List<Post> newPosts = queryDocumentSnapshots.toObjects(Post.class);
-                    
+
                     if (isRefresh) {
                         posts.setValue(newPosts);
                         // Khi refresh, xóa trạng thái cũ và tải lại engagement mới nhất
@@ -81,7 +81,7 @@ public class HomeViewModel extends ViewModel {
                                 .get(queryDocumentSnapshots.size() - 1);
                         isLastPage = false;
                     }
-                    
+
                     isLoading.setValue(false);
                 })
                 .addOnFailureListener(e -> {
@@ -99,7 +99,7 @@ public class HomeViewModel extends ViewModel {
 
         if (isLiking) {
             likedPostIds.add(postId);
-            
+
             // Add to post_likes collection
             java.util.Map<String, Object> likeData = new java.util.HashMap<>();
             likeData.put("postId", postId);
@@ -108,7 +108,7 @@ public class HomeViewModel extends ViewModel {
             db.collection(FirebaseManager.COLLECTION_POST_LIKES).document(postId + "_" + userId).set(likeData);
         } else {
             likedPostIds.remove(postId);
-            
+
             // Remove from post_likes collection
             db.collection(FirebaseManager.COLLECTION_POST_LIKES).document(postId + "_" + userId).delete();
         }
@@ -140,24 +140,24 @@ public class HomeViewModel extends ViewModel {
             bookmarkData.put("userId", userId);
             bookmarkData.put("createdAt", FieldValue.serverTimestamp());
             db.collection(FirebaseManager.COLLECTION_BOOKMARKS).document(docId).set(bookmarkData)
-                .addOnFailureListener(e -> {
-                    // Revert on failure
-                    bookmarkedPostIds.remove(postId);
-                    posts.setValue(posts.getValue());
-                });
+                    .addOnFailureListener(e -> {
+                        // Revert on failure
+                        bookmarkedPostIds.remove(postId);
+                        posts.setValue(posts.getValue());
+                    });
         } else {
             db.collection(FirebaseManager.COLLECTION_BOOKMARKS).document(docId).delete()
-                .addOnFailureListener(e -> {
-                    // Revert on failure
-                    bookmarkedPostIds.add(postId);
-                    posts.setValue(posts.getValue());
-                });
+                    .addOnFailureListener(e -> {
+                        // Revert on failure
+                        bookmarkedPostIds.add(postId);
+                        posts.setValue(posts.getValue());
+                    });
         }
     }
 
     public void incrementShareCount(Post post) {
         if (post == null || post.getId() == null) return;
-        
+
         String postId = post.getId();
         db.collection(FirebaseManager.COLLECTION_POSTS).document(postId)
                 .update("shareCount", FieldValue.increment(1))
@@ -195,6 +195,64 @@ public class HomeViewModel extends ViewModel {
                 })
                 .addOnFailureListener(e -> {
                     error.setValue("Lỗi khi gửi báo cáo: " + e.getMessage());
+                });
+    }
+
+    // ==================== THÊM: REPORT USER ====================
+
+    public void reportUser(com.example.social_app.data.model.User user, String reason) {
+        String userId = firebaseManager.getAuth().getUid();
+
+        if (userId == null) {
+            error.setValue("Vui lòng đăng nhập để báo cáo");
+            return;
+        }
+
+        if (user == null || user.getId() == null) {
+            error.setValue("Không thể báo cáo người dùng này");
+            return;
+        }
+
+        // Không cho report chính mình
+        if (userId.equals(user.getId())) {
+            error.setValue("Bạn không thể báo cáo chính mình");
+            return;
+        }
+
+        // Kiểm tra đã report user này chưa
+        db.collection(FirebaseManager.COLLECTION_REPORTS)
+                .whereEqualTo("reporterId", userId)
+                .whereEqualTo("targetId", user.getId())
+                .whereEqualTo("type", "USER")
+                .get()
+                .addOnSuccessListener(query -> {
+                    if (!query.isEmpty()) {
+                        error.setValue("Bạn đã báo cáo người dùng này rồi");
+                        return;
+                    }
+
+                    String reportId = java.util.UUID.randomUUID().toString();
+                    Report report = new Report();
+                    report.setId(reportId);
+                    report.setReporterId(userId);
+                    report.setTargetId(user.getId());
+                    report.setType("USER");
+                    report.setReason(reason);
+                    report.setStatus("UNPROCESSED");
+                    report.setCreatedAt(new java.util.Date());
+
+                    db.collection(FirebaseManager.COLLECTION_REPORTS)
+                            .document(reportId)
+                            .set(report)
+                            .addOnSuccessListener(aVoid -> {
+                                android.util.Log.d("HomeViewModel", "User report submitted: " + reportId);
+                            })
+                            .addOnFailureListener(e -> {
+                                error.setValue("Gửi báo cáo thất bại: " + e.getMessage());
+                            });
+                })
+                .addOnFailureListener(e -> {
+                    error.setValue("Lỗi kiểm tra báo cáo: " + e.getMessage());
                 });
     }
 
