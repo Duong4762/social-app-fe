@@ -1,6 +1,11 @@
 package com.example.social_app.fragments;
 
 import android.os.Bundle;
+import android.app.Dialog;
+import android.content.pm.PackageManager;
+import android.database.Cursor;
+import android.net.Uri;
+import android.provider.MediaStore;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -19,19 +24,22 @@ import com.example.social_app.utils.UserAvatarLoader;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.lifecycle.ViewModelProvider;
+import androidx.recyclerview.widget.GridLayoutManager;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 import androidx.swiperefreshlayout.widget.SwipeRefreshLayout;
 
+import com.bumptech.glide.Glide;
 import com.example.social_app.R;
-import com.example.social_app.utils.UserAvatarLoader;
 import com.example.social_app.adapters.CommentAdapter;
 import com.example.social_app.data.model.Comment;
-import com.example.social_app.utils.MockDataGenerator;
 import com.example.social_app.viewmodels.CommentViewModel;
 import com.google.android.material.bottomsheet.BottomSheetDialogFragment;
 import com.google.android.material.bottomsheet.BottomSheetBehavior;
 import com.google.android.material.button.MaterialButton;
+
+import java.util.ArrayList;
+import java.util.List;
 
 public class BottomSheetCommentFragment extends BottomSheetDialogFragment implements CommentAdapter.OnCommentActionListener {
 
@@ -50,6 +58,12 @@ public class BottomSheetCommentFragment extends BottomSheetDialogFragment implem
     private MaterialButton mediaSendButton;
     private android.net.Uri selectedMediaUri;
     private String selectedMediaType;
+    private View selectedMediaContainer;
+    private ImageView selectedMediaPreview;
+    private ImageButton selectedMediaRemoveButton;
+    private static final int MEDIA_PERMISSION_REQUEST = 101;
+    private final List<PickerMediaItem> pickerMediaItems = new ArrayList<>();
+    private MediaPickerAdapter mediaPickerAdapter;
 
     private CommentAdapter commentAdapter;
     private CommentViewModel commentViewModel;
@@ -106,6 +120,21 @@ public class BottomSheetCommentFragment extends BottomSheetDialogFragment implem
         emojiButton = view.findViewById(R.id.compose_emoji_button);
         sendButton = view.findViewById(R.id.compose_send_button);
         mediaSendButton = view.findViewById(R.id.media_send_button);
+        selectedMediaContainer = view.findViewById(R.id.compose_selected_media_container);
+        selectedMediaPreview = view.findViewById(R.id.compose_selected_media_preview);
+        selectedMediaRemoveButton = view.findViewById(R.id.compose_selected_media_remove);
+
+        if (selectedMediaRemoveButton != null) {
+            selectedMediaRemoveButton.setOnClickListener(v -> {
+                selectedMediaUri = null;
+                selectedMediaType = null;
+                updateSelectedMediaPreview();
+                updateSendButtonState();
+            });
+        }
+        if (mediaSendButton != null) {
+            mediaSendButton.setVisibility(View.GONE);
+        }
 
         if (composeAvatar != null) {
             UserAvatarLoader.load(composeAvatar, null);
@@ -182,11 +211,7 @@ public class BottomSheetCommentFragment extends BottomSheetDialogFragment implem
                     int currentLength = s.length();
                     updateCharacterCount(currentLength);
 
-                    boolean hasContent = s.toString().trim().length() > 0;
-                    boolean withinLimit = currentLength <= CHARACTER_LIMIT;
-                    if (sendButton != null) {
-                        sendButton.setEnabled(hasContent && withinLimit);
-                    }
+                    updateSendButtonState();
 
                     if (charCountText != null) {
                         if (currentLength >= CHARACTER_LIMIT * 0.9) {
@@ -293,7 +318,7 @@ public class BottomSheetCommentFragment extends BottomSheetDialogFragment implem
                         // For this task, I'll assume CommentViewModel.sendComment can handle or be updated
                         commentViewModel.sendCommentWithMedia(
                                 postId,
-                                secureUrl,
+                                commentText,
                                 secureUrl,
                                 "image"
                         );
@@ -314,6 +339,7 @@ public class BottomSheetCommentFragment extends BottomSheetDialogFragment implem
         selectedMediaType = null;
         replyingToUserId = null;
         replyingToCommentId = null;
+        updateSelectedMediaPreview();
         updateSendButtonState();
     }
 
@@ -366,32 +392,193 @@ public class BottomSheetCommentFragment extends BottomSheetDialogFragment implem
         dialog.show();
     }
     private void openFileChooser() {
-        android.content.Intent intent = new android.content.Intent(android.content.Intent.ACTION_GET_CONTENT);
-        intent.setType("image/*");
-        intent.addCategory(android.content.Intent.CATEGORY_OPENABLE);
-        mediaPickerLauncher.launch(intent);
+        showMediaSourcePickerFullscreen();
     }
-
-    private final androidx.activity.result.ActivityResultLauncher<android.content.Intent> mediaPickerLauncher =
-            registerForActivityResult(new androidx.activity.result.contract.ActivityResultContracts.StartActivityForResult(),
-                    result -> {
-                        if (result.getResultCode() == android.app.Activity.RESULT_OK && result.getData() != null) {
-                            selectedMediaUri = result.getData().getData();
-                            selectedMediaType = "image";
-                            updateSendButtonState();
-                            Toast.makeText(getContext(), R.string.image_selected, Toast.LENGTH_SHORT).show();
-                        }
-                    });
 
     private void updateSendButtonState() {
         if (sendButton == null || commentInput == null) return;
         boolean hasText = commentInput.getText().toString().trim().length() > 0;
         boolean hasMedia = selectedMediaUri != null;
-        sendButton.setEnabled(hasText);
-        sendButton.setVisibility(hasMedia ? View.GONE : View.VISIBLE);
+        sendButton.setEnabled(hasText || hasMedia);
+        sendButton.setVisibility(View.VISIBLE);
         if (mediaSendButton != null) {
-            mediaSendButton.setVisibility(hasMedia ? View.VISIBLE : View.GONE);
-            mediaSendButton.setEnabled(hasMedia);
+            mediaSendButton.setVisibility(View.GONE);
+            mediaSendButton.setEnabled(false);
+        }
+    }
+
+    private void updateSelectedMediaPreview() {
+        if (selectedMediaContainer == null || selectedMediaPreview == null) return;
+        if (selectedMediaUri == null) {
+            selectedMediaContainer.setVisibility(View.GONE);
+            return;
+        }
+        selectedMediaContainer.setVisibility(View.VISIBLE);
+        Glide.with(this)
+                .load(selectedMediaUri)
+                .fitCenter()
+                .into(selectedMediaPreview);
+    }
+
+    private void showMediaSourcePickerFullscreen() {
+        Dialog dialog = new Dialog(requireContext(), android.R.style.Theme_Black_NoTitleBar_Fullscreen);
+        dialog.setContentView(R.layout.dialog_media_source_picker);
+        if (dialog.getWindow() != null) {
+            dialog.getWindow().setWindowAnimations(0);
+            dialog.getWindow().setStatusBarColor(androidx.core.content.ContextCompat.getColor(requireContext(), R.color.white));
+            dialog.getWindow().setNavigationBarColor(androidx.core.content.ContextCompat.getColor(requireContext(), R.color.white));
+        }
+
+        View closeBtn = dialog.findViewById(R.id.media_picker_close);
+        RecyclerView mediaGrid = dialog.findViewById(R.id.media_picker_grid);
+        MaterialButton sendBtn = dialog.findViewById(R.id.media_picker_done);
+
+        closeBtn.setOnClickListener(v -> dialog.dismiss());
+        sendBtn.setVisibility(View.GONE);
+
+        mediaPickerAdapter = new MediaPickerAdapter((item, position) -> {
+            if (item.uri == null) return;
+            selectedMediaUri = item.uri;
+            selectedMediaType = item.isVideo ? "video" : "image";
+            updateSelectedMediaPreview();
+            updateSendButtonState();
+            dialog.dismiss();
+        });
+
+        mediaGrid.setLayoutManager(new GridLayoutManager(requireContext(), 3));
+        mediaGrid.setAdapter(mediaPickerAdapter);
+        loadDeviceMediaItems();
+        dialog.show();
+    }
+
+    private void loadDeviceMediaItems() {
+        pickerMediaItems.clear();
+        if (!canReadImages()) {
+            requestMediaPermissions();
+            if (mediaPickerAdapter != null) mediaPickerAdapter.notifyDataSetChanged();
+            return;
+        }
+
+        String[] projection = new String[]{
+                MediaStore.Images.Media._ID,
+                MediaStore.Images.Media.DATE_ADDED
+        };
+        Cursor cursor = requireContext().getContentResolver().query(
+                MediaStore.Images.Media.EXTERNAL_CONTENT_URI,
+                projection,
+                null,
+                null,
+                MediaStore.Images.Media.DATE_ADDED + " DESC"
+        );
+        if (cursor != null) {
+            int idColumn = cursor.getColumnIndexOrThrow(MediaStore.Images.Media._ID);
+            int count = 0;
+            while (cursor.moveToNext() && count < 200) {
+                long id = cursor.getLong(idColumn);
+                Uri uri = Uri.withAppendedPath(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, String.valueOf(id));
+                pickerMediaItems.add(new PickerMediaItem(uri, false));
+                count++;
+            }
+            cursor.close();
+        }
+        if (mediaPickerAdapter != null) mediaPickerAdapter.notifyDataSetChanged();
+    }
+
+    private boolean canReadImages() {
+        if (android.os.Build.VERSION.SDK_INT >= 33) {
+            return androidx.core.content.ContextCompat.checkSelfPermission(
+                    requireContext(),
+                    android.Manifest.permission.READ_MEDIA_IMAGES
+            ) == PackageManager.PERMISSION_GRANTED;
+        }
+        return androidx.core.content.ContextCompat.checkSelfPermission(
+                requireContext(),
+                android.Manifest.permission.READ_EXTERNAL_STORAGE
+        ) == PackageManager.PERMISSION_GRANTED;
+    }
+
+    private void requestMediaPermissions() {
+        if (android.os.Build.VERSION.SDK_INT >= 33) {
+            requestPermissions(new String[]{android.Manifest.permission.READ_MEDIA_IMAGES}, MEDIA_PERMISSION_REQUEST);
+            return;
+        }
+        requestPermissions(new String[]{android.Manifest.permission.READ_EXTERNAL_STORAGE}, MEDIA_PERMISSION_REQUEST);
+    }
+
+    @Override
+    public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults);
+        if (requestCode == MEDIA_PERMISSION_REQUEST) {
+            loadDeviceMediaItems();
+        }
+    }
+
+    private final class MediaPickerAdapter extends RecyclerView.Adapter<MediaPickerAdapter.MediaVH> {
+        private final OnPickerItemClickListener listener;
+
+        MediaPickerAdapter(OnPickerItemClickListener listener) {
+            this.listener = listener;
+        }
+
+        @NonNull
+        @Override
+        public MediaVH onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
+            View view = LayoutInflater.from(parent.getContext())
+                    .inflate(R.layout.item_new_post_media_picker, parent, false);
+            return new MediaVH(view);
+        }
+
+        @Override
+        public void onBindViewHolder(@NonNull MediaVH holder, int position) {
+            PickerMediaItem item = pickerMediaItems.get(position);
+            Glide.with(BottomSheetCommentFragment.this)
+                    .load(item.uri)
+                    .thumbnail(0.2f)
+                    .centerCrop()
+                    .into(holder.thumb);
+
+            holder.videoBadge.setVisibility(View.GONE);
+            holder.videoDuration.setVisibility(View.GONE);
+            boolean isSelected = item.uri != null && item.uri.equals(selectedMediaUri);
+            holder.selectedOverlay.setVisibility(isSelected ? View.VISIBLE : View.GONE);
+            holder.selectedCheck.setVisibility(isSelected ? View.VISIBLE : View.GONE);
+            holder.itemView.setOnClickListener(v -> listener.onItemClick(item, holder.getBindingAdapterPosition()));
+        }
+
+        @Override
+        public int getItemCount() {
+            return pickerMediaItems.size();
+        }
+
+        final class MediaVH extends RecyclerView.ViewHolder {
+            private final ImageView thumb;
+            private final ImageView videoBadge;
+            private final TextView videoDuration;
+            private final View selectedOverlay;
+            private final ImageView selectedCheck;
+
+            MediaVH(@NonNull View itemView) {
+                super(itemView);
+                thumb = itemView.findViewById(R.id.media_picker_thumb);
+                videoBadge = itemView.findViewById(R.id.media_picker_video_badge);
+                videoDuration = itemView.findViewById(R.id.media_picker_video_duration);
+                selectedOverlay = itemView.findViewById(R.id.media_picker_selected_overlay);
+                selectedCheck = itemView.findViewById(R.id.media_picker_selected_check);
+            }
+        }
+    }
+
+    private interface OnPickerItemClickListener {
+        void onItemClick(PickerMediaItem item, int position);
+    }
+
+    private static final class PickerMediaItem {
+        final Uri uri;
+        final boolean isVideo;
+
+        PickerMediaItem(@Nullable Uri uri, boolean isVideo) {
+            this.uri = uri;
+            this.isVideo = isVideo;
         }
     }
 

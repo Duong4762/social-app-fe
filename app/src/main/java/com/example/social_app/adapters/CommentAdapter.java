@@ -273,7 +273,22 @@ public class CommentAdapter extends RecyclerView.Adapter<CommentAdapter.CommentV
                         });
             }
 
-            if (commentText != null) commentText.setText(comment.getContent());
+            if (commentText != null) {
+                String mediaType = comment.getMediaType();
+                String content = comment.getContent();
+                boolean hasTextContent = content != null && !content.trim().isEmpty();
+                boolean imageOnlyComment = "image".equalsIgnoreCase(mediaType)
+                        && comment.getMediaUrl() != null
+                        && !comment.getMediaUrl().isEmpty()
+                        && !hasTextContent;
+                if (imageOnlyComment) {
+                    commentText.setText("");
+                    commentText.setVisibility(View.GONE);
+                } else {
+                    commentText.setVisibility(View.VISIBLE);
+                    commentText.setText(content != null ? content : "");
+                }
+            }
             bindCommentMedia(comment);
             bindLikeInteraction(comment, position);
             
@@ -304,7 +319,7 @@ public class CommentAdapter extends RecyclerView.Adapter<CommentAdapter.CommentV
             String mediaUrl = comment.getMediaUrl();
             if (mediaUrl != null && !mediaUrl.isEmpty()) {
                 mediaContainer.setVisibility(View.VISIBLE);
-                Glide.with(context).load(mediaUrl).centerCrop().into(mediaImage);
+                Glide.with(context).load(mediaUrl).fitCenter().into(mediaImage);
                 if (gifIndicator != null) {
                     gifIndicator.setVisibility("gif".equals(comment.getMediaType()) ? View.VISIBLE : View.GONE);
                 }
