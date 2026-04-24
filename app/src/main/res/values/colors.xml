@@ -80,4 +80,7 @@
 
     <!-- Transparent -->
     <color name="transparent">#00000000</color>
+
+    <color name="story_ring_green">#22C55E</color>
+    <color name="story_ring_gray">#94A3B8</color>
 </resources>
