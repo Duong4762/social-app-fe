@@ -224,6 +224,31 @@
     <string name="profile_empty_following">Not following anyone yet</string>
     <string name="admin_title">Admin Dashboard</string>
     <string name="admin_empty">No reported users to review</string>
+    <string name="admin_nav_dashboard">Dashboard</string>
+    <string name="admin_nav_users">Users</string>
+    <string name="admin_nav_stats">Stats</string>
+    <string name="admin_pending_reports_label">Pending reports</string>
+    <string name="admin_tab_new_reports">New reports</string>
+    <string name="admin_tab_processed">Processed</string>
+    <string name="admin_tab_banned_users">Banned users</string>
+    <string name="admin_manage_users">Manage users</string>
+    <string name="admin_search_user_hint">Search by name, email or UID</string>
+    <string name="admin_filter_all">All</string>
+    <string name="admin_filter_allowed">Allowed</string>
+    <string name="admin_filter_blocked">Blocked</string>
+    <string name="admin_filter_warned">Warned</string>
+    <string name="admin_stats_section_title">Statistics</string>
+    <string name="admin_total_users">Total users</string>
+    <string name="admin_period_7_days">7 days</string>
+    <string name="admin_period_30_days">30 days</string>
+    <string name="admin_period_90_days">90 days</string>
+    <string name="admin_banned_users">Banned</string>
+    <string name="admin_posts_in_period">Posts in period</string>
+    <string name="admin_user_growth_chart">User growth chart</string>
+    <string name="admin_chart_subtitle_default">Based on selected period</string>
+    <string name="admin_additional_metrics">Additional metrics</string>
+    <string name="admin_active_users">Active users</string>
+    <string name="admin_total_posts">Total posts</string>
 
 
     <!-- Messages -->

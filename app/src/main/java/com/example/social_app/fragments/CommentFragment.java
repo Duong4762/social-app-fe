@@ -287,6 +287,23 @@ public class CommentFragment extends Fragment implements CommentAdapter.OnCommen
 
     // ==================== CommentAdapter.OnCommentActionListener Callbacks ====================
     @Override
+    public void onUserClicked(String userId) {
+        if (userId == null || userId.trim().isEmpty()) return;
+        String currentUserId = com.example.social_app.firebase.FirebaseManager.getInstance().getAuth().getUid();
+        androidx.fragment.app.Fragment fragment;
+        if (userId.equals(currentUserId)) {
+            fragment = new ProfileFragment();
+        } else {
+            fragment = OtherProfileFragment.newInstance(userId);
+        }
+        requireActivity().getSupportFragmentManager()
+                .beginTransaction()
+                .replace(R.id.nav_host_fragment, fragment)
+                .addToBackStack(null)
+                .commit();
+    }
+
+    @Override
     public void onLikeClicked(Comment comment, int position) {
         commentViewModel.toggleLike(comment);
     }

@@ -24,6 +24,7 @@ import com.example.social_app.adapters.UserSearchAdapter;
 import com.example.social_app.data.model.Follow;
 import com.example.social_app.data.model.Notification;
 import com.example.social_app.data.model.Post;
+import com.example.social_app.data.model.Report;
 import com.example.social_app.data.model.User;
 import com.example.social_app.firebase.FirebaseManager;
 import com.example.social_app.repository.ConversationRepository;
@@ -57,6 +58,7 @@ public class OtherProfileFragment extends Fragment implements PostAdapter.OnPost
     private TextView tabEmptyState;
     private ImageView imgAvatar;
     private ImageView btnBack;
+    private ImageView btnMore;
     private View tabIndicator;
     private View tabLoading;
     private RecyclerView rvPosts;
@@ -110,6 +112,7 @@ public class OtherProfileFragment extends Fragment implements PostAdapter.OnPost
         tabEmptyState = view.findViewById(R.id.tabEmptyState);
         imgAvatar = view.findViewById(R.id.imgAvatar);
         btnBack = view.findViewById(R.id.btnBack);
+        btnMore = view.findViewById(R.id.btnMore);
         tabIndicator = view.findViewById(R.id.tabIndicator);
         tabLoading = view.findViewById(R.id.tabLoading);
         rvPosts = view.findViewById(R.id.rvPosts);
@@ -125,9 +128,78 @@ public class OtherProfileFragment extends Fragment implements PostAdapter.OnPost
 
     private void setupActions() {
         btnBack.setOnClickListener(v -> requireActivity().getSupportFragmentManager().popBackStack());
+        if (btnMore != null) {
+            btnMore.setOnClickListener(this::showProfileOptionsMenu);
+        }
         imgAvatar.setOnClickListener(v -> openAvatarPreviewOnly());
         btnFollow.setOnClickListener(v -> onFollowButtonClicked());
         btnChat.setOnClickListener(v -> openChatWithProfileUser());
+    }
+
+    private void showProfileOptionsMenu(@NonNull View anchor) {
+        if (!isAdded() || TextUtils.isEmpty(targetUserId)) {
+            return;
+        }
+        if (!TextUtils.isEmpty(currentUserId) && currentUserId.equals(targetUserId)) {
+            return;
+        }
+        android.widget.PopupMenu popup = new android.widget.PopupMenu(requireContext(), anchor);
+        popup.getMenu().add(getString(R.string.menu_report));
+        popup.setOnMenuItemClickListener(item -> {
+            if (getString(R.string.menu_report).contentEquals(item.getTitle())) {
+                showReportUserDetailDialog();
+                return true;
+            }
+            return false;
+        });
+        popup.show();
+    }
+
+    private void showReportUserDetailDialog() {
+        android.widget.EditText input = new android.widget.EditText(requireContext());
+        input.setHint(R.string.report_reason_hint);
+        int padding = (int) (16 * getResources().getDisplayMetrics().density);
+        android.widget.FrameLayout container = new android.widget.FrameLayout(requireContext());
+        container.addView(input);
+        input.setPadding(padding, padding, padding, padding);
+
+        new androidx.appcompat.app.AlertDialog.Builder(requireContext())
+                .setTitle(R.string.report_reason_title)
+                .setView(container)
+                .setPositiveButton(R.string.report_submit, (dialog, which) -> {
+                    String reason = input.getText().toString().trim();
+                    if (reason.isEmpty()) {
+                        reason = getString(R.string.report_reason_other);
+                    }
+                    submitUserReport(reason);
+                })
+                .setNegativeButton(R.string.cancel_action, null)
+                .show();
+    }
+
+    private void submitUserReport(@NonNull String reason) {
+        if (TextUtils.isEmpty(currentUserId) || TextUtils.isEmpty(targetUserId)) {
+            return;
+        }
+        if (currentUserId.equals(targetUserId)) {
+            return;
+        }
+        com.google.firebase.firestore.DocumentReference reportRef = FirebaseManager.getInstance()
+                .getFirestore()
+                .collection(FirebaseManager.COLLECTION_REPORTS)
+                .document();
+        Report report = new Report();
+        report.setId(reportRef.getId());
+        report.setReporterId(currentUserId);
+        report.setTargetId(targetUserId);
+        report.setType("USER");
+        report.setStatus("UNPROCESSED");
+        report.setReason(reason);
+        reportRef.set(report)
+                .addOnSuccessListener(unused ->
+                        Toast.makeText(requireContext(), getString(R.string.report_thanks), Toast.LENGTH_SHORT).show())
+                .addOnFailureListener(e ->
+                        Toast.makeText(requireContext(), "Gui report that bai", Toast.LENGTH_SHORT).show());
     }
 
     private void loadUserProfile() {
