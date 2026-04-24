@@ -23,6 +23,12 @@ public class FirebaseManager {
     public static final String COLLECTION_REPORTS              = "reports";
     public static final String COLLECTION_BOOKMARKS            = "bookmarks";
     public static final String COLLECTION_STORIES = "stories";
+    /** Cuộc gọi thoại: trạng thái tổng (RINGING, CONNECTED, …). */
+    public static final String COLLECTION_VOICE_CALLS = "voice_calls";
+    /** Mỗi user một document: phase + peer để lắng nghe realtime toàn app. */
+    public static final String COLLECTION_USER_CALL_INBOX = "user_call_inbox";
+    /** Subcollection của {@code voice_calls/{callId}} — ICE trickle WebRTC. */
+    public static final String SUBCOLLECTION_VOICE_CALL_WEBRTC_ICE = "webrtc_ice";
     // -------------------------------------------------------
     // Firebase Storage Paths
     // -------------------------------------------------------

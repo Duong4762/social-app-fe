@@ -23,6 +23,7 @@ import androidx.fragment.app.FragmentManager;
 import androidx.recyclerview.widget.RecyclerView;
 
 import com.example.social_app.firebase.FirebaseManager;
+import com.example.social_app.fragments.CallOverlayFragment;
 import com.example.social_app.fragments.ChatDetailFragment;
 import com.example.social_app.fragments.NewGroupSelectMembersFragment;
 import com.example.social_app.fragments.SearchFragment;
@@ -126,8 +127,26 @@ public class MainActivity extends BaseActivity {
         // Lưu Token để nhận thông báo
         saveFCMToken();
 
+        ensureCallOverlayAttached();
+
         // Xử lý điều hướng nếu được mở từ thông báo
         handleIntent(getIntent());
+    }
+
+    /**
+     * Gắn fragment lắng nghe {@code user_call_inbox} để hiện cuộc gọi trên mọi tab.
+     */
+    private void ensureCallOverlayAttached() {
+        FirebaseUser user = FirebaseAuth.getInstance().getCurrentUser();
+        if (user == null) {
+            return;
+        }
+        if (fragmentManager.findFragmentById(R.id.call_overlay_host) != null) {
+            return;
+        }
+        fragmentManager.beginTransaction()
+                .add(R.id.call_overlay_host, new CallOverlayFragment())
+                .commit();
     }
 
     @Override
@@ -354,6 +373,15 @@ public class MainActivity extends BaseActivity {
         } else {
             showBottomNavigation();
         }
+    }
+
+    /** Chat toàn màn đang mở — dùng khi đóng overlay gọi để không bật bottom nav nhầm. */
+    public boolean isFullScreenChatOverlayVisible() {
+        View overlay = findViewById(R.id.full_screen_chat_overlay);
+        if (overlay == null || overlay.getVisibility() != View.VISIBLE) {
+            return false;
+        }
+        return fragmentManager.findFragmentById(R.id.full_screen_chat_overlay) != null;
     }
 
     /**

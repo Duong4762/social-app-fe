@@ -90,4 +90,7 @@ dependencies {
     // Glide for Image Loading
     implementation("com.github.bumptech.glide:glide:4.16.0")
     annotationProcessor("com.github.bumptech.glide:compiler:4.16.0")
+
+    // WebRTC (âm thanh P2P; tín hiệu SDP/ICE qua Firestore)
+    implementation("com.infobip:google-webrtc:1.0.43590")
 }

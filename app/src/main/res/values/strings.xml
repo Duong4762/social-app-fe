@@ -273,6 +273,8 @@
     <string name="group_invited_label">Invited</string>
     <string name="new_group_need_two_members">Select at least 2 people</string>
     <string name="new_group_create_failed">Could not create group</string>
+    <string name="story_add_label">Thêm</string>
+    <string name="story_add_content_desc">Tạo story mới</string>
     <string name="story_sarah">Sarah</string>
     <string name="story_alex">Alex</string>
     <string name="story_jordan">Jordan</string>
@@ -307,6 +309,21 @@
     <string name="chat_pick_image_title">Pick image</string>
     <string name="chat_need_image_permission">App needs image permission</string>
     <string name="chat_cannot_read_images">Cannot read images from device</string>
+    <string name="cd_chat_voice_call">Voice call</string>
+    <string name="call_accept">Accept</string>
+    <string name="call_decline">Decline</string>
+    <string name="call_speaker">Speaker</string>
+    <string name="call_hangup">End call</string>
+    <string name="call_status_incoming">Incoming call…</string>
+    <string name="call_status_waiting">Waiting for the other side…</string>
+    <string name="call_status_connected">Connected</string>
+    <string name="call_peer_declined">Call declined</string>
+    <string name="call_peer_cancelled">Caller cancelled</string>
+    <string name="call_ended">Call ended</string>
+    <string name="call_action_failed">Could not update call</string>
+    <string name="call_start_failed">Could not start call</string>
+    <string name="call_webrtc_error">Voice connection issue</string>
+    <string name="call_need_mic_permission">Microphone permission is required for voice</string>
     <string name="chat_tick_sent" translatable="false">✓</string>
     <string name="chat_tick_read" translatable="false">✓✓</string>
     <string name="retry">Retry</string>

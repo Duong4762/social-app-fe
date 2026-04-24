@@ -52,6 +52,12 @@
         android:clickable="true"
         android:elevation="20dp"
         android:focusable="true"
+    <!-- Cuộc gọi thoại: trên cả chat overlay -->
+    <androidx.fragment.app.FragmentContainerView
+        android:id="@+id/call_overlay_host"
+        android:layout_width="0dp"
+        android:layout_height="0dp"
+        android:elevation="24dp"
         android:visibility="gone"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toEndOf="parent"

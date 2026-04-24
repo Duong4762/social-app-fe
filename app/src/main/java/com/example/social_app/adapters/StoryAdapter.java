@@ -5,10 +5,10 @@ import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
-import android.widget.ImageView;
 import android.widget.TextView;
 
 import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
 import androidx.recyclerview.widget.RecyclerView;
 
 import com.example.social_app.R;
@@ -23,17 +23,20 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-public class StoryAdapter extends RecyclerView.Adapter<StoryAdapter.StoryViewHolder> {
+public class StoryAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
 
-    private Context context;
+    private static final int TYPE_ADD = 0;
+    private static final int TYPE_STORY = 1;
+
+    private final Context context;
     private List<Story> stories;
-    private Map<String, User> userCache = new HashMap<>();
-    private OnStoryClickListener listener;
-    private String currentUserId;
-    private User currentUser; // 👈 thêm
+    private final Map<String, User> userCache = new HashMap<>();
+    private final OnStoryClickListener listener;
+    private final String currentUserId;
 
     public interface OnStoryClickListener {
         void onStoryClick(Story story, User user);
+
         void onAddStoryClick();
     }
 
@@ -43,35 +46,54 @@ public class StoryAdapter extends RecyclerView.Adapter<StoryAdapter.StoryViewHol
         this.listener = listener;
         this.currentUserId = FirebaseManager.getInstance().getAuth().getUid();
 
-        loadCurrentUser(); // 👈 load user hiện tại
+        loadCurrentUser();
     }
 
-    // ================== LOAD CURRENT USER ==================
     private void loadCurrentUser() {
-        if (currentUserId == null) return;
+        if (currentUserId == null) {
+            return;
+        }
 
         FirebaseFirestore.getInstance()
                 .collection(FirebaseManager.COLLECTION_USERS)
                 .document(currentUserId)
                 .get()
                 .addOnSuccessListener(doc -> {
-                    currentUser = doc.toObject(User.class);
-                    if (currentUser != null) {
-                        currentUser.setId(doc.getId());
-                        userCache.put(currentUserId, currentUser); // cache luôn
+                    User me = doc.toObject(User.class);
+                    if (me != null) {
+                        me.setId(doc.getId());
+                        userCache.put(currentUserId, me);
                         notifyDataSetChanged();
                     }
                 });
     }
 
-    // ================== SET STORIES ==================
     public void setStories(List<Story> stories) {
-        this.stories = stories != null ? stories : new ArrayList<>();
+        List<Story> list = stories != null ? new ArrayList<>(stories) : new ArrayList<>();
+        this.stories = reorderOwnStoriesFirst(list);
         notifyDataSetChanged();
         loadAllUserInfo();
     }
 
-    // ================== LOAD USERS ==================
+    /** Story của tài khoản hiện tại đứng ngay sau ô “Thêm”. */
+    @NonNull
+    private List<Story> reorderOwnStoriesFirst(@NonNull List<Story> input) {
+        if (currentUserId == null) {
+            return input;
+        }
+        List<Story> own = new ArrayList<>();
+        List<Story> rest = new ArrayList<>();
+        for (Story s : input) {
+            if (currentUserId.equals(s.getUserId())) {
+                own.add(s);
+            } else {
+                rest.add(s);
+            }
+        }
+        own.addAll(rest);
+        return own;
+    }
+
     private void loadAllUserInfo() {
         for (Story story : stories) {
             if (!userCache.containsKey(story.getUserId())) {
@@ -92,71 +114,69 @@ public class StoryAdapter extends RecyclerView.Adapter<StoryAdapter.StoryViewHol
         }
     }
 
-    // ================== COUNT ==================
+    @Override
+    public int getItemViewType(int position) {
+        return position == 0 ? TYPE_ADD : TYPE_STORY;
+    }
+
     @Override
     public int getItemCount() {
-        boolean hasOwnStory = false;
-
-        for (Story s : stories) {
-            if (currentUserId != null && currentUserId.equals(s.getUserId())) {
-                hasOwnStory = true;
-                break;
-            }
-        }
-
-        return stories.size() + (hasOwnStory ? 0 : 1);
+        return stories.size() + 1;
     }
 
-    // ================== CREATE VIEW ==================
     @NonNull
     @Override
-    public StoryViewHolder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
-        View view = LayoutInflater.from(context).inflate(R.layout.item_story, parent, false);
-        return new StoryViewHolder(view);
+    public RecyclerView.ViewHolder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
+        if (viewType == TYPE_ADD) {
+            View v = LayoutInflater.from(context).inflate(R.layout.item_story_add, parent, false);
+            return new AddStoryViewHolder(v);
+        }
+        View v = LayoutInflater.from(context).inflate(R.layout.item_story, parent, false);
+        return new StoryViewHolder(v);
     }
 
-    // ================== BIND ==================
     @Override
-    public void onBindViewHolder(@NonNull StoryViewHolder holder, int position) {
-        boolean hasOwnStory = false;
-
-        for (Story s : stories) {
-            if (currentUserId != null && currentUserId.equals(s.getUserId())) {
-                hasOwnStory = true;
-                break;
-            }
-        }
-
-        if (position == 0 && !hasOwnStory) {
-            holder.bindAddStory();
-        } else {
-            int storyIndex = hasOwnStory ? position : position - 1;
-
-            if (storyIndex >= 0 && storyIndex < stories.size()) {
-                Story story = stories.get(storyIndex);
+    public void onBindViewHolder(@NonNull RecyclerView.ViewHolder holder, int position) {
+        if (holder instanceof AddStoryViewHolder) {
+            ((AddStoryViewHolder) holder).bind(listener);
+        } else if (holder instanceof StoryViewHolder) {
+            int idx = position - 1;
+            if (idx >= 0 && idx < stories.size()) {
+                Story story = stories.get(idx);
                 User user = userCache.get(story.getUserId());
-                holder.bind(story, user);
+                ((StoryViewHolder) holder).bind(story, user);
             }
         }
     }
 
-    // ================== VIEW HOLDER ==================
-    class StoryViewHolder extends RecyclerView.ViewHolder {
-        ImageView storyRing;
-        com.google.android.material.imageview.ShapeableImageView avatar;
-        TextView username;
-        ImageView addStoryBtn;
+    static final class AddStoryViewHolder extends RecyclerView.ViewHolder {
+
+        AddStoryViewHolder(@NonNull View itemView) {
+            super(itemView);
+        }
+
+        void bind(OnStoryClickListener l) {
+            itemView.setOnClickListener(v -> {
+                if (l != null) {
+                    l.onAddStoryClick();
+                }
+            });
+        }
+    }
+
+    final class StoryViewHolder extends RecyclerView.ViewHolder {
+        private final View storyRing;
+        private final com.google.android.material.imageview.ShapeableImageView avatar;
+        private final TextView username;
 
         StoryViewHolder(@NonNull View itemView) {
             super(itemView);
             storyRing = itemView.findViewById(R.id.story_ring);
             avatar = itemView.findViewById(R.id.story_avatar);
             username = itemView.findViewById(R.id.story_username);
-            addStoryBtn = itemView.findViewById(R.id.add_story_btn);
         }
 
-        // ===== STORY NORMAL =====
-        void bind(Story story, User user) {
+        void bind(@NonNull Story story, @Nullable User user) {
             if (user != null) {
                 username.setText(user.getFullName() != null ? user.getFullName() : user.getUsername());
                 UserAvatarLoader.load(avatar, user.getAvatarUrl());
@@ -165,49 +185,20 @@ public class StoryAdapter extends RecyclerView.Adapter<StoryAdapter.StoryViewHol
                 avatar.setImageResource(R.drawable.avatar_placeholder);
             }
 
-            String currentUserId = FirebaseManager.getInstance().getAuth().getUid();
+            boolean ownStory = currentUserId != null && currentUserId.equals(story.getUserId());
+            boolean isViewed = story.getViewedBy() != null && story.getViewedBy().contains(currentUserId);
 
-            boolean isViewed = story.getViewedBy() != null &&
-                    story.getViewedBy().contains(currentUserId);
-
-            if (isViewed) {
-                storyRing.setAlpha(0.3f);   // đã xem → mờ
+            if (ownStory || isViewed) {
+                storyRing.setBackgroundResource(R.drawable.story_ring_gray);
             } else {
-                storyRing.setAlpha(1f);     // chưa xem → rõ
+                storyRing.setBackgroundResource(R.drawable.story_ring);
             }
-            storyRing.setVisibility(View.VISIBLE); // luôn hiện
-            addStoryBtn.setVisibility(View.GONE);
+            storyRing.setAlpha(1f);
+            storyRing.setVisibility(View.VISIBLE);
 
             itemView.setOnClickListener(v -> {
                 if (listener != null && user != null) {
                     listener.onStoryClick(story, user);
-                }
-            });
-        }
-
-        // ===== ADD STORY =====
-        void bindAddStory() {
-            username.setText("Thêm story");
-
-            // 🔥 FIX CHÍNH: dùng avatar current user
-            if (currentUser != null) {
-                UserAvatarLoader.load(avatar, currentUser.getAvatarUrl());
-            } else {
-                avatar.setImageResource(R.drawable.avatar_placeholder);
-            }
-
-            storyRing.setVisibility(View.GONE);
-            addStoryBtn.setVisibility(View.VISIBLE);
-
-            addStoryBtn.setOnClickListener(v -> {
-                if (listener != null) {
-                    listener.onAddStoryClick();
-                }
-            });
-
-            itemView.setOnClickListener(v -> {
-                if (listener != null) {
-                    listener.onAddStoryClick();
                 }
             });
         }
