@@ -3,6 +3,7 @@ package com.example.social_app.firebase;
 import android.util.Log;
 
 import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
 
 import org.json.JSONObject;
 
@@ -22,7 +23,32 @@ public class FcmSender {
     // DÁN SERVER KEY CỦA CẬU VÀO ĐÂY (Lưu ý: Cách này chỉ dùng để demo/đồ án)
     private static final String SERVER_KEY = "AIzaSyAJOYSRCDwApxludSaEeykbYjFbmXFIOcg";
 
-    public static void sendNotification(String targetToken, String title, String body, String type, String refId, String targetUserId) {
+    public static void sendNotification(
+            String targetToken,
+            String title,
+            String body,
+            String type,
+            String refId,
+            String targetUserId) {
+        sendNotification(targetToken, title, body, type, refId, targetUserId, null, null, null, null);
+    }
+
+    /**
+     * @param actorId     MESSAGE: uid người gửi; GROUPCHAT: conversationId (điều hướng chat nhóm).
+     * @param actorName   MESSAGE: tên người gửi; GROUPCHAT: tên nhóm hiển thị trên header.
+     * @param notifId     id document notifications (đánh dấu đã đọc khi bấm).
+     */
+    public static void sendNotification(
+            String targetToken,
+            String title,
+            String body,
+            String type,
+            String refId,
+            String targetUserId,
+            @Nullable String actorId,
+            @Nullable String actorName,
+            @Nullable String actorAvatar,
+            @Nullable String notifId) {
         try {
             OkHttpClient client = new OkHttpClient();
             JSONObject json = new JSONObject();
@@ -35,8 +61,20 @@ public class FcmSender {
             data.put("title", title);
             data.put("body", body);
             data.put("type", type);
-            data.put("referenceId", refId);
+            data.put("referenceId", refId != null ? refId : "");
             data.put("targetUserId", targetUserId); // Quan trọng để lọc khi đăng nhập nhiều tài khoản
+            if (actorId != null) {
+                data.put("actorId", actorId);
+            }
+            if (actorName != null) {
+                data.put("actorName", actorName);
+            }
+            if (actorAvatar != null) {
+                data.put("actorAvatar", actorAvatar);
+            }
+            if (notifId != null) {
+                data.put("notifId", notifId);
+            }
 
             // notification payload giúp hiện banner hệ thống khi app ở background
             JSONObject notification = new JSONObject();

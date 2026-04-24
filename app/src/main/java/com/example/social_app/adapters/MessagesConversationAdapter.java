@@ -1,5 +1,7 @@
 package com.example.social_app.adapters;
 
+import android.content.res.ColorStateList;
+import android.content.res.TypedArray;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -7,6 +9,7 @@ import android.widget.ImageView;
 import android.widget.TextView;
 
 import androidx.annotation.NonNull;
+import androidx.core.widget.ImageViewCompat;
 import androidx.recyclerview.widget.RecyclerView;
 
 import com.example.social_app.R;
@@ -31,6 +34,8 @@ public class MessagesConversationAdapter extends RecyclerView.Adapter<MessagesCo
         public final String avatarUrl;
         /** Sắp xếp danh sách (last message hoặc cập nhật hội thoại). */
         public final long lastActivityMillis;
+        /** true = nhóm chat (không có một peer đơn). */
+        public final boolean isGroup;
 
         public Item(
                 String conversationId,
@@ -41,9 +46,10 @@ public class MessagesConversationAdapter extends RecyclerView.Adapter<MessagesCo
                 boolean unread,
                 boolean showPhotoIcon,
                 String avatarUrl,
-                long lastActivityMillis) {
+                long lastActivityMillis,
+                boolean isGroup) {
             this.conversationId = conversationId;
-            this.peerUserId = peerUserId;
+            this.peerUserId = peerUserId != null ? peerUserId : "";
             this.name = name;
             this.preview = preview;
             this.time = time;
@@ -51,6 +57,7 @@ public class MessagesConversationAdapter extends RecyclerView.Adapter<MessagesCo
             this.showPhotoIcon = showPhotoIcon;
             this.avatarUrl = avatarUrl;
             this.lastActivityMillis = lastActivityMillis;
+            this.isGroup = isGroup;
         }
     }
 
@@ -84,10 +91,21 @@ public class MessagesConversationAdapter extends RecyclerView.Adapter<MessagesCo
         Item item = items.get(position);
         h.name.setText(item.name);
         h.preview.setText(item.preview);
+        int previewColor = themeAttrColor(
+                h.preview,
+                item.unread
+                        ? com.google.android.material.R.attr.colorOnSurface
+                        : com.google.android.material.R.attr.colorOnSurfaceVariant);
+        h.preview.setTextColor(previewColor);
+        ImageViewCompat.setImageTintList(h.photoIcon, ColorStateList.valueOf(previewColor));
         h.time.setText(item.time);
         h.unreadDot.setVisibility(item.unread ? View.VISIBLE : View.GONE);
         h.photoIcon.setVisibility(item.showPhotoIcon ? View.VISIBLE : View.GONE);
-        UserAvatarLoader.load(h.avatar, item.avatarUrl);
+        if (item.isGroup) {
+            h.avatar.setImageResource(R.drawable.ic_group_chat);
+        } else {
+            UserAvatarLoader.load(h.avatar, item.avatarUrl);
+        }
         boolean last = position == getItemCount() - 1;
         h.divider.setVisibility(last ? View.GONE : View.VISIBLE);
         h.itemView.setOnClickListener(v -> {
@@ -100,6 +118,13 @@ public class MessagesConversationAdapter extends RecyclerView.Adapter<MessagesCo
     @Override
     public int getItemCount() {
         return items.size();
+    }
+
+    private static int themeAttrColor(@NonNull View view, int attrRes) {
+        TypedArray a = view.getContext().obtainStyledAttributes(new int[]{attrRes});
+        int color = a.getColor(0, 0);
+        a.recycle();
+        return color;
     }
 
     static final class VH extends RecyclerView.ViewHolder {

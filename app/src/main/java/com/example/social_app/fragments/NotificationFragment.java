@@ -18,6 +18,7 @@ import com.example.social_app.R;
 import com.example.social_app.adapters.NotificationAdapter;
 import com.example.social_app.data.model.Notification;
 import com.example.social_app.firebase.FirebaseManager;
+import com.example.social_app.repository.ConversationRepository;
 import com.google.firebase.firestore.FirebaseFirestore;
 import com.google.firebase.firestore.Query;
 import com.google.firebase.firestore.ListenerRegistration;
@@ -203,9 +204,84 @@ public class NotificationFragment extends Fragment {
                 }
                 break;
             case "MESSAGE":
-                Toast.makeText(requireContext(), "Mở tin nhắn", Toast.LENGTH_SHORT).show();
+                openMessageConversation(notification);
+                break;
+            case "GROUPCHAT":
+                openGroupChatFromNotification(notification);
                 break;
         }
+    }
+
+    private void openGroupChatFromNotification(@NonNull Notification notification) {
+        if (!(getActivity() instanceof MainActivity)) {
+            return;
+        }
+        String convId = notification.getReferenceId();
+        if (convId == null || convId.trim().isEmpty()) {
+            convId = notification.getActorId();
+        }
+        if (convId == null || convId.trim().isEmpty()) {
+            Toast.makeText(requireContext(), R.string.chat_send_failed, Toast.LENGTH_SHORT).show();
+            return;
+        }
+        String title = notification.getGroupChatTitle();
+        if (title == null || title.trim().isEmpty()) {
+            title = getString(R.string.chat_group_subtitle);
+        }
+        ((MainActivity) getActivity()).openChatDetail(convId, title, null, "", true);
+    }
+
+    private void openMessageConversation(@NonNull Notification notification) {
+        if (!(getActivity() instanceof MainActivity)) {
+            return;
+        }
+        String actorId = notification.getActorId();
+        if (actorId == null || actorId.trim().isEmpty()) {
+            Toast.makeText(requireContext(), "Không xác định được người gửi tin nhắn", Toast.LENGTH_SHORT).show();
+            return;
+        }
+
+        String currentUserId = FirebaseManager.getInstance().getAuth().getUid();
+        if (currentUserId == null || currentUserId.trim().isEmpty()) {
+            Toast.makeText(requireContext(), "Vui lòng đăng nhập", Toast.LENGTH_SHORT).show();
+            return;
+        }
+
+        String fallbackConversationId = ConversationRepository.buildDirectConversationId(currentUserId, actorId);
+        String notificationRefId = notification.getReferenceId();
+        String preferredConversationId = (notificationRefId != null && !notificationRefId.trim().isEmpty())
+                ? notificationRefId
+                : fallbackConversationId;
+
+        db.collection(FirebaseManager.COLLECTION_USERS)
+                .document(actorId)
+                .get()
+                .addOnSuccessListener(userDoc -> {
+                    String peerName = "User";
+                    String peerAvatar = null;
+                    if (userDoc.exists()) {
+                        String fullName = userDoc.getString("fullName");
+                        String username = userDoc.getString("username");
+                        peerName = (fullName != null && !fullName.trim().isEmpty())
+                                ? fullName.trim()
+                                : (username != null && !username.trim().isEmpty() ? username.trim() : "User");
+                        peerAvatar = userDoc.getString("avatarUrl");
+                    }
+                    ((MainActivity) getActivity()).openChatDetail(
+                            preferredConversationId,
+                            peerName,
+                            peerAvatar,
+                            actorId
+                    );
+                })
+                .addOnFailureListener(e -> {
+                    ((MainActivity) getActivity()).openChatDetail(
+                            fallbackConversationId,
+                            "User",
+                            null,
+                            actorId
+                    );
+                });
     }
 
     private void openPostDetail(String postId) {
