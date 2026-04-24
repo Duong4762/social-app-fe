@@ -138,6 +138,8 @@
     <string name="notification_comment">commented on your post</string>
     <string name="notification_follow">started following you</string>
     <string name="notification_message">sent you a message</string>
+    <string name="notification_like_comment">liked your comment</string>
+    <string name="notification_reply_comment">replied to your comment</string>
 
     <!-- Time formats -->
     <string name="just_now">Just now</string>

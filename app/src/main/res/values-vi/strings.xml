@@ -19,6 +19,8 @@
     <string name="notification_comment">đã bình luận về bài viết của bạn</string>
     <string name="notification_follow">đã bắt đầu theo dõi bạn</string>
     <string name="notification_message">đã gửi cho bạn một tin nhắn</string>
+    <string name="notification_like_comment">đã thích bình luận của bạn</string>
+    <string name="notification_reply_comment">đã trả lời bình luận của bạn</string>
     <string name="no_notifications">Chưa có thông báo nào</string>
     <string name="messages_title">Tin nhắn</string>
     <string name="messages_search_hint">Tìm kiếm</string>

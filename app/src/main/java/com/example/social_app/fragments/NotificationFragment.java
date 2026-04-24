@@ -104,31 +104,43 @@ public class NotificationFragment extends Fragment {
 
     private void loadNotifications() {
         showLoading(true);
+        String currentUserId = com.example.social_app.firebase.FirebaseManager.getInstance().getAuth().getUid();
+        if (currentUserId == null) {
+            showLoading(false);
+            swipeRefresh.setRefreshing(false);
+            return;
+        }
 
-        executorService.execute(() -> {
-            try {
-                Thread.sleep(500);
-            } catch (InterruptedException e) {
-                e.printStackTrace();
-            }
+        com.example.social_app.firebase.FirebaseManager.getInstance().getFirestore()
+                .collection(com.example.social_app.firebase.FirebaseManager.COLLECTION_NOTIFICATIONS)
+                .whereEqualTo("userId", currentUserId)
+                .get()
+                .addOnSuccessListener(queryDocumentSnapshots -> {
+                    notifications = queryDocumentSnapshots.toObjects(Notification.class);
+                    
+                    // Sắp xếp thủ công phía Client để tránh lỗi Index Firestore
+                    notifications.sort((n1, n2) -> {
+                        if (n1.getCreatedAt() == null || n2.getCreatedAt() == null) return 0;
+                        return n2.getCreatedAt().compareTo(n1.getCreatedAt());
+                    });
 
-            List<Notification> newNotifications = generateMockNotifications();
+                    notificationAdapter.setNotifications(notifications);
 
-            mainHandler.post(() -> {
-                notifications.clear();
-                notifications.addAll(newNotifications);
-                notificationAdapter.setNotifications(notifications);
+                    if (notifications.isEmpty()) {
+                        emptyStateText.setVisibility(View.VISIBLE);
+                    } else {
+                        emptyStateText.setVisibility(View.GONE);
+                    }
 
-                if (notifications.isEmpty()) {
-                    emptyStateText.setVisibility(View.VISIBLE);
-                } else {
-                    emptyStateText.setVisibility(View.GONE);
-                }
-
-                showLoading(false);
-                swipeRefresh.setRefreshing(false);
-            });
-        });
+                    showLoading(false);
+                    swipeRefresh.setRefreshing(false);
+                })
+                .addOnFailureListener(e -> {
+                    android.util.Log.e("NotificationFragment", "Error loading notifications", e);
+                    showLoading(false);
+                    swipeRefresh.setRefreshing(false);
+                    Toast.makeText(requireContext(), "Lỗi tải thông báo: " + e.getMessage(), Toast.LENGTH_SHORT).show();
+                });
     }
 
     private List<Notification> generateMockNotifications() {

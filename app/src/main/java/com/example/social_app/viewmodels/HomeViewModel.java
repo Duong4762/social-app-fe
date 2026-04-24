@@ -106,6 +106,9 @@ public class HomeViewModel extends ViewModel {
             likeData.put("userId", userId);
             likeData.put("createdAt", FieldValue.serverTimestamp());
             db.collection(FirebaseManager.COLLECTION_POST_LIKES).document(postId + "_" + userId).set(likeData);
+            
+            // Send notification to post owner
+            sendLikeNotification(post, userId);
         } else {
             likedPostIds.remove(postId);
             
@@ -196,6 +199,22 @@ public class HomeViewModel extends ViewModel {
                 .addOnFailureListener(e -> {
                     error.setValue("Lỗi khi gửi báo cáo: " + e.getMessage());
                 });
+    }
+
+    private void sendLikeNotification(Post post, String currentUserId) {
+        if (post.getUserId().equals(currentUserId)) return; // Don't notify yourself
+
+        DocumentReference notifRef = db.collection(FirebaseManager.COLLECTION_NOTIFICATIONS).document();
+        com.example.social_app.data.model.Notification notification = new com.example.social_app.data.model.Notification();
+        notification.setId(notifRef.getId());
+        notification.setUserId(post.getUserId());
+        notification.setActorId(currentUserId);
+        notification.setType("LIKE");
+        notification.setReferenceId(post.getId());
+        notification.setRead(false);
+        notification.setCreatedAt(new java.util.Date());
+
+        notifRef.set(notification);
     }
 
     private void loadUserEngagement() {

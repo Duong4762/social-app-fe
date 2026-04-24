@@ -1,6 +1,10 @@
 package com.example.social_app;
 
+import android.app.NotificationChannel;
+import android.app.NotificationManager;
+import android.content.Context;
 import android.os.Bundle;
+import android.util.Log;
 import android.view.View;
 import android.view.animation.TranslateAnimation;
 import android.widget.ImageButton;
@@ -12,6 +16,8 @@ import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.graphics.Insets;
 import androidx.core.view.ViewCompat;
 import androidx.core.view.WindowInsetsCompat;
+import androidx.core.app.ActivityCompat;
+import androidx.core.content.ContextCompat;
 import androidx.fragment.app.Fragment;
 import androidx.fragment.app.FragmentManager;
 import androidx.recyclerview.widget.RecyclerView;
@@ -31,17 +37,20 @@ import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseUser;
 import com.google.firebase.firestore.SetOptions;
 
+import com.google.firebase.firestore.ListenerRegistration;
 import java.util.HashMap;
 import java.util.Map;
 
 public class MainActivity extends BaseActivity {
 
-    private View customBottomNav;
+    private static final int PERMISSION_REQUEST_CODE = 100;
     private ImageButton navBtnHome, navBtnSearch, navBtnMessage, navBtnNotifications, navBtnProfile, navBtnSettings;
+    private View customBottomNav;
     private View notificationBadge;
     private FragmentManager fragmentManager;
     private boolean isBottomNavVisible = true;
     private int currentSelectedNav = R.id.nav_btn_home;
+    private ListenerRegistration notificationListener;
 
     @Override
     protected void onStart() {
@@ -52,7 +61,15 @@ public class MainActivity extends BaseActivity {
     @Override
     protected void onStop() {
         updateCurrentUserActiveStatus(false);
+        stopNotificationListener();
         super.onStop();
+    }
+
+    private void stopNotificationListener() {
+        if (notificationListener != null) {
+            notificationListener.remove();
+            notificationListener = null;
+        }
     }
 
     @Override
@@ -60,6 +77,8 @@ public class MainActivity extends BaseActivity {
         super.onCreate(savedInstanceState);
         EdgeToEdge.enable(this);
         setContentView(R.layout.activity_main);
+
+        checkNotificationPermission();
 
         ViewCompat.setOnApplyWindowInsetsListener(findViewById(R.id.main), (v, insets) -> {
             Insets systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars());
@@ -84,6 +103,9 @@ public class MainActivity extends BaseActivity {
 
         // Show notification badge on notifications icon (demo)
         showNotificationBadge();
+        
+        // Bắt đầu lắng nghe thông báo Realtime
+        setupRealtimeNotificationListener();
     }
 
     /**
@@ -265,6 +287,32 @@ public class MainActivity extends BaseActivity {
     }
 
     /**
+     * Checks and requests notification permission for Android 13+.
+     */
+    private void checkNotificationPermission() {
+        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU) {
+            if (ContextCompat.checkSelfPermission(this, android.Manifest.permission.POST_NOTIFICATIONS)
+                    != android.content.pm.PackageManager.PERMISSION_GRANTED) {
+                ActivityCompat.requestPermissions(this,
+                        new String[]{android.Manifest.permission.POST_NOTIFICATIONS},
+                        PERMISSION_REQUEST_CODE);
+            }
+        }
+    }
+
+    @Override
+    public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults);
+        if (requestCode == PERMISSION_REQUEST_CODE) {
+            if (grantResults.length > 0 && grantResults[0] == android.content.pm.PackageManager.PERMISSION_GRANTED) {
+                showToast("Notification permission granted");
+            } else {
+                showToast("Notification permission denied. You won't receive push notifications.");
+            }
+        }
+    }
+
+    /**
      * Loads the specified fragment into the fragment container.
      *
      * @param fragment The fragment to load
@@ -300,4 +348,105 @@ public class MainActivity extends BaseActivity {
                 .set(payload, SetOptions.merge());
     }
 
+    /**
+     * Lắng nghe thông báo mới từ Firestore và hiển thị cho người dùng.
+     */
+    private void setupRealtimeNotificationListener() {
+        FirebaseUser currentUser = FirebaseAuth.getInstance().getCurrentUser();
+        if (currentUser == null) return;
+
+        stopNotificationListener(); // Xóa listener cũ nếu có
+
+        notificationListener = FirebaseManager.getInstance().getFirestore()
+                .collection(FirebaseManager.COLLECTION_NOTIFICATIONS)
+                .whereEqualTo("userId", currentUser.getUid())
+                .whereEqualTo("isRead", false)
+                .addSnapshotListener((snapshots, e) -> {
+                    if (e != null) {
+                        Log.w("MainActivity", "Listen failed.", e);
+                        return;
+                    }
+
+                    if (snapshots != null && !snapshots.isEmpty()) {
+                        showNotificationBadge();
+                        
+                        for (com.google.firebase.firestore.DocumentChange dc : snapshots.getDocumentChanges()) {
+                            if (dc.getType() == com.google.firebase.firestore.DocumentChange.Type.ADDED) {
+                                String type = dc.getDocument().getString("type");
+                                String actorId = dc.getDocument().getString("actorId");
+                                
+                                fetchActorAndNotify(actorId, type);
+                            }
+                        }
+                    }
+                });
+    }
+
+    private void fetchActorAndNotify(String actorId, String type) {
+        if (actorId == null) {
+            sendNotificationWithActorName("Ai đó", type);
+            return;
+        }
+
+        FirebaseManager.getInstance().getFirestore()
+                .collection(FirebaseManager.COLLECTION_USERS)
+                .document(actorId)
+                .get()
+                .addOnSuccessListener(documentSnapshot -> {
+                    String actorName = "Ai đó";
+                    if (documentSnapshot.exists()) {
+                        String fullName = documentSnapshot.getString("fullName");
+                        String username = documentSnapshot.getString("username");
+                        actorName = (fullName != null && !fullName.isEmpty()) ? fullName : (username != null ? username : "Ai đó");
+                    }
+                    sendNotificationWithActorName(actorName, type);
+                })
+                .addOnFailureListener(e -> {
+                    sendNotificationWithActorName("Ai đó", type);
+                });
+    }
+
+    private void sendNotificationWithActorName(String actorName, String type) {
+        String message = actorName + " đã tương tác với bạn";
+        
+        if ("LIKE".equals(type)) {
+            message = actorName + " đã thích bài viết của bạn";
+        } else if ("COMMENT".equals(type)) {
+            message = actorName + " đã bình luận về bài viết của bạn";
+        } else if ("FOLLOW".equals(type)) {
+            message = actorName + " đã bắt đầu theo dõi bạn";
+        } else if ("LIKE_COMMENT".equals(type)) {
+            message = actorName + " đã thích bình luận của bạn";
+        } else if ("REPLY_COMMENT".equals(type)) {
+            message = actorName + " đã trả lời bình luận của bạn";
+        } else if ("MESSAGE".equals(type)) {
+            message = actorName + " đã gửi cho bạn một tin nhắn";
+        }
+        
+        sendLocalNotification("Social App", message);
+    }
+
+    private void sendLocalNotification(String title, String body) {
+        String channelId = "social_notifications";
+        NotificationManager notificationManager = (NotificationManager) getSystemService(Context.NOTIFICATION_SERVICE);
+
+        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
+            NotificationChannel channel = new NotificationChannel(channelId,
+                    "Thông báo hệ thống",
+                    NotificationManager.IMPORTANCE_HIGH);
+            notificationManager.createNotificationChannel(channel);
+        }
+
+        androidx.core.app.NotificationCompat.Builder builder = new androidx.core.app.NotificationCompat.Builder(this, channelId)
+                .setSmallIcon(R.drawable.ic_notifications) // Đảm bảo dùng đúng icon vector nếu có
+                .setContentTitle(title)
+                .setContentText(body)
+                .setPriority(androidx.core.app.NotificationCompat.PRIORITY_HIGH)
+                .setCategory(androidx.core.app.NotificationCompat.CATEGORY_MESSAGE)
+                .setVisibility(androidx.core.app.NotificationCompat.VISIBILITY_PUBLIC) // Hiển thị trên màn hình khóa
+                .setDefaults(androidx.core.app.NotificationCompat.DEFAULT_ALL) // Âm thanh + Rung
+                .setAutoCancel(true);
+
+        notificationManager.notify((int) System.currentTimeMillis(), builder.build());
+    }
 }
