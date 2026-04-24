@@ -14,6 +14,7 @@ import com.google.firebase.firestore.Query;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 
@@ -85,9 +86,39 @@ public class CommentViewModel extends ViewModel {
                     // Update comment count in Post document
                     db.collection(FirebaseManager.COLLECTION_POSTS).document(postId)
                             .update("commentCount", com.google.firebase.firestore.FieldValue.increment(1));
+                    
+                    // Logic gửi thông báo
+                    if (parentId != null) {
+                        // Nếu là reply, gửi thông báo cho chủ của comment cha
+                        sendReplyNotification(parentId, postId, text, userId);
+                    } else {
+                        // Nếu là comment mới, gửi thông báo cho chủ bài viết
+                        sendCommentNotification(postId, text, userId);
+                    }
+                    
                     loadComments(postId); // Refresh list
                 })
                 .addOnFailureListener(e -> error.setValue("Lỗi gửi bình luận: " + e.getMessage()));
+    }
+
+    private void sendReplyNotification(String parentCommentId, String postId, String text, String currentUserId) {
+        db.collection(FirebaseManager.COLLECTION_COMMENTS).document(parentCommentId).get()
+                .addOnSuccessListener(documentSnapshot -> {
+                    if (documentSnapshot.exists()) {
+                        String parentOwnerId = documentSnapshot.getString("userId");
+                        if (parentOwnerId != null && !parentOwnerId.equals(currentUserId)) {
+                            Map<String, Object> notification = new java.util.HashMap<>();
+                            notification.put("userId", parentOwnerId);
+                            notification.put("actorId", currentUserId);
+                            notification.put("type", "REPLY_COMMENT");
+                            notification.put("referenceId", postId);
+                            notification.put("isRead", false);
+                            notification.put("createdAt", com.google.firebase.firestore.FieldValue.serverTimestamp());
+                            
+                            db.collection(FirebaseManager.COLLECTION_NOTIFICATIONS).add(notification);
+                        }
+                    }
+                });
     }
 
     public void sendComment(String postId, String text) {
@@ -111,6 +142,10 @@ public class CommentViewModel extends ViewModel {
                 .addOnSuccessListener(aVoid -> {
                     db.collection(FirebaseManager.COLLECTION_POSTS).document(postId)
                             .update("commentCount", com.google.firebase.firestore.FieldValue.increment(1));
+                    
+                    // Send notification
+                    sendCommentNotification(postId, "đã gửi một ảnh", userId);
+                    
                     loadComments(postId);
                 })
                 .addOnFailureListener(e -> error.setValue("Lỗi gửi bình luận: " + e.getMessage()));
@@ -135,6 +170,9 @@ public class CommentViewModel extends ViewModel {
         if (isLiking) {
             likedCommentIds.add(commentId);
             comment.setLikeCount(comment.getLikeCount() + 1);
+            
+            // Send notification to comment owner
+            sendCommentLikeNotification(comment, userId);
         } else {
             likedCommentIds.remove(commentId);
             comment.setLikeCount(Math.max(0, comment.getLikeCount() - 1));
@@ -156,6 +194,20 @@ public class CommentViewModel extends ViewModel {
                     comments.setValue(comments.getValue());
                     error.setValue("Lỗi cập nhật lượt thích");
                 });
+    }
+
+    private void sendCommentLikeNotification(Comment comment, String currentUserId) {
+        if (comment.getUserId().equals(currentUserId)) return;
+
+        Map<String, Object> notification = new java.util.HashMap<>();
+        notification.put("userId", comment.getUserId());
+        notification.put("actorId", currentUserId);
+        notification.put("type", "LIKE_COMMENT");
+        notification.put("referenceId", comment.getPostId());
+        notification.put("isRead", false);
+        notification.put("createdAt", com.google.firebase.firestore.FieldValue.serverTimestamp());
+        
+        db.collection(FirebaseManager.COLLECTION_NOTIFICATIONS).add(notification);
     }
 
     /**
@@ -205,5 +257,25 @@ public class CommentViewModel extends ViewModel {
 
         reportRef.set(report)
                 .addOnFailureListener(e -> error.setValue("Lỗi khi gửi báo cáo: " + e.getMessage()));
+    }
+
+    private void sendCommentNotification(String postId, String commentText, String currentUserId) {
+        db.collection(FirebaseManager.COLLECTION_POSTS).document(postId).get()
+                .addOnSuccessListener(documentSnapshot -> {
+                    if (documentSnapshot.exists()) {
+                        String postOwnerId = documentSnapshot.getString("userId");
+                        if (postOwnerId != null && !postOwnerId.equals(currentUserId)) {
+                            Map<String, Object> notification = new java.util.HashMap<>();
+                            notification.put("userId", postOwnerId);
+                            notification.put("actorId", currentUserId);
+                            notification.put("type", "COMMENT");
+                            notification.put("referenceId", postId);
+                            notification.put("isRead", false);
+                            notification.put("createdAt", com.google.firebase.firestore.FieldValue.serverTimestamp());
+                            
+                            db.collection(FirebaseManager.COLLECTION_NOTIFICATIONS).add(notification);
+                        }
+                    }
+                });
     }
 }

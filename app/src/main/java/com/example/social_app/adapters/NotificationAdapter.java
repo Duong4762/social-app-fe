@@ -14,7 +14,9 @@ import androidx.recyclerview.widget.RecyclerView;
 import com.example.social_app.R;
 import com.example.social_app.data.model.Notification;
 import com.example.social_app.data.model.User;
-import com.example.social_app.utils.MockDataGenerator;
+import com.example.social_app.firebase.FirebaseManager;
+import com.example.social_app.utils.UserAvatarLoader;
+import com.google.firebase.firestore.FirebaseFirestore;
 
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
@@ -79,32 +81,36 @@ public class NotificationAdapter extends RecyclerView.Adapter<NotificationAdapte
         }
 
         void bind(Notification notification, int position) {
-            // Lấy thông tin actor từ userId (trong model gốc không có actorId riêng)
-            // Giả định: người gửi thông báo được lấy từ MockDataGenerator
-            String actorName = "Someone";
-            User mockUser = MockDataGenerator.generateMockUser(position);
-            if (mockUser != null) {
-                actorName = mockUser.getFullName() != null ? mockUser.getFullName() : mockUser.getUsername();
+            String actorId = notification.getActorId();
+            
+            if (actorId != null) {
+                FirebaseFirestore.getInstance().collection(FirebaseManager.COLLECTION_USERS)
+                        .document(actorId)
+                        .get()
+                        .addOnSuccessListener(documentSnapshot -> {
+                            if (documentSnapshot.exists()) {
+                                User actor = documentSnapshot.toObject(User.class);
+                                if (actor != null) {
+                                    String actorName = actor.getFullName() != null ? actor.getFullName() : actor.getUsername();
+                                    contentText.setText(buildNotificationContent(actorName, notification.getType()));
+                                    UserAvatarLoader.load(avatar, actor.getAvatarUrl());
+                                }
+                            }
+                        });
+            } else {
+                avatar.setImageResource(R.drawable.avatar_placeholder);
+                contentText.setText(buildNotificationContent("Ai đó", notification.getType()));
             }
-
-            // Tạo nội dung hiển thị dựa trên type
-            String type = notification.getType();
-            String contentText = buildNotificationContent(actorName, type);
-
-            this.contentText.setText(contentText);
 
             // Format thời gian
             String timeStr = formatTime(notification.getCreatedAt());
             this.timeText.setText(timeStr);
 
             // Set icon dựa trên type
-            setTypeIcon(type);
+            setTypeIcon(notification.getType());
 
             // Hiển thị unread indicator
             unreadIndicator.setVisibility(notification.isRead() ? View.GONE : View.VISIBLE);
-
-            // Avatar placeholder
-            avatar.setImageResource(R.drawable.avatar_placeholder);
 
             // Click listener
             itemView.setOnClickListener(v -> {
@@ -137,6 +143,10 @@ public class NotificationAdapter extends RecyclerView.Adapter<NotificationAdapte
                     return actorName + " " + context.getString(R.string.notification_comment);
                 case "FOLLOW":
                     return actorName + " " + context.getString(R.string.notification_follow);
+                case "LIKE_COMMENT":
+                    return actorName + " " + context.getString(R.string.notification_like_comment);
+                case "REPLY_COMMENT":
+                    return actorName + " " + context.getString(R.string.notification_reply_comment);
                 case "MESSAGE":
                     return actorName + " " + context.getString(R.string.notification_message);
                 default:
@@ -161,6 +171,14 @@ public class NotificationAdapter extends RecyclerView.Adapter<NotificationAdapte
                     break;
                 case "FOLLOW":
                     typeIcon.setImageResource(R.drawable.ic_follow);
+                    typeIcon.setColorFilter(ContextCompat.getColor(context, R.color.primary));
+                    break;
+                case "LIKE_COMMENT":
+                    typeIcon.setImageResource(R.drawable.ic_heart_filled);
+                    typeIcon.setColorFilter(ContextCompat.getColor(context, R.color.accent_red));
+                    break;
+                case "REPLY_COMMENT":
+                    typeIcon.setImageResource(R.drawable.ic_comment);
                     typeIcon.setColorFilter(ContextCompat.getColor(context, R.color.primary));
                     break;
                 case "MESSAGE":

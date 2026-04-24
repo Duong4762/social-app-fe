@@ -19,7 +19,8 @@ import java.util.Date;
 public class Notification {
 
     private String id;
-    private String userId;
+    private String userId;        // ID của người nhận thông báo
+    private String actorId;       // ID của người gây ra hành động (người like, comment...)
     private String type;          // FOLLOW | LIKE | COMMENT | MESSAGE
     private String referenceId;   // flexible reference: postId / commentId / userId
     private boolean isRead;
@@ -29,10 +30,11 @@ public class Notification {
 
     public Notification() {}
 
-    public Notification(String id, String userId, String type,
+    public Notification(String id, String userId, String actorId, String type,
                         String referenceId, boolean isRead) {
         this.id = id;
         this.userId = userId;
+        this.actorId = actorId;
         this.type = type;
         this.referenceId = referenceId;
         this.isRead = isRead;
@@ -53,6 +55,14 @@ public class Notification {
 
     public void setUserId(String userId) {
         this.userId = userId;
+    }
+
+    public String getActorId() {
+        return actorId;
+    }
+
+    public void setActorId(String actorId) {
+        this.actorId = actorId;
     }
 
     public String getType() {
