@@ -11,7 +11,6 @@ import com.example.social_app.firebase.FirebaseManager;
 import com.example.social_app.utils.CloudinaryUploadUtil;
 import com.google.firebase.firestore.FieldValue;
 import com.google.firebase.firestore.FirebaseFirestore;
-import com.google.firebase.firestore.Query;
 
 import java.util.ArrayList;
 import java.util.Calendar;
@@ -39,23 +38,39 @@ public class StoryViewModel extends ViewModel {
     public LiveData<String> getError() { return error; }
     public LiveData<Boolean> getUploadSuccess() { return uploadSuccess; }
 
+    // ================== LOAD STORIES ==================
     public void loadStories() {
         String currentUserId = firebaseManager.getAuth().getUid();
         if (currentUserId == null) return;
 
         db.collection(FirebaseManager.COLLECTION_STORIES)
                 .whereGreaterThan("expiresAt", new Date())
-                .orderBy("createdAt", Query.Direction.DESCENDING)
                 .get()
                 .addOnSuccessListener(query -> {
                     List<Story> storyList = new ArrayList<>();
+
                     for (var doc : query.getDocuments()) {
                         Story story = doc.toObject(Story.class);
                         if (story != null) {
                             story.setId(doc.getId());
-                            storyList.add(story);
+
+                            if (story.getExpiresAt() == null || story.getExpiresAt().after(new Date())) {
+                                storyList.add(story);
+                            }
                         }
                     }
+
+                    storyList.sort((s1, s2) -> {
+                        Date d1 = s1.getCreatedAt();
+                        Date d2 = s2.getCreatedAt();
+
+                        if (d1 == null && d2 == null) return 0;
+                        if (d1 == null) return 1;
+                        if (d2 == null) return -1;
+
+                        return d2.compareTo(d1);
+                    });
+
                     stories.setValue(storyList);
                 })
                 .addOnFailureListener(e -> {
@@ -63,6 +78,7 @@ public class StoryViewModel extends ViewModel {
                 });
     }
 
+    // ================== UPLOAD ==================
     public void uploadStory(Uri mediaUri, String mediaType, int duration) {
         String userId = firebaseManager.getAuth().getUid();
         if (userId == null) {
@@ -91,6 +107,7 @@ public class StoryViewModel extends ViewModel {
         );
     }
 
+    // ================== CREATE STORY ==================
     private void createStoryInFirestore(String userId, String mediaUrl, String mediaType, int duration) {
         String storyId = UUID.randomUUID().toString();
 
@@ -117,12 +134,14 @@ public class StoryViewModel extends ViewModel {
                 });
     }
 
+    // ================== VIEW COUNT ==================
     public void incrementViewCount(String storyId) {
         db.collection(FirebaseManager.COLLECTION_STORIES)
                 .document(storyId)
                 .update("viewCount", FieldValue.increment(1));
     }
 
+    // ================== CLEAN EXPIRED ==================
     public void cleanExpiredStories() {
         db.collection(FirebaseManager.COLLECTION_STORIES)
                 .whereLessThan("expiresAt", new Date())
@@ -133,4 +152,6 @@ public class StoryViewModel extends ViewModel {
                     }
                 });
     }
+
+
 }
