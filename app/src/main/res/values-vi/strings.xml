@@ -19,6 +19,9 @@
     <string name="notification_comment">đã bình luận về bài viết của bạn</string>
     <string name="notification_follow">đã bắt đầu theo dõi bạn</string>
     <string name="notification_message">đã gửi cho bạn một tin nhắn</string>
+    <string name="notification_groupchat_title">Nhóm chat</string>
+    <string name="notification_groupchat_body">%1$s đã gửi tin trong nhóm %2$s</string>
+    <string name="chat_group_subtitle">Nhóm</string>
     <string name="notification_like_comment">đã thích bình luận của bạn</string>
     <string name="notification_reply_comment">đã trả lời bình luận của bạn</string>
     <string name="no_notifications">Chưa có thông báo nào</string>
@@ -29,6 +32,7 @@
     <string name="messages_need_login">Đăng nhập để xem tin nhắn</string>
     <string name="message_preview_sent_photo">Đã gửi một ảnh</string>
     <string name="message_preview_sent_video">Đã gửi một video</string>
+    <string name="message_preview_you_prefix">Bạn:\u0020</string>
     <string name="message_no_messages_yet">Chưa có tin nhắn nào</string>
     <string name="search_hint">Tìm kiếm người dùng hoặc bài viết...</string>
 

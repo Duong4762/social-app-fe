@@ -25,6 +25,7 @@ import androidx.recyclerview.widget.RecyclerView;
 import com.example.social_app.firebase.FirebaseManager;
 import com.example.social_app.fragments.CallOverlayFragment;
 import com.example.social_app.fragments.ChatDetailFragment;
+import com.example.social_app.fragments.NewGroupSelectMembersFragment;
 import com.example.social_app.fragments.SearchFragment;
 import com.example.social_app.fragments.HomeFragment;
 import com.example.social_app.fragments.NotificationFragment;
@@ -40,6 +41,7 @@ import android.graphics.Bitmap;
 import android.graphics.drawable.Drawable;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseUser;
+import com.google.firebase.firestore.QueryDocumentSnapshot;
 import com.google.firebase.firestore.SetOptions;
 
 import com.google.firebase.firestore.ListenerRegistration;
@@ -102,7 +104,11 @@ public class MainActivity extends BaseActivity {
         customBottomNav = findViewById(R.id.custom_bottom_nav);
         initializeNavigationButtons();
 
-        fragmentManager.addOnBackStackChangedListener(this::syncChatOverlayVisibility);
+        fragmentManager.addOnBackStackChangedListener(() -> {
+            syncChatOverlayVisibility();
+            syncGroupOverlayVisibility();
+            reloadMessagesListIfReturnedFromChatOverlay();
+        });
 
         // Load home fragment by default
         if (savedInstanceState == null) {
@@ -167,6 +173,12 @@ public class MainActivity extends BaseActivity {
                 String actorAvatar = intent.getStringExtra("ACTOR_AVATAR");
                 String actorId = intent.getStringExtra("ACTOR_ID");
                 openChatDetail(refId, actorName, actorAvatar, actorId);
+            } else if ("GROUPCHAT".equals(type)) {
+                String groupTitle = intent.getStringExtra("ACTOR_NAME");
+                if (groupTitle == null || groupTitle.trim().isEmpty()) {
+                    groupTitle = getString(R.string.chat_group_subtitle);
+                }
+                openChatDetail(refId, groupTitle, null, "", true);
             } else if ("FOLLOW".equals(type)) {
                 String actorId = intent.getStringExtra("ACTOR_ID");
                 if (actorId != null) {
@@ -380,18 +392,52 @@ public class MainActivity extends BaseActivity {
             @NonNull String peerName,
             @Nullable String peerAvatarUrl,
             @NonNull String peerUserId) {
+        openChatDetail(conversationId, peerName, peerAvatarUrl, peerUserId, false);
+    }
+
+    public void openChatDetail(
+            @NonNull String conversationId,
+            @NonNull String peerName,
+            @Nullable String peerAvatarUrl,
+            @NonNull String peerUserId,
+            boolean isGroup) {
         View overlay = findViewById(R.id.full_screen_chat_overlay);
         if (overlay != null) {
             overlay.setVisibility(View.VISIBLE);
         }
-        ChatDetailFragment chat = ChatDetailFragment.newInstance(
-                conversationId, peerName, peerAvatarUrl, peerUserId);
+        setBottomNavigationHiddenForOverlay(true);
+        ChatDetailFragment chat = isGroup
+                ? ChatDetailFragment.newInstanceGroup(conversationId, peerName)
+                : ChatDetailFragment.newInstance(conversationId, peerName, peerAvatarUrl, peerUserId);
         fragmentManager.beginTransaction()
                 .replace(R.id.full_screen_chat_overlay, chat)
                 .addToBackStack("chat_detail")
                 .commit();
         fragmentManager.executePendingTransactions();
         syncChatOverlayVisibility();
+    }
+
+    public void openNewGroupChatFlow() {
+        View groupOverlay = findViewById(R.id.full_screen_group_overlay);
+        if (groupOverlay != null) {
+            groupOverlay.setVisibility(View.VISIBLE);
+        }
+        setBottomNavigationHiddenForOverlay(true);
+        fragmentManager.beginTransaction()
+                .replace(R.id.full_screen_group_overlay, new NewGroupSelectMembersFragment())
+                .addToBackStack("new_group_flow")
+                .commit();
+        fragmentManager.executePendingTransactions();
+        syncGroupOverlayVisibility();
+    }
+
+    public void finishNewGroupFlowAndOpenGroupChat(
+            @NonNull String conversationId,
+            @NonNull String displayTitle) {
+        fragmentManager.popBackStack("new_group_flow", FragmentManager.POP_BACK_STACK_INCLUSIVE);
+        fragmentManager.executePendingTransactions();
+        syncGroupOverlayVisibility();
+        openChatDetail(conversationId, displayTitle, null, "", true);
     }
 
     private void syncChatOverlayVisibility() {
@@ -401,6 +447,42 @@ public class MainActivity extends BaseActivity {
         }
         Fragment f = fragmentManager.findFragmentById(R.id.full_screen_chat_overlay);
         overlay.setVisibility(f != null ? View.VISIBLE : View.GONE);
+        updateBottomNavForOverlays();
+    }
+
+    /**
+     * Chat toàn màn nằm overlay; {@link MessagesFragment} dưới nên thường không qua onPause/onResume.
+     * Khi pop chat, làm mới danh sách hội thoại một lần nếu đang ở tab Tin nhắn.
+     */
+    private void reloadMessagesListIfReturnedFromChatOverlay() {
+        Fragment chat = fragmentManager.findFragmentById(R.id.full_screen_chat_overlay);
+        if (chat != null) {
+            return;
+        }
+        if (currentSelectedNav != R.id.nav_btn_message) {
+            return;
+        }
+        Fragment nav = fragmentManager.findFragmentById(R.id.nav_host_fragment);
+        if (nav instanceof MessagesFragment) {
+            ((MessagesFragment) nav).reloadConversationsListAfterChatClosed();
+        }
+    }
+
+    private void syncGroupOverlayVisibility() {
+        View overlay = findViewById(R.id.full_screen_group_overlay);
+        if (overlay == null) {
+            return;
+        }
+        Fragment f = fragmentManager.findFragmentById(R.id.full_screen_group_overlay);
+        overlay.setVisibility(f != null ? View.VISIBLE : View.GONE);
+        updateBottomNavForOverlays();
+    }
+
+    private void updateBottomNavForOverlays() {
+        Fragment chat = fragmentManager.findFragmentById(R.id.full_screen_chat_overlay);
+        Fragment group = fragmentManager.findFragmentById(R.id.full_screen_group_overlay);
+        boolean any = chat != null || group != null;
+        setBottomNavigationHiddenForOverlay(any);
     }
 
     public void openOtherProfile(String userId) {
@@ -524,13 +606,8 @@ public class MainActivity extends BaseActivity {
                                 }
 
                                 // Chỉ hiện banner cho thông báo thực sự mới phát sinh
-                                com.google.firebase.firestore.QueryDocumentSnapshot doc = dc.getDocument();
-                                String type = doc.getString("type");
-                                String actorId = doc.getString("actorId");
-                                String referenceId = doc.getString("referenceId");
-                                String notifId = doc.getId();
-                                
-                                fetchActorAndNotify(actorId, type, referenceId, notifId);
+                                QueryDocumentSnapshot doc = dc.getDocument();
+                                handleNewNotificationDocForBanner(doc);
                             }
                         }
                         
@@ -540,6 +617,43 @@ public class MainActivity extends BaseActivity {
                         }
                     }
                 });
+    }
+
+    private void handleNewNotificationDocForBanner(@NonNull QueryDocumentSnapshot doc) {
+        String type = doc.getString("type");
+        String referenceId = doc.getString("referenceId");
+        String notifId = doc.getId();
+        if ("GROUPCHAT".equalsIgnoreCase(type)) {
+            String actorId = doc.getString("actorId");
+            String convId = referenceId != null && !referenceId.trim().isEmpty()
+                    ? referenceId.trim()
+                    : (actorId != null ? actorId.trim() : "");
+            if (convId.isEmpty()) {
+                return;
+            }
+            String senderName = doc.getString("groupChatSenderName");
+            String groupTitle = doc.getString("groupChatTitle");
+            String displaySender = (senderName != null && !senderName.trim().isEmpty())
+                    ? senderName.trim()
+                    : "Ai đó";
+            String displayGroup = (groupTitle != null && !groupTitle.trim().isEmpty())
+                    ? groupTitle.trim()
+                    : getString(R.string.chat_group_subtitle);
+            String body = getString(R.string.notification_groupchat_body, displaySender, displayGroup);
+            sendLocalNotification(
+                    getString(R.string.notification_groupchat_title),
+                    body,
+                    type,
+                    convId,
+                    displayGroup,
+                    null,
+                    actorId != null ? actorId : convId,
+                    notifId);
+            return;
+        }
+
+        String actorId = doc.getString("actorId");
+        fetchActorAndNotify(actorId, type, referenceId, notifId);
     }
 
     private void fetchActorAndNotify(String actorId, String type, String referenceId, String notifId) {

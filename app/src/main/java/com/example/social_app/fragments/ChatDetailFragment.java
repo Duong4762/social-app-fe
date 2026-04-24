@@ -38,6 +38,7 @@ import com.example.social_app.repository.VoiceCallRepository;
 import com.example.social_app.utils.CloudinaryUploadUtil;
 import com.example.social_app.utils.UserAvatarLoader;
 import com.google.android.material.button.MaterialButton;
+import com.google.android.gms.tasks.Task;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseUser;
 import com.google.firebase.firestore.ListenerRegistration;
@@ -56,6 +57,7 @@ public class ChatDetailFragment extends Fragment {
     private static final String ARG_PEER_NAME = "peer_name";
     private static final String ARG_PEER_AVATAR = "peer_avatar";
     private static final String ARG_PEER_UID = "peer_uid";
+    private static final String ARG_IS_GROUP = "is_group";
 
     private ConversationRepository repository;
     private ListenerRegistration messagesListener;
@@ -68,6 +70,7 @@ public class ChatDetailFragment extends Fragment {
     private String mConversationId;
     private String mPeerUid;
     private String mMyUid;
+    private boolean mIsGroup;
     private String mPeerName;
     @Nullable
     private String mPeerAvatarUrl;
@@ -109,6 +112,22 @@ public class ChatDetailFragment extends Fragment {
         b.putString(ARG_PEER_NAME, peerName);
         b.putString(ARG_PEER_AVATAR, peerAvatarUrl != null ? peerAvatarUrl : "");
         b.putString(ARG_PEER_UID, peerUserId);
+        b.putBoolean(ARG_IS_GROUP, false);
+        f.setArguments(b);
+        return f;
+    }
+
+    @NonNull
+    public static ChatDetailFragment newInstanceGroup(
+            @NonNull String conversationId,
+            @NonNull String groupDisplayTitle) {
+        ChatDetailFragment f = new ChatDetailFragment();
+        Bundle b = new Bundle();
+        b.putString(ARG_CONVERSATION_ID, conversationId);
+        b.putString(ARG_PEER_NAME, groupDisplayTitle);
+        b.putString(ARG_PEER_AVATAR, "");
+        b.putString(ARG_PEER_UID, "");
+        b.putBoolean(ARG_IS_GROUP, true);
         f.setArguments(b);
         return f;
     }
@@ -126,7 +145,12 @@ public class ChatDetailFragment extends Fragment {
         String peerName = args.getString(ARG_PEER_NAME);
         String peerAvatar = args.getString(ARG_PEER_AVATAR);
         String peerUid = args.getString(ARG_PEER_UID);
-        if (conversationId == null || peerName == null || peerUid == null) {
+        mIsGroup = args.getBoolean(ARG_IS_GROUP, false);
+        if (conversationId == null || peerName == null) {
+            requireActivity().getSupportFragmentManager().popBackStack();
+            return;
+        }
+        if (!mIsGroup && (peerUid == null || peerUid.isEmpty())) {
             requireActivity().getSupportFragmentManager().popBackStack();
             return;
         }
@@ -135,7 +159,7 @@ public class ChatDetailFragment extends Fragment {
         }
 
         mConversationId = conversationId;
-        mPeerUid = peerUid;
+        mPeerUid = peerUid != null ? peerUid : "";
         mPeerName = peerName;
         mPeerAvatarUrl = peerAvatar;
 
@@ -149,8 +173,18 @@ public class ChatDetailFragment extends Fragment {
         headerStatus = view.findViewById(R.id.chat_header_status);
         headerOnlineDot = view.findViewById(R.id.chat_header_online_dot);
         headerName.setText(peerName);
-        UserAvatarLoader.load(headerAvatar, peerAvatar);
-        updateHeaderStatusUi(false);
+        if (mIsGroup) {
+            headerAvatar.setImageResource(R.drawable.ic_group_chat);
+            if (headerOnlineDot != null) {
+                headerOnlineDot.setVisibility(View.GONE);
+            }
+            if (headerStatus != null) {
+                headerStatus.setText(R.string.chat_group_subtitle);
+            }
+        } else {
+            UserAvatarLoader.load(headerAvatar, peerAvatar);
+            updateHeaderStatusUi(false);
+        }
 
         view.findViewById(R.id.btn_chat_call).setOnClickListener(v -> startVoiceCall());
 
@@ -162,7 +196,7 @@ public class ChatDetailFragment extends Fragment {
         }
         mMyUid = user.getUid();
 
-        messagesAdapter = new ChatMessagesAdapter(mMyUid, peerAvatar);
+        messagesAdapter = new ChatMessagesAdapter(mMyUid, mIsGroup ? null : peerAvatar);
         recyclerView = view.findViewById(R.id.chat_messages_list);
         layoutManager = new LinearLayoutManager(requireContext());
         layoutManager.setStackFromEnd(true);
@@ -188,12 +222,14 @@ public class ChatDetailFragment extends Fragment {
                 return;
             }
             input.setText("");
-            repository.sendTextMessage(mConversationId, mMyUid, mPeerUid, text)
-                    .addOnFailureListener(e -> Toast.makeText(
-                            requireContext(),
-                            R.string.chat_send_failed,
-                            Toast.LENGTH_SHORT
-                    ).show());
+            Task<?> sendTask = mIsGroup
+                    ? repository.sendGroupTextMessage(mConversationId, mMyUid, text)
+                    : repository.sendTextMessage(mConversationId, mMyUid, mPeerUid, text);
+            sendTask.addOnFailureListener(e -> Toast.makeText(
+                    requireContext(),
+                    R.string.chat_send_failed,
+                    Toast.LENGTH_SHORT
+            ).show());
         };
         sendBtn.setOnClickListener(v -> sendAction.run());
         input.addTextChangedListener(new TextWatcher() {
@@ -220,8 +256,10 @@ public class ChatDetailFragment extends Fragment {
         });
         setupKeyboardBehavior(view, input);
 
-        startListening(peerAvatar);
-        listenPeerActiveStatus();
+        startListening(mIsGroup ? null : peerAvatar);
+        if (!mIsGroup) {
+            listenPeerActiveStatus();
+        }
     }
 
     private void startVoiceCall() {
@@ -435,7 +473,10 @@ public class ChatDetailFragment extends Fragment {
         CloudinaryUploadUtil.uploadMedia(requireContext(), selectedImageUri, new CloudinaryUploadUtil.UploadCallback() {
             @Override
             public void onSuccess(String secureUrl, String publicId) {
-                repository.sendImageMessage(mConversationId, mMyUid, mPeerUid, secureUrl)
+                Task<?> sendImg = mIsGroup
+                        ? repository.sendGroupImageMessage(mConversationId, mMyUid, secureUrl)
+                        : repository.sendImageMessage(mConversationId, mMyUid, mPeerUid, secureUrl);
+                sendImg
                         .addOnCompleteListener(task -> {
                             isUploadingImage = false;
                             if (task.isSuccessful()) {
@@ -470,21 +511,23 @@ public class ChatDetailFragment extends Fragment {
         mLastMessages.clear();
         mPeerReadMessageIds = Collections.emptySet();
 
-        readReceiptsListener = repository.listenPeerReadReceipts(
-                mConversationId,
-                mPeerUid,
-                new ConversationRepository.PeerReadReceiptsCallback() {
-                    @Override
-                    public void onPeerReadMessageIds(@NonNull Set<String> messageIds) {
-                        mPeerReadMessageIds = messageIds;
-                        applyMessagesToAdapter(peerAvatar);
-                    }
+        if (!mIsGroup && !TextUtils.isEmpty(mPeerUid)) {
+            readReceiptsListener = repository.listenPeerReadReceipts(
+                    mConversationId,
+                    mPeerUid,
+                    new ConversationRepository.PeerReadReceiptsCallback() {
+                        @Override
+                        public void onPeerReadMessageIds(@NonNull Set<String> messageIds) {
+                            mPeerReadMessageIds = messageIds;
+                            applyMessagesToAdapter(peerAvatar);
+                        }
 
-                    @Override
-                    public void onError(@NonNull Exception e) {
-                        Toast.makeText(requireContext(), e.getMessage(), Toast.LENGTH_LONG).show();
-                    }
-                });
+                        @Override
+                        public void onError(@NonNull Exception e) {
+                            Toast.makeText(requireContext(), e.getMessage(), Toast.LENGTH_LONG).show();
+                        }
+                    });
+        }
 
         messagesListener = repository.listenMessages(
                 mConversationId,
@@ -505,13 +548,19 @@ public class ChatDetailFragment extends Fragment {
                 });
     }
 
-    /** Tin do đối phương gửi: ghi nhận mình đã đọc (để đối phương thấy ✓✓ trên tin của họ). */
+    /**
+     * Ghi {@code message_reads} cho tin không phải của mình (DM: đối phương; nhóm: mọi thành viên khác)
+     * để inbox cập nhật trạng thái đã đọc / preview.
+     */
     private void markIncomingFromPeerAsRead(@NonNull List<Message> messages) {
         for (Message m : messages) {
             if (m.getId() == null || m.getCreatedAt() == null) {
                 continue;
             }
-            if (!mPeerUid.equals(m.getSenderId())) {
+            if (m.getSenderId() == null || mMyUid.equals(m.getSenderId())) {
+                continue;
+            }
+            if (!mIsGroup && (mPeerUid == null || !mPeerUid.equals(m.getSenderId()))) {
                 continue;
             }
             if (mMarkedIncomingReadIds.contains(m.getId())) {

@@ -3,6 +3,8 @@ package com.example.social_app.fragments;
 import android.net.Uri;
 import android.os.Bundle;
 import android.os.Handler;
+import android.os.Looper;
+import android.os.SystemClock;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -30,6 +32,7 @@ public class StoryDetailFragment extends DialogFragment {
     private ImageView imageView;
     private VideoView videoView;
     private ProgressBar progressBar;
+    private ImageView userAvatar;
     private TextView username;
     private View content;
     private ImageView btnClose; // 🔥 nút X
@@ -37,8 +40,9 @@ public class StoryDetailFragment extends DialogFragment {
     private Story story;
     private User user;
     private StoryViewModel storyViewModel;
-    private Handler handler = new Handler();
+    private final Handler handler = new Handler(Looper.getMainLooper());
     private Runnable dismissRunnable;
+    private Runnable progressRunnable;
 
     public static StoryDetailFragment newInstance(Story story, User user) {
         StoryDetailFragment fragment = new StoryDetailFragment();
@@ -73,6 +77,7 @@ public class StoryDetailFragment extends DialogFragment {
         imageView = view.findViewById(R.id.story_image);
         videoView = view.findViewById(R.id.story_video);
         progressBar = view.findViewById(R.id.story_progress);
+        userAvatar = view.findViewById(R.id.story_user_avatar);
         username = view.findViewById(R.id.story_username);
         content = view.findViewById(R.id.story_content);
         btnClose = view.findViewById(R.id.btn_close); // 🔥 init nút X
@@ -81,6 +86,12 @@ public class StoryDetailFragment extends DialogFragment {
         btnClose.setOnClickListener(v -> dismiss());
 
         username.setText(user != null ? user.getFullName() : "User");
+        Glide.with(this)
+                .load(user != null ? user.getAvatarUrl() : null)
+                .placeholder(R.drawable.avatar_placeholder)
+                .error(R.drawable.avatar_placeholder)
+                .circleCrop()
+                .into(userAvatar);
 
         if (story != null && story.getId() != null) {
             storyViewModel.incrementViewCount(story.getId());
@@ -89,30 +100,27 @@ public class StoryDetailFragment extends DialogFragment {
         if (story != null && "IMAGE".equals(story.getMediaType())) {
             videoView.setVisibility(View.GONE);
             imageView.setVisibility(View.VISIBLE);
-
-            progressBar.setVisibility(View.VISIBLE);
+            progressBar.setProgress(0);
 
             Glide.with(this)
                     .load(story.getMediaUrl())
                     .into(imageView);
 
-            progressBar.setVisibility(View.GONE);
-
-            startAutoDismiss(30000);
+            startAutoDismiss(15000);
+            startImageProgress(15000);
 
         } else if (story != null && "VIDEO".equals(story.getMediaType())) {
             imageView.setVisibility(View.GONE);
             videoView.setVisibility(View.VISIBLE);
-
-            progressBar.setVisibility(View.VISIBLE);
+            progressBar.setProgress(0);
 
             videoView.setVideoURI(Uri.parse(story.getMediaUrl()));
             videoView.start();
 
             videoView.setOnPreparedListener(mp -> {
-                progressBar.setVisibility(View.GONE);
                 int duration = mp.getDuration();
                 startAutoDismiss(duration);
+                startVideoProgress(duration);
             });
 
             videoView.setOnCompletionListener(mp -> dismiss());
@@ -130,12 +138,60 @@ public class StoryDetailFragment extends DialogFragment {
         handler.postDelayed(dismissRunnable, delayMillis);
     }
 
+    private void startImageProgress(int durationMillis) {
+        if (durationMillis <= 0) return;
+        stopProgressUpdates();
+
+        final long startedAt = SystemClock.uptimeMillis();
+        progressRunnable = new Runnable() {
+            @Override
+            public void run() {
+                if (!isAdded()) return;
+                long elapsed = SystemClock.uptimeMillis() - startedAt;
+                int progress = (int) Math.min(1000L, (elapsed * 1000L) / durationMillis);
+                progressBar.setProgress(progress);
+                if (progress < 1000) {
+                    handler.postDelayed(this, 50);
+                }
+            }
+        };
+        handler.post(progressRunnable);
+    }
+
+    private void startVideoProgress(int durationMillis) {
+        if (durationMillis <= 0) return;
+        stopProgressUpdates();
+
+        progressRunnable = new Runnable() {
+            @Override
+            public void run() {
+                if (!isAdded() || videoView == null) return;
+                int current = videoView.getCurrentPosition();
+                int progress = (int) Math.min(1000L, (current * 1000L) / durationMillis);
+                progressBar.setProgress(progress);
+                if (current < durationMillis) {
+                    handler.postDelayed(this, 50);
+                }
+            }
+        };
+        handler.post(progressRunnable);
+    }
+
+    private void stopProgressUpdates() {
+        if (progressRunnable != null) {
+            handler.removeCallbacks(progressRunnable);
+            progressRunnable = null;
+        }
+    }
+
     @Override
     public void onDestroyView() {
         super.onDestroyView();
         if (dismissRunnable != null) {
             handler.removeCallbacks(dismissRunnable);
+            dismissRunnable = null;
         }
+        stopProgressUpdates();
         if (videoView != null) {
             videoView.stopPlayback();
         }

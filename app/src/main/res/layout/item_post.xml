@@ -77,7 +77,8 @@
                 android:layout_height="wrap_content"
                 android:layout_marginStart="8dp"
                 style="@style/TextAppearance.Feed.Time"
-                android:text="KYOTO, JAPAN" />
+                android:text="KYOTO, JAPAN"
+                android:visibility="gone" />
 
         </LinearLayout>
 
@@ -204,7 +205,8 @@
                 android:layout_weight="1"
                 android:orientation="horizontal"
                 android:gravity="center_vertical"
-                android:padding="8dp">
+                android:padding="8dp"
+                android:visibility="gone">
 
                 <ImageView
                     android:id="@+id/post_share_icon"
@@ -235,7 +237,8 @@
                 android:src="@drawable/ic_bookmark"
                 android:scaleType="centerInside"
                 app:tint="?attr/colorOnSurface"
-                android:background="?attr/selectableItemBackgroundBorderless" />
+                android:background="?attr/selectableItemBackgroundBorderless"
+                android:visibility="gone" />
 
         </LinearLayout>
 

@@ -5,6 +5,7 @@ import android.text.Editable;
 import android.text.TextWatcher;
 import android.view.View;
 import android.widget.EditText;
+import android.widget.PopupMenu;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -29,6 +30,7 @@ import java.util.Locale;
 public class MessagesFragment extends Fragment {
 
     private ConversationRepository conversationRepository;
+    private MessagesConversationAdapter conversationsAdapter;
     private ListenerRegistration conversationsListener;
     private TextView emptyView;
     private RecyclerView listView;
@@ -45,23 +47,36 @@ public class MessagesFragment extends Fragment {
 
         conversationRepository = new ConversationRepository(requireContext());
 
-        view.findViewById(R.id.btn_compose).setOnClickListener(v ->
-                Toast.makeText(requireContext(), R.string.messages_compose, Toast.LENGTH_SHORT).show());
+        view.findViewById(R.id.btn_compose).setOnClickListener(v -> {
+            PopupMenu popup = new PopupMenu(requireContext(), v);
+            popup.getMenu().add(getString(R.string.new_group_menu_create_group));
+            popup.setOnMenuItemClickListener(item -> {
+                if (getString(R.string.new_group_menu_create_group).contentEquals(item.getTitle())) {
+                    if (getActivity() instanceof MainActivity) {
+                        ((MainActivity) getActivity()).openNewGroupChatFlow();
+                    }
+                    return true;
+                }
+                return false;
+            });
+            popup.show();
+        });
 
         listView = view.findViewById(R.id.conversations_list);
         emptyView = view.findViewById(R.id.messages_empty);
         searchInput = view.findViewById(R.id.messages_search);
         listView.setLayoutManager(new LinearLayoutManager(requireContext()));
-        MessagesConversationAdapter adapter = new MessagesConversationAdapter();
-        listView.setAdapter(adapter);
-        setupSearch(adapter);
-        adapter.setOnConversationClickListener(item -> {
+        conversationsAdapter = new MessagesConversationAdapter();
+        listView.setAdapter(conversationsAdapter);
+        setupSearch(conversationsAdapter);
+        conversationsAdapter.setOnConversationClickListener(item -> {
             if (getActivity() instanceof MainActivity) {
                 ((MainActivity) getActivity()).openChatDetail(
                         item.conversationId,
                         item.name,
                         item.avatarUrl,
-                        item.peerUserId);
+                        item.peerUserId,
+                        item.isGroup);
             }
         });
 
@@ -73,7 +88,35 @@ public class MessagesFragment extends Fragment {
             return;
         }
 
-        startListening(user.getUid(), adapter);
+        startListening(user.getUid(), conversationsAdapter);
+    }
+
+    /**
+     * Đóng {@link com.example.social_app.fragments.ChatDetailFragment} overlay không làm
+     * fragment này resume — {@link com.example.social_app.MainActivity} gọi từ
+     * {@code addOnBackStackChangedListener} sau khi pop chat.
+     */
+    public void reloadConversationsListAfterChatClosed() {
+        FirebaseUser user = FirebaseAuth.getInstance().getCurrentUser();
+        if (user == null || conversationRepository == null || conversationsAdapter == null) {
+            return;
+        }
+        conversationRepository.reloadConversationList(
+                user.getUid(),
+                new ConversationRepository.ConversationListCallback() {
+                    @Override
+                    public void onConversationsLoaded(
+                            @NonNull java.util.List<MessagesConversationAdapter.Item> items) {
+                        allConversationItems.clear();
+                        allConversationItems.addAll(items);
+                        applySearchFilter(conversationsAdapter);
+                    }
+
+                    @Override
+                    public void onError(@NonNull Exception e) {
+                        // Giữ danh sách cũ
+                    }
+                });
     }
 
     private void startListening(@NonNull String currentUserId, @NonNull MessagesConversationAdapter adapter) {
@@ -152,6 +195,8 @@ public class MessagesFragment extends Fragment {
     @Override
     public void onDestroyView() {
         stopListening();
+        conversationsAdapter = null;
+        conversationRepository = null;
         super.onDestroyView();
     }
 }

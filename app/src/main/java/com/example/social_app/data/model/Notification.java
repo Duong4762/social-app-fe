@@ -12,7 +12,7 @@ import java.util.Date;
  *
  * Các thông báo gửi đến cho người dùng.
  * - userId: ID của người nhận thông báo
- * - type: "FOLLOW" | "LIKE" | "COMMENT" | "MESSAGE"
+ * - type: "FOLLOW" | "LIKE" | "COMMENT" | "MESSAGE" | "GROUPCHAT"
  * - referenceId: ID linh hoạt trỏ tới Post, Comment hoặc User tùy theo type
  *                (không ràng buộc cứng, chỉ là String)
  * - isRead: trạng thái đã đọc hay chưa
@@ -22,8 +22,12 @@ public class Notification {
     private String id;
     private String userId;        // ID của người nhận thông báo
     private String actorId;       // ID của người gây ra hành động (người like, comment...)
-    private String type;          // FOLLOW | LIKE | COMMENT | MESSAGE
-    private String referenceId;   // flexible reference: postId / commentId / userId
+    private String type;          // FOLLOW | LIKE | COMMENT | MESSAGE | GROUPCHAT
+    private String referenceId;   // flexible reference: postId / commentId / userId / conversationId
+    /** GROUPCHAT: tên hiển thị người gửi tin trong nhóm. */
+    private String groupChatSenderName;
+    /** GROUPCHAT: tên nhóm (có thể rỗng). */
+    private String groupChatTitle;
     private boolean isRead;
 
     @ServerTimestamp
@@ -80,6 +84,22 @@ public class Notification {
 
     public void setReferenceId(String referenceId) {
         this.referenceId = referenceId;
+    }
+
+    public String getGroupChatSenderName() {
+        return groupChatSenderName;
+    }
+
+    public void setGroupChatSenderName(String groupChatSenderName) {
+        this.groupChatSenderName = groupChatSenderName;
+    }
+
+    public String getGroupChatTitle() {
+        return groupChatTitle;
+    }
+
+    public void setGroupChatTitle(String groupChatTitle) {
+        this.groupChatTitle = groupChatTitle;
     }
 
     @PropertyName("isRead")

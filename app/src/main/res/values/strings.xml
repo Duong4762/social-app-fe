@@ -138,6 +138,8 @@
     <string name="notification_comment">commented on your post</string>
     <string name="notification_follow">started following you</string>
     <string name="notification_message">sent you a message</string>
+    <string name="notification_groupchat_title">Group chat</string>
+    <string name="notification_groupchat_body">%1$s sent a message in %2$s</string>
     <string name="notification_like_comment">liked your comment</string>
     <string name="notification_reply_comment">replied to your comment</string>
 
@@ -259,7 +261,18 @@
     <string name="messages_need_login">Log in to view messages</string>
     <string name="message_preview_sent_photo">Sent a photo</string>
     <string name="message_preview_sent_video">Sent a video</string>
+    <!-- \\u0020 = khoảng trắng sau dấu hai chấm (một số bản build giữ literal chính xác hơn) -->
+    <string name="message_preview_you_prefix">You:\u0020</string>
     <string name="message_no_messages_yet">No messages yet</string>
+    <string name="chat_group_subtitle">Group</string>
+    <string name="new_group_chat_title">New Group Chat</string>
+    <string name="new_group_create">Create</string>
+    <string name="new_group_search_hint">Search users</string>
+    <string name="new_group_menu_create_group">Create group</string>
+    <string name="group_name_hint">Group name</string>
+    <string name="group_invited_label">Invited</string>
+    <string name="new_group_need_two_members">Select at least 2 people</string>
+    <string name="new_group_create_failed">Could not create group</string>
     <string name="story_add_label">Thêm</string>
     <string name="story_add_content_desc">Tạo story mới</string>
     <string name="story_sarah">Sarah</string>

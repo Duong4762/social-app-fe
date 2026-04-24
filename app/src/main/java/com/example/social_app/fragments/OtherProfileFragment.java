@@ -100,6 +100,7 @@ public class OtherProfileFragment extends Fragment implements PostAdapter.OnPost
         Map<String, Object> notification = new HashMap<>();
         notification.put("id", notificationId);
         notification.put("userId", receiverId);
+        notification.put("actorId", followerId);
         notification.put("type", "FOLLOW");
         notification.put("referenceId", followerId);
         notification.put("isRead", false);

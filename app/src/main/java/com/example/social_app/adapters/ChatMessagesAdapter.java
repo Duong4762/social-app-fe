@@ -66,12 +66,25 @@ public class ChatMessagesAdapter extends RecyclerView.Adapter<RecyclerView.ViewH
             notifyDataSetChanged();
             return;
         }
+        List<Message> ordered = new ArrayList<>(messages);
+        Collections.sort(ordered, (a, b) -> {
+            long ta = messageSortKeyTime(a);
+            long tb = messageSortKeyTime(b);
+            int c = Long.compare(ta, tb);
+            if (c != 0) {
+                return c;
+            }
+            String ida = a.getId() != null ? a.getId() : "";
+            String idb = b.getId() != null ? b.getId() : "";
+            return ida.compareTo(idb);
+        });
+        Date pendingTime = new Date();
         Calendar cal = Calendar.getInstance();
         long lastDayKey = Long.MIN_VALUE;
-        for (Message m : messages) {
+        for (Message m : ordered) {
             Date created = m.getCreatedAt();
             if (created == null) {
-                continue;
+                created = pendingTime;
             }
             cal.setTime(created);
             long dayKey = dayKey(cal);
@@ -83,6 +96,14 @@ public class ChatMessagesAdapter extends RecyclerView.Adapter<RecyclerView.ViewH
             rows.add(outgoing ? Row.out(m) : Row.in(m));
         }
         notifyDataSetChanged();
+    }
+
+    /** ServerTimestamp chưa về: đặt cuối danh sách thời gian để bubble vẫn hiện (DM & nhóm). */
+    private static long messageSortKeyTime(@NonNull Message m) {
+        if (m.getCreatedAt() != null) {
+            return m.getCreatedAt().getTime();
+        }
+        return Long.MAX_VALUE;
     }
 
     private static long dayKey(Calendar cal) {

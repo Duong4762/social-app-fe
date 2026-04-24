@@ -5,6 +5,8 @@ import android.content.SharedPreferences;
 import android.content.res.Configuration;
 import android.content.res.Resources;
 
+import androidx.annotation.NonNull;
+
 import java.util.Locale;
 
 public class LanguageUtils {
@@ -32,5 +34,18 @@ public class LanguageUtils {
     public static void loadLocale(Context context) {
         String language = getLanguage(context);
         setLocale(context, language);
+    }
+
+    /**
+     * Context (Resources) theo ngôn ngữ đã lưu trong prefs — cần khi dùng {@code getApplicationContext()},
+     * vì application context không đi qua {@code attachBaseContext} của Activity.
+     */
+    @NonNull
+    public static Context contextWithSavedLanguage(@NonNull Context base) {
+        String lang = getLanguage(base);
+        Locale locale = new Locale(lang);
+        Configuration config = new Configuration(base.getResources().getConfiguration());
+        config.setLocale(locale);
+        return base.createConfigurationContext(config);
     }
 }

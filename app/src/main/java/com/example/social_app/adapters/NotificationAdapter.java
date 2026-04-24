@@ -11,11 +11,11 @@ import androidx.annotation.NonNull;
 import androidx.core.content.ContextCompat;
 import androidx.recyclerview.widget.RecyclerView;
 
-import com.bumptech.glide.Glide;
 import com.example.social_app.R;
 import com.example.social_app.data.model.Notification;
 import com.example.social_app.data.model.User;
 import com.example.social_app.firebase.FirebaseManager;
+import com.example.social_app.utils.UserAvatarLoader;
 import com.google.firebase.firestore.FirebaseFirestore;
 
 import java.util.ArrayList;
@@ -71,8 +71,9 @@ public class NotificationAdapter extends RecyclerView.Adapter<NotificationAdapte
     private void loadUserInfo(String userId, TextView contentText, String type, ImageView avatar) {
         if (userId == null || userId.isEmpty()) {
             if (contentText != null) {
-                contentText.setText("Ai đó " + getActionText(type));
+                contentText.setText("Người dùng " + getActionText(type));
             }
+            UserAvatarLoader.load(avatar, null);
             return;
         }
 
@@ -80,9 +81,7 @@ public class NotificationAdapter extends RecyclerView.Adapter<NotificationAdapte
         if (userCache.containsKey(userId)) {
             User user = userCache.get(userId);
             updateContentText(contentText, user, type);
-            if (avatar != null && user.getAvatarUrl() != null && !user.getAvatarUrl().isEmpty()) {
-                Glide.with(context).load(user.getAvatarUrl()).into(avatar);
-            }
+            UserAvatarLoader.load(avatar, user != null ? user.getAvatarUrl() : null);
             return;
         }
 
@@ -97,22 +96,20 @@ public class NotificationAdapter extends RecyclerView.Adapter<NotificationAdapte
                             user.setId(documentSnapshot.getId());
                             userCache.put(userId, user);
                             updateContentText(contentText, user, type);
-                            if (avatar != null && user.getAvatarUrl() != null && !user.getAvatarUrl().isEmpty()) {
-                                Glide.with(context).load(user.getAvatarUrl()).into(avatar);
-                            } else if (avatar != null) {
-                                avatar.setImageResource(R.drawable.avatar_placeholder);
-                            }
+                            UserAvatarLoader.load(avatar, user.getAvatarUrl());
                         }
                     } else {
                         if (contentText != null) {
                             contentText.setText("Người dùng " + getActionText(type));
                         }
+                        UserAvatarLoader.load(avatar, null);
                     }
                 })
                 .addOnFailureListener(e -> {
                     if (contentText != null) {
-                        contentText.setText("Ai đó " + getActionText(type));
+                        contentText.setText("Người dùng " + getActionText(type));
                     }
+                    UserAvatarLoader.load(avatar, null);
                 });
     }
 
@@ -138,6 +135,8 @@ public class NotificationAdapter extends RecyclerView.Adapter<NotificationAdapte
                     return "đã bắt đầu theo dõi bạn";
                 case "MESSAGE":
                     return "đã gửi cho bạn một tin nhắn";
+                case "GROUPCHAT":
+                    return "đã gửi tin trong nhóm chat";
                 default:
                     return "đã tương tác với bạn";
             }
@@ -164,10 +163,30 @@ public class NotificationAdapter extends RecyclerView.Adapter<NotificationAdapte
 
         void bind(Notification notification, int position) {
             String type = notification.getType();
-            String actorId = notification.getActorId();
-
-            // Load user info from actorId (người tạo ra hành động)
-            loadUserInfo(actorId, contentText, type, avatar);
+            if (type != null && "GROUPCHAT".equalsIgnoreCase(type)) {
+                String sender = notification.getGroupChatSenderName();
+                String gtitle = notification.getGroupChatTitle();
+                String g = (gtitle != null && !gtitle.trim().isEmpty())
+                        ? gtitle.trim()
+                        : context.getString(R.string.chat_group_subtitle);
+                String s = (sender != null && !sender.trim().isEmpty())
+                        ? sender.trim()
+                        : "—";
+                if (contentText != null) {
+                    contentText.setText(context.getString(R.string.notification_groupchat_body, s, g));
+                }
+                avatar.setImageResource(R.drawable.ic_group_chat);
+            } else {
+                String actorId = notification.getActorId();
+                String resolvedActorId = actorId;
+                if ((resolvedActorId == null || resolvedActorId.isEmpty())
+                        && type != null
+                        && "FOLLOW".equalsIgnoreCase(type)) {
+                    resolvedActorId = notification.getReferenceId();
+                }
+                UserAvatarLoader.load(avatar, null);
+                loadUserInfo(resolvedActorId, contentText, type, avatar);
+            }
 
             // Format thời gian
             String timeStr = formatTime(notification.getCreatedAt());
@@ -223,6 +242,10 @@ public class NotificationAdapter extends RecyclerView.Adapter<NotificationAdapte
                     break;
                 case "MESSAGE":
                     typeIcon.setImageResource(R.drawable.ic_message);
+                    typeIcon.setColorFilter(ContextCompat.getColor(context, R.color.primary));
+                    break;
+                case "GROUPCHAT":
+                    typeIcon.setImageResource(R.drawable.ic_group_chat);
                     typeIcon.setColorFilter(ContextCompat.getColor(context, R.color.primary));
                     break;
                 default:
