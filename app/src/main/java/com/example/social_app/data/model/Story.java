@@ -4,7 +4,7 @@ import com.google.firebase.firestore.ServerTimestamp;
 
 import java.io.Serializable;
 import java.util.Date;
-
+import java.util.List;
 public class Story implements Serializable {
 
     private String id;
@@ -13,7 +13,7 @@ public class Story implements Serializable {
     private String mediaType; // IMAGE | VIDEO
     private int duration; // thời gian hiển thị (giây)
     private int viewCount;
-
+    private List<String> viewedBy;
     @ServerTimestamp
     private Date createdAt;
 
@@ -54,7 +54,13 @@ public class Story implements Serializable {
 
     public Date getExpiresAt() { return expiresAt; }
     public void setExpiresAt(Date expiresAt) { this.expiresAt = expiresAt; }
+    public List<String> getViewedBy() {
+        return viewedBy;
+    }
 
+    public void setViewedBy(List<String> viewedBy) {
+        this.viewedBy = viewedBy;
+    }
     public boolean isValid() {
         if (expiresAt == null) return true;
         return expiresAt.after(new Date());

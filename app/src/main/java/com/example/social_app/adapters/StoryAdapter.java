@@ -165,7 +165,17 @@ public class StoryAdapter extends RecyclerView.Adapter<StoryAdapter.StoryViewHol
                 avatar.setImageResource(R.drawable.avatar_placeholder);
             }
 
-            storyRing.setVisibility(View.VISIBLE);
+            String currentUserId = FirebaseManager.getInstance().getAuth().getUid();
+
+            boolean isViewed = story.getViewedBy() != null &&
+                    story.getViewedBy().contains(currentUserId);
+
+            if (isViewed) {
+                storyRing.setAlpha(0.3f);   // đã xem → mờ
+            } else {
+                storyRing.setAlpha(1f);     // chưa xem → rõ
+            }
+            storyRing.setVisibility(View.VISIBLE); // luôn hiện
             addStoryBtn.setVisibility(View.GONE);
 
             itemView.setOnClickListener(v -> {

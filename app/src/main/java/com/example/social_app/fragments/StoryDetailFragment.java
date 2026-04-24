@@ -23,6 +23,7 @@ import com.example.social_app.viewmodels.StoryViewModel;
 
 public class StoryDetailFragment extends DialogFragment {
 
+
     private static final String ARG_STORY = "story";
     private static final String ARG_USER = "user";
 
@@ -31,6 +32,7 @@ public class StoryDetailFragment extends DialogFragment {
     private ProgressBar progressBar;
     private TextView username;
     private View content;
+    private ImageView btnClose; // 🔥 nút X
 
     private Story story;
     private User user;
@@ -73,6 +75,10 @@ public class StoryDetailFragment extends DialogFragment {
         progressBar = view.findViewById(R.id.story_progress);
         username = view.findViewById(R.id.story_username);
         content = view.findViewById(R.id.story_content);
+        btnClose = view.findViewById(R.id.btn_close); // 🔥 init nút X
+
+        // 🔥 xử lý click nút X
+        btnClose.setOnClickListener(v -> dismiss());
 
         username.setText(user != null ? user.getFullName() : "User");
 
@@ -83,17 +89,32 @@ public class StoryDetailFragment extends DialogFragment {
         if (story != null && "IMAGE".equals(story.getMediaType())) {
             videoView.setVisibility(View.GONE);
             imageView.setVisibility(View.VISIBLE);
-            Glide.with(this).load(story.getMediaUrl()).into(imageView);
+
+            progressBar.setVisibility(View.VISIBLE);
+
+            Glide.with(this)
+                    .load(story.getMediaUrl())
+                    .into(imageView);
+
+            progressBar.setVisibility(View.GONE);
+
             startAutoDismiss(30000);
+
         } else if (story != null && "VIDEO".equals(story.getMediaType())) {
             imageView.setVisibility(View.GONE);
             videoView.setVisibility(View.VISIBLE);
+
+            progressBar.setVisibility(View.VISIBLE);
+
             videoView.setVideoURI(Uri.parse(story.getMediaUrl()));
             videoView.start();
+
             videoView.setOnPreparedListener(mp -> {
+                progressBar.setVisibility(View.GONE);
                 int duration = mp.getDuration();
                 startAutoDismiss(duration);
             });
+
             videoView.setOnCompletionListener(mp -> dismiss());
         }
 
@@ -119,4 +140,6 @@ public class StoryDetailFragment extends DialogFragment {
             videoView.stopPlayback();
         }
     }
+
+
 }

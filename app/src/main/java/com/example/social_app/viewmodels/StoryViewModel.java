@@ -136,9 +136,15 @@ public class StoryViewModel extends ViewModel {
 
     // ================== VIEW COUNT ==================
     public void incrementViewCount(String storyId) {
+        String userId = firebaseManager.getAuth().getUid();
+        if (userId == null) return;
+
         db.collection(FirebaseManager.COLLECTION_STORIES)
                 .document(storyId)
-                .update("viewCount", FieldValue.increment(1));
+                .update(
+                        "viewCount", FieldValue.increment(1),
+                        "viewedBy", FieldValue.arrayUnion(userId)
+                );
     }
 
     // ================== CLEAN EXPIRED ==================
