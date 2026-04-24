@@ -29,15 +29,22 @@ import com.example.social_app.viewmodels.HomeViewModel;
 import com.example.social_app.viewmodels.NewPostViewModel;
 import com.google.android.material.tabs.TabLayout;
 import com.google.firebase.firestore.FirebaseFirestore;
+import com.google.firebase.firestore.FieldValue;
 
 import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
 import androidx.lifecycle.ViewModelProvider;
-
+import com.google.firebase.firestore.FieldValue;
+import java.util.HashMap;
+import java.util.Map;
 public class SearchFragment extends Fragment implements PostAdapter.OnPostActionListener {
 
     private EditText searchInput;
@@ -63,6 +70,8 @@ public class SearchFragment extends Fragment implements PostAdapter.OnPostAction
     private List<User> filteredUsers = new ArrayList<>();
     private List<Post> filteredPosts = new ArrayList<>();
 
+    private Set<String> followedUserIds = new HashSet<>();
+
     private ExecutorService executor = Executors.newSingleThreadExecutor();
     private Handler mainHandler = new Handler(Looper.getMainLooper());
     private FirebaseFirestore firestore;
@@ -87,6 +96,7 @@ public class SearchFragment extends Fragment implements PostAdapter.OnPostAction
         loadSearchData();
     }
 
+
     private void initViews(View view) {
         searchInput = view.findViewById(R.id.etSearch);
         suggestedLabel = view.findViewById(R.id.suggested_label);
@@ -104,6 +114,7 @@ public class SearchFragment extends Fragment implements PostAdapter.OnPostAction
         tabLayout.addTab(tabLayout.newTab().setText(getString(R.string.tab_posts)));
     }
 
+
     private void setupRecyclerViews() {
         // Suggested users adapter (dùng chung UserSearchAdapter)
         suggestedUsersRecycler.setLayoutManager(new LinearLayoutManager(requireContext()));
@@ -115,7 +126,7 @@ public class SearchFragment extends Fragment implements PostAdapter.OnPostAction
 
             @Override
             public void onFollowClicked(User user, int position) {
-                Toast.makeText(requireContext(), getString(R.string.follow_user, user.getFullName()), Toast.LENGTH_SHORT).show();
+                handleFollowClick(user, position, suggestedAdapter);
             }
         });
         suggestedUsersRecycler.setAdapter(suggestedAdapter);
@@ -130,7 +141,7 @@ public class SearchFragment extends Fragment implements PostAdapter.OnPostAction
 
             @Override
             public void onFollowClicked(User user, int position) {
-                Toast.makeText(requireContext(), getString(R.string.follow_user, user.getFullName()), Toast.LENGTH_SHORT).show();
+                handleFollowClick(user, position, userSearchAdapter);
             }
         });
         usersRecyclerView.setAdapter(userSearchAdapter);
@@ -156,6 +167,80 @@ public class SearchFragment extends Fragment implements PostAdapter.OnPostAction
                 updateResultTabVisibility(tab.getPosition());
             }
         });
+    }
+
+    private void handleFollowClick(User user, int position, UserSearchAdapter adapter) {
+        String currentUserId = FirebaseManager.getInstance().getAuth().getUid();
+        if (currentUserId == null || user == null || user.getId() == null) {
+            Toast.makeText(requireContext(), "Vui lòng đăng nhập", Toast.LENGTH_SHORT).show();
+            return;
+        }
+
+        if (currentUserId.equals(user.getId())) {
+            Toast.makeText(requireContext(), "Không thể theo dõi chính mình", Toast.LENGTH_SHORT).show();
+            return;
+        }
+
+        boolean isFollowing = followedUserIds.contains(user.getId());
+        String followDocId = currentUserId + "_" + user.getId();
+
+        if (isFollowing) {
+            // Unfollow
+            firestore.collection(FirebaseManager.COLLECTION_FOLLOWS)
+                    .document(followDocId)
+                    .delete()
+                    .addOnSuccessListener(aVoid -> {
+                        followedUserIds.remove(user.getId());
+                        updateAllAdaptersFollowState();
+                        Toast.makeText(requireContext(), "Đã bỏ theo dõi", Toast.LENGTH_SHORT).show();
+                    })
+                    .addOnFailureListener(e -> {
+                        Toast.makeText(requireContext(), "Lỗi khi bỏ theo dõi", Toast.LENGTH_SHORT).show();
+                    });
+        } else {
+            // Follow
+            Map<String, Object> followData = new HashMap<>();
+            followData.put("followerId", currentUserId);
+            followData.put("followingId", user.getId());
+            followData.put("createdAt", FieldValue.serverTimestamp());
+
+            firestore.collection(FirebaseManager.COLLECTION_FOLLOWS)
+                    .document(followDocId)
+                    .set(followData)
+                    .addOnSuccessListener(aVoid -> {
+                        followedUserIds.add(user.getId());
+                        updateAllAdaptersFollowState();
+                        Toast.makeText(requireContext(), "Đã theo dõi", Toast.LENGTH_SHORT).show();
+                        createFollowNotification(user.getId(), currentUserId);
+                    })
+                    .addOnFailureListener(e -> {
+                        Toast.makeText(requireContext(), "Lỗi khi theo dõi", Toast.LENGTH_SHORT).show();
+                    });
+        }
+    }
+
+    private void updateAllAdaptersFollowState() {
+        if (suggestedAdapter != null) {
+            suggestedAdapter.setFollowedUserIds(followedUserIds);
+        }
+        if (userSearchAdapter != null) {
+            userSearchAdapter.setFollowedUserIds(followedUserIds);
+        }
+    }
+
+    private void createFollowNotification(String targetUserId, String followerId) {
+        String notificationId = "follow_" + followerId + "_" + targetUserId;
+        Map<String, Object> notification = new HashMap<>();
+        notification.put("id", notificationId);
+        notification.put("userId", targetUserId);
+        notification.put("type", "FOLLOW");
+        notification.put("referenceId", followerId);
+        notification.put("isRead", false);
+        notification.put("createdAt", FieldValue.serverTimestamp());
+
+        firestore.collection(FirebaseManager.COLLECTION_NOTIFICATIONS)
+                .document(notificationId)
+                .set(notification);
     }
 
     private void setupSearchListener() {
@@ -266,6 +351,7 @@ public class SearchFragment extends Fragment implements PostAdapter.OnPostAction
                     } else {
                         showSuggestedMode();
                     }
+                    loadFollowingList();
                 })
                 .addOnFailureListener(e -> {
                     if (!isAdded()) {
@@ -278,11 +364,31 @@ public class SearchFragment extends Fragment implements PostAdapter.OnPostAction
                 });
     }
 
+    private void loadFollowingList() {
+        String currentUserId = FirebaseManager.getInstance().getAuth().getUid();
+        if (currentUserId == null) return;
+
+        firestore.collection(FirebaseManager.COLLECTION_FOLLOWS)
+                .whereEqualTo("followerId", currentUserId)
+                .get()
+                .addOnSuccessListener(query -> {
+                    followedUserIds.clear();
+                    for (var doc : query.getDocuments()) {
+                        String followingId = doc.getString("followingId");
+                        if (followingId != null) {
+                            followedUserIds.add(followingId);
+                        }
+                    }
+                    updateAllAdaptersFollowState();
+                });
+    }
+
     private void showSuggestedMode() {
         isSearchMode = false;
 
         // Hiển thị TẤT CẢ user trong danh sách Suggested
         suggestedAdapter.setUsers(allUsers);
+        suggestedAdapter.setFollowedUserIds(followedUserIds);
 
         suggestedLabel.setVisibility(View.VISIBLE);
         suggestedUsersRecycler.setVisibility(View.VISIBLE);
@@ -333,6 +439,7 @@ public class SearchFragment extends Fragment implements PostAdapter.OnPostAction
                 filteredPosts = posts;
 
                 userSearchAdapter.setUsers(filteredUsers);
+                userSearchAdapter.setFollowedUserIds(followedUserIds);
                 postSearchAdapter.setPosts(filteredPosts);
 
                 searchLoadingProgress.setVisibility(View.GONE);
@@ -392,8 +499,6 @@ public class SearchFragment extends Fragment implements PostAdapter.OnPostAction
         androidx.fragment.app.Fragment fragment;
 
         if (userId.equals(currentUserId)) {
-            // Thay vì replace bằng ProfileFragment mới, có thể chuyển sang tab Profile nếu cần, 
-            // nhưng ở đây ta cứ replace để đồng bộ flow OtherProfile.
             fragment = new ProfileFragment();
         } else {
             fragment = OtherProfileFragment.newInstance(userId);
@@ -472,6 +577,7 @@ public class SearchFragment extends Fragment implements PostAdapter.OnPostAction
                 .setNegativeButton(getString(R.string.cancel_action), null)
                 .show();
     }
+
     @Override
     public void onReportPostClicked(Post post) {
         String currentUserId = FirebaseManager.getInstance().getAuth().getUid();
@@ -498,7 +604,6 @@ public class SearchFragment extends Fragment implements PostAdapter.OnPostAction
                 .setItems(reasons, (dialog, which) -> {
                     String selectedReason = reasons[which];
 
-                    // CHỈ khi chọn "Lý do khác" (index 4) mới hiện dialog nhập chi tiết
                     if (which == 4) {
                         showPostReportDetailDialog(post, selectedReason);
                     } else {

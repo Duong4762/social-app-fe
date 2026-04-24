@@ -36,7 +36,9 @@ import java.util.ArrayList;
 import java.util.List;
 
 import androidx.lifecycle.ViewModelProvider;
-
+import com.google.firebase.firestore.FieldValue;
+import java.util.HashMap;
+import java.util.Map;
 public class OtherProfileFragment extends Fragment implements PostAdapter.OnPostActionListener {
 
     private static final String ARG_USER_ID = "user_id";
@@ -81,6 +83,33 @@ public class OtherProfileFragment extends Fragment implements PostAdapter.OnPost
         args.putString(ARG_USER_ID, userId);
         fragment.setArguments(args);
         return fragment;
+    }
+    private void createFollowNotification(String receiverId, String followerId) {
+        // receiverId: người nhận thông báo (người được follow)
+        // followerId: người follow
+        if (receiverId == null || followerId == null) return;
+        if (receiverId.equals(followerId)) return; // Không tự thông báo cho chính mình
+
+        String notificationId = "follow_" + followerId + "_" + receiverId;
+
+        Map<String, Object> notification = new HashMap<>();
+        notification.put("id", notificationId);
+        notification.put("userId", receiverId);
+        notification.put("type", "FOLLOW");
+        notification.put("referenceId", followerId);
+        notification.put("isRead", false);
+        notification.put("createdAt", FieldValue.serverTimestamp());
+
+        FirebaseManager.getInstance().getFirestore()
+                .collection(FirebaseManager.COLLECTION_NOTIFICATIONS)
+                .document(notificationId)
+                .set(notification)
+                .addOnSuccessListener(aVoid -> {
+                    android.util.Log.d("OtherProfile", "Follow notification created: " + notificationId);
+                })
+                .addOnFailureListener(e -> {
+                    android.util.Log.e("OtherProfile", "Failed to create notification", e);
+                });
     }
 
     @Override
@@ -251,7 +280,9 @@ public class OtherProfileFragment extends Fragment implements PostAdapter.OnPost
                 .document(followDocId)
                 .set(follow)
                 .addOnSuccessListener(unused -> {
-                    createFollowNotification();
+                    // Tạo notification cho người được follow
+                    createFollowNotification(targetUserId, currentUserId);
+
                     if (!isAdded()) {
                         return;
                     }

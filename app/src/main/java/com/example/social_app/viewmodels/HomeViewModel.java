@@ -14,8 +14,10 @@ import com.google.firebase.firestore.Query;
 import com.example.social_app.data.model.Report;
 import com.google.firebase.firestore.DocumentReference;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 
 public class HomeViewModel extends ViewModel {
@@ -63,7 +65,6 @@ public class HomeViewModel extends ViewModel {
 
                     if (isRefresh) {
                         posts.setValue(newPosts);
-                        // Khi refresh, xóa trạng thái cũ và tải lại engagement mới nhất
                         likedPostIds.clear();
                         bookmarkedPostIds.clear();
                         loadUserEngagement();
@@ -90,6 +91,8 @@ public class HomeViewModel extends ViewModel {
                 });
     }
 
+    // ==================== TOGGLE LIKE WITH NOTIFICATION ====================
+
     public void toggleLike(Post post) {
         String userId = firebaseManager.getAuth().getUid();
         if (userId == null) return;
@@ -101,11 +104,14 @@ public class HomeViewModel extends ViewModel {
             likedPostIds.add(postId);
 
             // Add to post_likes collection
-            java.util.Map<String, Object> likeData = new java.util.HashMap<>();
+            Map<String, Object> likeData = new HashMap<>();
             likeData.put("postId", postId);
             likeData.put("userId", userId);
             likeData.put("createdAt", FieldValue.serverTimestamp());
             db.collection(FirebaseManager.COLLECTION_POST_LIKES).document(postId + "_" + userId).set(likeData);
+
+            // Tạo notification cho chủ bài viết (CHỈ KHI LIKE)
+            createLikeNotification(postId, post.getUserId(), userId);
         } else {
             likedPostIds.remove(postId);
 
@@ -118,6 +124,36 @@ public class HomeViewModel extends ViewModel {
                 .update("likeCount", FieldValue.increment(isLiking ? 1 : -1));
     }
 
+    /**
+     * Tạo notification khi có người like bài viết
+     */
+    private void createLikeNotification(String postId, String postOwnerId, String likerId) {
+        if (postOwnerId == null || likerId == null) return;
+        if (postOwnerId.equals(likerId)) return; // Không tự thông báo cho chính mình
+
+        String notificationId = "like_" + postId + "_" + likerId;
+
+        Map<String, Object> notification = new HashMap<>();
+        notification.put("id", notificationId);
+        notification.put("userId", postOwnerId);      // Người nhận thông báo (chủ bài viết)
+        notification.put("type", "LIKE");
+        notification.put("referenceId", likerId);     // Người like
+        notification.put("isRead", false);
+        notification.put("createdAt", FieldValue.serverTimestamp());
+
+        db.collection(FirebaseManager.COLLECTION_NOTIFICATIONS)
+                .document(notificationId)
+                .set(notification)
+                .addOnSuccessListener(aVoid -> {
+                    android.util.Log.d("HomeViewModel", "Like notification created: " + notificationId);
+                })
+                .addOnFailureListener(e -> {
+                    android.util.Log.e("HomeViewModel", "Failed to create like notification", e);
+                });
+    }
+
+    // ==================== END LIKE NOTIFICATION ====================
+
     public void toggleBookmark(Post post) {
         String userId = firebaseManager.getAuth().getUid();
         if (userId == null || post == null || post.getId() == null) return;
@@ -125,30 +161,27 @@ public class HomeViewModel extends ViewModel {
         String postId = post.getId();
         boolean isBookmarking = !bookmarkedPostIds.contains(postId);
 
-        // Optimistic UI update
         if (isBookmarking) {
             bookmarkedPostIds.add(postId);
         } else {
             bookmarkedPostIds.remove(postId);
         }
-        posts.setValue(posts.getValue()); // Trigger UI update immediately
+        posts.setValue(posts.getValue());
 
         String docId = postId + "_" + userId;
         if (isBookmarking) {
-            java.util.Map<String, Object> bookmarkData = new java.util.HashMap<>();
+            Map<String, Object> bookmarkData = new HashMap<>();
             bookmarkData.put("postId", postId);
             bookmarkData.put("userId", userId);
             bookmarkData.put("createdAt", FieldValue.serverTimestamp());
             db.collection(FirebaseManager.COLLECTION_BOOKMARKS).document(docId).set(bookmarkData)
                     .addOnFailureListener(e -> {
-                        // Revert on failure
                         bookmarkedPostIds.remove(postId);
                         posts.setValue(posts.getValue());
                     });
         } else {
             db.collection(FirebaseManager.COLLECTION_BOOKMARKS).document(docId).delete()
                     .addOnFailureListener(e -> {
-                        // Revert on failure
                         bookmarkedPostIds.add(postId);
                         posts.setValue(posts.getValue());
                     });
@@ -162,7 +195,6 @@ public class HomeViewModel extends ViewModel {
         db.collection(FirebaseManager.COLLECTION_POSTS).document(postId)
                 .update("shareCount", FieldValue.increment(1))
                 .addOnSuccessListener(aVoid -> {
-                    // Update local list to refresh UI
                     List<Post> currentPosts = posts.getValue();
                     if (currentPosts != null) {
                         for (Post p : currentPosts) {
@@ -190,15 +222,11 @@ public class HomeViewModel extends ViewModel {
         report.setReason(reason);
 
         reportRef.set(report)
-                .addOnSuccessListener(aVoid -> {
-                    // Show success or update UI
-                })
+                .addOnSuccessListener(aVoid -> {})
                 .addOnFailureListener(e -> {
                     error.setValue("Lỗi khi gửi báo cáo: " + e.getMessage());
                 });
     }
-
-    // ==================== THÊM: REPORT USER ====================
 
     public void reportUser(com.example.social_app.data.model.User user, String reason) {
         String userId = firebaseManager.getAuth().getUid();
@@ -213,13 +241,11 @@ public class HomeViewModel extends ViewModel {
             return;
         }
 
-        // Không cho report chính mình
         if (userId.equals(user.getId())) {
             error.setValue("Bạn không thể báo cáo chính mình");
             return;
         }
 
-        // Kiểm tra đã report user này chưa
         db.collection(FirebaseManager.COLLECTION_REPORTS)
                 .whereEqualTo("reporterId", userId)
                 .whereEqualTo("targetId", user.getId())
@@ -260,7 +286,6 @@ public class HomeViewModel extends ViewModel {
         String userId = firebaseManager.getAuth().getUid();
         if (userId == null) return;
 
-        // Load likes
         db.collection(FirebaseManager.COLLECTION_POST_LIKES)
                 .whereEqualTo("userId", userId)
                 .get()
@@ -272,7 +297,6 @@ public class HomeViewModel extends ViewModel {
                     posts.setValue(posts.getValue());
                 });
 
-        // Load bookmarks
         db.collection(FirebaseManager.COLLECTION_BOOKMARKS)
                 .whereEqualTo("userId", userId)
                 .get()

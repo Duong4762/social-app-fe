@@ -1,8 +1,6 @@
 package com.example.social_app.fragments;
 
 import android.os.Bundle;
-import android.os.Handler;
-import android.os.Looper;
 import android.view.View;
 import android.widget.ProgressBar;
 import android.widget.TextView;
@@ -18,12 +16,13 @@ import androidx.swiperefreshlayout.widget.SwipeRefreshLayout;
 import com.example.social_app.R;
 import com.example.social_app.adapters.NotificationAdapter;
 import com.example.social_app.data.model.Notification;
+import com.example.social_app.firebase.FirebaseManager;
+import com.google.firebase.firestore.FirebaseFirestore;
+import com.google.firebase.firestore.Query;
+import com.google.firebase.firestore.ListenerRegistration;
 
 import java.util.ArrayList;
-import java.util.Date;
 import java.util.List;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
 
 public class NotificationFragment extends Fragment {
 
@@ -34,8 +33,8 @@ public class NotificationFragment extends Fragment {
     private TextView emptyStateText;
 
     private List<Notification> notifications = new ArrayList<>();
-    private ExecutorService executorService = Executors.newSingleThreadExecutor();
-    private Handler mainHandler = new Handler(Looper.getMainLooper());
+    private FirebaseFirestore db;
+    private ListenerRegistration notificationListener; // Real-time listener
 
     public NotificationFragment() {
         super(R.layout.fragment_notification);
@@ -45,6 +44,8 @@ public class NotificationFragment extends Fragment {
     public void onViewCreated(@NonNull View view, @Nullable Bundle savedInstanceState) {
         super.onViewCreated(view, savedInstanceState);
 
+        db = FirebaseManager.getInstance().getFirestore();
+
         notificationRecyclerView = view.findViewById(R.id.notification_recycler_view);
         swipeRefresh = view.findViewById(R.id.swipe_refresh);
         loadingProgress = view.findViewById(R.id.loading_progress);
@@ -52,7 +53,7 @@ public class NotificationFragment extends Fragment {
 
         setupRecyclerView();
         setupSwipeRefresh();
-        loadNotifications();
+        setupRealtimeNotifications(); // Thay vì loadNotifications()
     }
 
     private void setupRecyclerView() {
@@ -65,97 +66,149 @@ public class NotificationFragment extends Fragment {
 
             @Override
             public void onMarkAsRead(Notification notification, int position) {
-                notification.setRead(true);
-                notificationAdapter.notifyItemChanged(position);
-                Toast.makeText(requireContext(), R.string.marked_as_read, Toast.LENGTH_SHORT).show();
+                markAsRead(notification);
             }
         });
         notificationRecyclerView.setAdapter(notificationAdapter);
     }
 
-    private void handleNotificationClick(Notification notification) {
-        String type = notification.getType();
+    private void setupSwipeRefresh() {
+        swipeRefresh.setOnRefreshListener(() -> {
+            // Refresh manually - force reload
+            if (notificationListener != null) {
+                notificationListener.remove();
+                setupRealtimeNotifications();
+            }
+            swipeRefresh.setRefreshing(false);
+        });
+    }
 
-        if (type == null) {
-            Toast.makeText(requireContext(), R.string.notification_clicked, Toast.LENGTH_SHORT).show();
+    /**
+     * REAL-TIME NOTIFICATIONS - tự động cập nhật khi có notification mới
+     */
+    private void setupRealtimeNotifications() {
+        showLoading(true);
+
+        String currentUserId = FirebaseManager.getInstance().getAuth().getUid();
+        if (currentUserId == null) {
+            showLoading(false);
+            emptyStateText.setVisibility(View.VISIBLE);
+            emptyStateText.setText("Vui lòng đăng nhập");
             return;
         }
+
+        // Bỏ orderBy để không cần index, chỉ lấy tất cả và sắp xếp trong code
+        notificationListener = db.collection(FirebaseManager.COLLECTION_NOTIFICATIONS)
+                .whereEqualTo("userId", currentUserId)
+                // .orderBy("createdAt", Query.Direction.DESCENDING)  // COMMENT DÒNG NÀY
+                .addSnapshotListener((queryDocumentSnapshots, e) -> {
+                    if (e != null) {
+                        android.util.Log.e("NotificationFragment", "Listen failed: " + e.getMessage(), e);
+                        showLoading(false);
+                        emptyStateText.setVisibility(View.VISIBLE);
+                        emptyStateText.setText("Lỗi kết nối: " + e.getMessage());
+                        return;
+                    }
+
+                    if (queryDocumentSnapshots == null) return;
+
+                    notifications.clear();
+                    for (var doc : queryDocumentSnapshots.getDocuments()) {
+                        Notification notification = doc.toObject(Notification.class);
+                        if (notification != null) {
+                            notification.setId(doc.getId());
+                            notifications.add(notification);
+                        }
+                    }
+
+                    // Sắp xếp thủ công trong code (mới nhất lên đầu)
+                    notifications.sort((a, b) -> {
+                        long t1 = a.getCreatedAt() != null ? a.getCreatedAt().getTime() : 0;
+                        long t2 = b.getCreatedAt() != null ? b.getCreatedAt().getTime() : 0;
+                        return Long.compare(t2, t1);
+                    });
+
+                    notificationAdapter.setNotifications(notifications);
+
+                    if (notifications.isEmpty()) {
+                        emptyStateText.setVisibility(View.VISIBLE);
+                        emptyStateText.setText("Chưa có thông báo nào");
+                    } else {
+                        emptyStateText.setVisibility(View.GONE);
+                    }
+
+                    showLoading(false);
+                });
+    }
+
+    private void markAsRead(Notification notification) {
+        if (notification.isRead()) return;
+
+        db.collection(FirebaseManager.COLLECTION_NOTIFICATIONS)
+                .document(notification.getId())
+                .update("isRead", true)
+                .addOnSuccessListener(aVoid -> {
+                    notification.setRead(true);
+                    notificationAdapter.notifyDataSetChanged();
+                    android.util.Log.d("NotificationFragment", "Marked as read: " + notification.getId());
+                });
+    }
+
+    private void handleNotificationClick(Notification notification) {
+        markAsRead(notification);
+
+        String type = notification.getType();
+        String referenceId = notification.getReferenceId();
+
+        if (type == null) return;
 
         switch (type.toUpperCase()) {
             case "LIKE":
             case "COMMENT":
-                Toast.makeText(requireContext(), getString(R.string.open_post_id, notification.getReferenceId()), Toast.LENGTH_SHORT).show();
+                if (referenceId != null) {
+                    Toast.makeText(requireContext(), "Mở bài viết: " + referenceId, Toast.LENGTH_SHORT).show();
+                }
                 break;
             case "FOLLOW":
-                Toast.makeText(requireContext(), getString(R.string.open_profile_id, notification.getUserId()), Toast.LENGTH_SHORT).show();
+                if (referenceId != null) {
+                    openProfile(referenceId);
+                }
                 break;
             case "MESSAGE":
-                Toast.makeText(requireContext(), R.string.open_chat, Toast.LENGTH_SHORT).show();
-                break;
-            default:
-                Toast.makeText(requireContext(), R.string.notification_clicked, Toast.LENGTH_SHORT).show();
+                Toast.makeText(requireContext(), "Mở tin nhắn", Toast.LENGTH_SHORT).show();
                 break;
         }
     }
 
-    private void setupSwipeRefresh() {
-        swipeRefresh.setOnRefreshListener(this::loadNotifications);
-    }
-
-    private void loadNotifications() {
-        showLoading(true);
-
-        executorService.execute(() -> {
-            try {
-                Thread.sleep(500);
-            } catch (InterruptedException e) {
-                e.printStackTrace();
-            }
-
-            List<Notification> newNotifications = generateMockNotifications();
-
-            mainHandler.post(() -> {
-                notifications.clear();
-                notifications.addAll(newNotifications);
-                notificationAdapter.setNotifications(notifications);
-
-                if (notifications.isEmpty()) {
-                    emptyStateText.setVisibility(View.VISIBLE);
-                } else {
-                    emptyStateText.setVisibility(View.GONE);
-                }
-
-                showLoading(false);
-                swipeRefresh.setRefreshing(false);
-            });
-        });
-    }
-
-    private List<Notification> generateMockNotifications() {
-        List<Notification> list = new ArrayList<>();
-        String[] types = {"LIKE", "COMMENT", "FOLLOW", "MESSAGE"};
-
-        for (int i = 0; i < 12; i++) {
-            Notification notification = new Notification();
-            notification.setId("notif_" + i);
-            notification.setUserId("user_" + i);
-            notification.setType(types[i % types.length]);
-            notification.setReferenceId("ref_" + i);
-            notification.setRead(i % 3 == 0);
-            notification.setCreatedAt(new Date(System.currentTimeMillis() - (i * 60000 * 10)));
-            list.add(notification);
+    private void openProfile(String userId) {
+        String currentUserId = FirebaseManager.getInstance().getAuth().getUid();
+        if (userId.equals(currentUserId)) {
+            requireActivity().getSupportFragmentManager()
+                    .beginTransaction()
+                    .replace(R.id.nav_host_fragment, new ProfileFragment())
+                    .addToBackStack(null)
+                    .commit();
+        } else {
+            requireActivity().getSupportFragmentManager()
+                    .beginTransaction()
+                    .replace(R.id.nav_host_fragment, OtherProfileFragment.newInstance(userId))
+                    .addToBackStack(null)
+                    .commit();
         }
-
-        return list;
     }
 
     private void showLoading(boolean show) {
         loadingProgress.setVisibility(show ? View.VISIBLE : View.GONE);
+        if (show) emptyStateText.setVisibility(View.GONE);
     }
 
     @Override
-    public void onDestroy() {
-        super.onDestroy();
-        executorService.shutdown();
+    public void onDestroyView() {
+        super.onDestroyView();
+        // Quan trọng: Xóa listener khi fragment bị destroy để tránh memory leak
+        if (notificationListener != null) {
+            notificationListener.remove();
+            notificationListener = null;
+        }
     }
 }

@@ -9,18 +9,17 @@ import androidx.lifecycle.ViewModel;
 import com.example.social_app.data.model.Comment;
 import com.example.social_app.firebase.FirebaseManager;
 import com.google.firebase.firestore.FirebaseFirestore;
+import com.google.firebase.firestore.FieldValue;
 import com.google.firebase.firestore.Query;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 
-/**
- * ViewModel for managing comment data and operations.
- * Handles fetching, posting, liking, and replying to comments.
- */
 public class CommentViewModel extends ViewModel {
 
     private final MutableLiveData<List<Comment>> comments = new MutableLiveData<>();
@@ -48,8 +47,6 @@ public class CommentViewModel extends ViewModel {
         db = firebaseManager.getFirestore();
     }
 
-    private String currentSortBy = "createdAt"; // Default sort
-
     public void loadComments(String postId) {
         isLoading.setValue(true);
         db.collection(FirebaseManager.COLLECTION_COMMENTS)
@@ -67,7 +64,7 @@ public class CommentViewModel extends ViewModel {
     }
 
     /**
-     * Send a new comment to Firestore.
+     * Send a new comment to Firestore with notification
      */
     public void sendComment(String postId, String text, String parentId) {
         String userId = firebaseManager.getAuth().getUid();
@@ -84,10 +81,94 @@ public class CommentViewModel extends ViewModel {
                 .addOnSuccessListener(aVoid -> {
                     // Update comment count in Post document
                     db.collection(FirebaseManager.COLLECTION_POSTS).document(postId)
-                            .update("commentCount", com.google.firebase.firestore.FieldValue.increment(1));
-                    loadComments(postId); // Refresh list
+                            .update("commentCount", FieldValue.increment(1));
+
+                    // Tạo notification cho chủ bài viết (nếu không phải comment của chính mình)
+                    createCommentNotification(postId, userId, text);
+
+                    loadComments(postId);
                 })
                 .addOnFailureListener(e -> error.setValue("Lỗi gửi bình luận: " + e.getMessage()));
+    }
+
+    /**
+     * Tạo notification khi có comment mới
+     */
+    private void createCommentNotification(String postId, String commenterId, String commentText) {
+        // Lấy thông tin chủ bài viết
+        db.collection(FirebaseManager.COLLECTION_POSTS)
+                .document(postId)
+                .get()
+                .addOnSuccessListener(postDoc -> {
+                    if (!postDoc.exists()) return;
+
+                    String postOwnerId = postDoc.getString("userId");
+                    if (postOwnerId == null) return;
+                    if (postOwnerId.equals(commenterId)) return; // Không tự thông báo
+
+                    String notificationId = "comment_" + postId + "_" + commenterId;
+
+                    Map<String, Object> notification = new HashMap<>();
+                    notification.put("id", notificationId);
+                    notification.put("userId", postOwnerId);      // Người nhận (chủ bài viết)
+                    notification.put("type", "COMMENT");
+                    notification.put("referenceId", commenterId);  // Người comment
+                    notification.put("isRead", false);
+                    notification.put("createdAt", FieldValue.serverTimestamp());
+
+                    // Thêm preview nội dung comment
+                    String preview = commentText.length() > 50 ? commentText.substring(0, 50) + "..." : commentText;
+                    notification.put("contentPreview", preview);
+
+                    db.collection(FirebaseManager.COLLECTION_NOTIFICATIONS)
+                            .document(notificationId)
+                            .set(notification)
+                            .addOnSuccessListener(aVoid -> {
+                                android.util.Log.d("CommentViewModel", "Comment notification created");
+                            })
+                            .addOnFailureListener(e -> {
+                                android.util.Log.e("CommentViewModel", "Failed to create comment notification", e);
+                            });
+                })
+                .addOnFailureListener(e -> {
+                    android.util.Log.e("CommentViewModel", "Failed to get post owner", e);
+                });
+    }
+
+    /**
+     * Tạo notification khi có reply vào comment của người khác
+     */
+    private void createReplyNotification(String parentCommentId, String replierId, String replyText) {
+        db.collection(FirebaseManager.COLLECTION_COMMENTS)
+                .document(parentCommentId)
+                .get()
+                .addOnSuccessListener(commentDoc -> {
+                    if (!commentDoc.exists()) return;
+
+                    String parentCommentUserId = commentDoc.getString("userId");
+                    String postId = commentDoc.getString("postId");
+
+                    if (parentCommentUserId == null) return;
+                    if (parentCommentUserId.equals(replierId)) return; // Không tự thông báo
+
+                    String notificationId = "reply_" + parentCommentId + "_" + replierId;
+
+                    Map<String, Object> notification = new HashMap<>();
+                    notification.put("id", notificationId);
+                    notification.put("userId", parentCommentUserId);  // Người nhận (chủ comment gốc)
+                    notification.put("type", "REPLY");
+                    notification.put("referenceId", replierId);       // Người reply
+                    notification.put("postId", postId);
+                    notification.put("isRead", false);
+                    notification.put("createdAt", FieldValue.serverTimestamp());
+
+                    String preview = replyText.length() > 50 ? replyText.substring(0, 50) + "..." : replyText;
+                    notification.put("contentPreview", preview);
+
+                    db.collection(FirebaseManager.COLLECTION_NOTIFICATIONS)
+                            .document(notificationId)
+                            .set(notification);
+                });
     }
 
     public void sendComment(String postId, String text) {
@@ -110,7 +191,8 @@ public class CommentViewModel extends ViewModel {
                 .set(newComment)
                 .addOnSuccessListener(aVoid -> {
                     db.collection(FirebaseManager.COLLECTION_POSTS).document(postId)
-                            .update("commentCount", com.google.firebase.firestore.FieldValue.increment(1));
+                            .update("commentCount", FieldValue.increment(1));
+                    createCommentNotification(postId, userId, contentUrl);
                     loadComments(postId);
                 })
                 .addOnFailureListener(e -> error.setValue("Lỗi gửi bình luận: " + e.getMessage()));
@@ -131,7 +213,6 @@ public class CommentViewModel extends ViewModel {
         String commentId = comment.getId();
         boolean isLiking = !likedCommentIds.contains(commentId);
 
-        // Optimistic UI Update
         if (isLiking) {
             likedCommentIds.add(commentId);
             comment.setLikeCount(comment.getLikeCount() + 1);
@@ -141,11 +222,9 @@ public class CommentViewModel extends ViewModel {
         }
         comments.setValue(comments.getValue());
 
-        // Firestore Update
         db.collection(FirebaseManager.COLLECTION_COMMENTS).document(commentId)
-                .update("likeCount", com.google.firebase.firestore.FieldValue.increment(isLiking ? 1 : -1))
+                .update("likeCount", FieldValue.increment(isLiking ? 1 : -1))
                 .addOnFailureListener(e -> {
-                    // Rollback on failure
                     if (isLiking) {
                         likedCommentIds.remove(commentId);
                         comment.setLikeCount(comment.getLikeCount() - 1);
@@ -158,25 +237,14 @@ public class CommentViewModel extends ViewModel {
                 });
     }
 
-    /**
-     * Load more comments for pagination (infinite scroll).
-     */
     public void loadMoreComments(String postId) {
-        // Implementation for pagination if needed
         isLoading.setValue(false);
     }
 
-    /**
-     * Load more replies for a comment.
-     */
     public void loadMoreReplies(String commentId) {
-        // No-op in mock mode: replies are represented by parentId relation.
         error.setValue(null);
     }
 
-    /**
-     * Delete a comment by ID.
-     */
     public void deleteComment(String commentId) {
         db.collection(FirebaseManager.COLLECTION_COMMENTS).document(commentId)
                 .delete()

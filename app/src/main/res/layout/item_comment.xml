@@ -11,7 +11,7 @@
     android:paddingTop="8dp"
     android:paddingBottom="8dp">
 
-    <!-- User Avatar -->
+    <!-- User Avatar - THÊM clickable và focusable -->
     <ImageView
         android:id="@+id/comment_avatar"
         android:layout_width="32dp"
@@ -19,6 +19,9 @@
         android:contentDescription="@string/user_avatar"
         android:scaleType="centerCrop"
         android:src="@drawable/avatar_placeholder"
+        android:clickable="true"
+        android:focusable="true"
+        android:background="?attr/selectableItemBackgroundBorderless"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="parent" />
 
@@ -40,6 +43,7 @@
         app:layout_constraintStart_toEndOf="@id/comment_avatar"
         app:layout_constraintTop_toTopOf="parent">
 
+        <!-- Username - THÊM clickable và focusable -->
         <TextView
             android:id="@+id/comment_username"
             android:layout_width="wrap_content"
@@ -48,6 +52,9 @@
             android:textColor="?attr/colorOnSurface"
             android:textSize="13sp"
             android:textStyle="bold"
+            android:clickable="true"
+            android:focusable="true"
+            android:background="?attr/selectableItemBackgroundBorderless"
             tools:text="John Doe" />
 
         <TextView
@@ -155,4 +162,3 @@
     </LinearLayout>
 
 </androidx.constraintlayout.widget.ConstraintLayout>
-

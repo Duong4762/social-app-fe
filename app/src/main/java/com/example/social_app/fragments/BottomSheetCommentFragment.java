@@ -40,7 +40,7 @@ import com.google.android.material.button.MaterialButton;
 
 import java.util.ArrayList;
 import java.util.List;
-
+import android.util.Log;
 public class BottomSheetCommentFragment extends BottomSheetDialogFragment implements CommentAdapter.OnCommentActionListener {
 
     private static final String POST_ID_KEY = "post_id";
@@ -309,11 +309,11 @@ public class BottomSheetCommentFragment extends BottomSheetDialogFragment implem
                         String commentText = replyingToUserId != null
                                 ? text.replace("@" + replyingToUserId + " ", "").trim()
                                 : text;
-                        
+
                         // Need to update CommentViewModel to support media
                         // For now, we'll just log and reset
                         android.util.Log.d("CommentFragment", "Media uploaded: " + secureUrl);
-                        
+
                         // If Comment model was updated, we would send it here
                         // For this task, I'll assume CommentViewModel.sendComment can handle or be updated
                         commentViewModel.sendCommentWithMedia(
@@ -352,16 +352,16 @@ public class BottomSheetCommentFragment extends BottomSheetDialogFragment implem
     // Placeholders for future features
     private void openEmojiPicker() {
         if (commentInput == null) return;
-        
+
         final String[] emojis = {"😀", "😂", "😍", "👍", "🔥", "😮", "😢", "😡", "🎉", "❤️", "✨", "🙏", "😎", "🤔", "👏", "🙌", "💪", "💯"};
-        
+
         android.widget.GridView gridView = new android.widget.GridView(requireContext());
         gridView.setNumColumns(5); // Giảm số cột để tăng chiều rộng mỗi cột
         gridView.setPadding(16, 16, 16, 16);
         gridView.setVerticalSpacing(16);
         gridView.setHorizontalSpacing(16);
         gridView.setStretchMode(android.widget.GridView.STRETCH_COLUMN_WIDTH);
-        
+
         android.widget.ArrayAdapter<String> adapter = new android.widget.ArrayAdapter<String>(requireContext(), android.R.layout.simple_list_item_1, emojis) {
             @NonNull
             @Override
@@ -375,12 +375,12 @@ public class BottomSheetCommentFragment extends BottomSheetDialogFragment implem
             }
         };
         gridView.setAdapter(adapter);
-        
+
         android.app.AlertDialog dialog = new android.app.AlertDialog.Builder(requireContext())
                 .setTitle("Chọn Emoji")
                 .setView(gridView)
                 .create();
-                
+
         gridView.setOnItemClickListener((parent, view, position, id) -> {
             String selectedEmoji = emojis[position];
             int start = commentInput.getSelectionStart();
@@ -388,7 +388,7 @@ public class BottomSheetCommentFragment extends BottomSheetDialogFragment implem
             commentInput.getText().replace(Math.min(start, end), Math.max(start, end), selectedEmoji);
             dialog.dismiss();
         });
-        
+
         dialog.show();
     }
     private void openFileChooser() {
@@ -600,9 +600,9 @@ public class BottomSheetCommentFragment extends BottomSheetDialogFragment implem
             // Force update text and selection even if already focused
             commentInput.setText("@" + replyingToUserId + " ");
             commentInput.setSelection(commentInput.getText().length());
-            
+
             // Show soft keyboard explicitly
-            android.view.inputmethod.InputMethodManager imm = (android.view.inputmethod.InputMethodManager) 
+            android.view.inputmethod.InputMethodManager imm = (android.view.inputmethod.InputMethodManager)
                     requireContext().getSystemService(android.content.Context.INPUT_METHOD_SERVICE);
             if (imm != null) {
                 imm.showSoftInput(commentInput, android.view.inputmethod.InputMethodManager.SHOW_IMPLICIT);
@@ -659,7 +659,7 @@ public class BottomSheetCommentFragment extends BottomSheetDialogFragment implem
         commentInput.setText(comment.getContent());
         commentInput.requestFocus();
         commentInput.setSelection(commentInput.getText().length());
-        
+
         // Change send button icon to indicate edit mode (optional)
         // Store the fact that we are editing
         final String originalContent = comment.getContent();
@@ -745,22 +745,53 @@ public class BottomSheetCommentFragment extends BottomSheetDialogFragment implem
             View bottomSheet = getDialog().findViewById(com.google.android.material.R.id.design_bottom_sheet);
             if (bottomSheet != null) {
                 bottomSheetBehavior = BottomSheetBehavior.from(bottomSheet);
-                
+
                 // Mở rộng tối đa ngay khi hiện ra
                 bottomSheetBehavior.setState(BottomSheetBehavior.STATE_EXPANDED);
-                
+
                 // Đặt chiều cao tối thiểu là full màn hình để khung comment không bị lửng lơ
                 bottomSheet.getLayoutParams().height = ViewGroup.LayoutParams.MATCH_PARENT;
-                
+
                 // Ngăn chặn việc vuốt xuống để ẩn đi nếu đang cuộn RecyclerView
                 bottomSheetBehavior.setSkipCollapsed(true);
             }
-            
+
             if (getDialog().getWindow() != null) {
                 getDialog().getWindow().setSoftInputMode(
                         android.view.WindowManager.LayoutParams.SOFT_INPUT_ADJUST_RESIZE
                 );
             }
+        }
+    }
+    @Override
+    public void onUserClicked(String userId) {
+        Log.d("BottomSheetComment", "onUserClicked called with userId: " + userId);
+
+        if (userId == null || userId.isEmpty()) {
+            Log.e("BottomSheetComment", "userId is null or empty");
+            return;
+        }
+
+        String currentUserId = FirebaseManager.getInstance().getAuth().getUid();
+        Log.d("BottomSheetComment", "currentUserId: " + currentUserId);
+
+        // Đóng bottom sheet trước
+        dismiss();
+
+        if (userId.equals(currentUserId)) {
+            Log.d("BottomSheetComment", "Opening own profile");
+            requireActivity().getSupportFragmentManager()
+                    .beginTransaction()
+                    .replace(R.id.nav_host_fragment, new ProfileFragment())
+                    .addToBackStack(null)
+                    .commit();
+        } else {
+            Log.d("BottomSheetComment", "Opening other profile: " + userId);
+            requireActivity().getSupportFragmentManager()
+                    .beginTransaction()
+                    .replace(R.id.nav_host_fragment, OtherProfileFragment.newInstance(userId))
+                    .addToBackStack(null)
+                    .commit();
         }
     }
 }

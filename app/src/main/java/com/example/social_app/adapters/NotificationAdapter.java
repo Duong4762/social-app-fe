@@ -11,22 +11,27 @@ import androidx.annotation.NonNull;
 import androidx.core.content.ContextCompat;
 import androidx.recyclerview.widget.RecyclerView;
 
+import com.bumptech.glide.Glide;
 import com.example.social_app.R;
 import com.example.social_app.data.model.Notification;
 import com.example.social_app.data.model.User;
-import com.example.social_app.utils.MockDataGenerator;
+import com.example.social_app.firebase.FirebaseManager;
+import com.google.firebase.firestore.FirebaseFirestore;
 
-import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Date;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 
 public class NotificationAdapter extends RecyclerView.Adapter<NotificationAdapter.NotificationViewHolder> {
 
     private Context context;
     private List<Notification> notifications;
     private OnNotificationClickListener listener;
+    private FirebaseFirestore db;
+    private Map<String, User> userCache = new HashMap<>();
 
     public interface OnNotificationClickListener {
         void onNotificationClick(Notification notification);
@@ -37,6 +42,7 @@ public class NotificationAdapter extends RecyclerView.Adapter<NotificationAdapte
         this.context = context;
         this.notifications = new ArrayList<>();
         this.listener = listener;
+        this.db = FirebaseFirestore.getInstance();
     }
 
     public void setNotifications(List<Notification> notifications) {
@@ -62,6 +68,78 @@ public class NotificationAdapter extends RecyclerView.Adapter<NotificationAdapte
         return notifications.size();
     }
 
+    private void loadUserInfo(String userId, TextView contentText, String type, ImageView avatar) {
+        if (userId == null || userId.isEmpty()) {
+            if (contentText != null) {
+                contentText.setText("Ai đó " + getActionText(type));
+            }
+            return;
+        }
+
+        // Check cache
+        if (userCache.containsKey(userId)) {
+            User user = userCache.get(userId);
+            updateContentText(contentText, user, type);
+            if (avatar != null && user.getAvatarUrl() != null && !user.getAvatarUrl().isEmpty()) {
+                Glide.with(context).load(user.getAvatarUrl()).into(avatar);
+            }
+            return;
+        }
+
+        // Load from Firestore
+        db.collection(FirebaseManager.COLLECTION_USERS)
+                .document(userId)
+                .get()
+                .addOnSuccessListener(documentSnapshot -> {
+                    if (documentSnapshot.exists()) {
+                        User user = documentSnapshot.toObject(User.class);
+                        if (user != null) {
+                            user.setId(documentSnapshot.getId());
+                            userCache.put(userId, user);
+                            updateContentText(contentText, user, type);
+                            if (avatar != null && user.getAvatarUrl() != null && !user.getAvatarUrl().isEmpty()) {
+                                Glide.with(context).load(user.getAvatarUrl()).into(avatar);
+                            } else if (avatar != null) {
+                                avatar.setImageResource(R.drawable.avatar_placeholder);
+                            }
+                        }
+                    } else {
+                        if (contentText != null) {
+                            contentText.setText("Người dùng " + getActionText(type));
+                        }
+                    }
+                })
+                .addOnFailureListener(e -> {
+                    if (contentText != null) {
+                        contentText.setText("Ai đó " + getActionText(type));
+                    }
+                });
+    }
+
+    private void updateContentText(TextView contentText, User user, String type) {
+        if (contentText == null) return;
+        String name = user.getFullName() != null && !user.getFullName().isEmpty()
+                ? user.getFullName()
+                : (user.getUsername() != null ? user.getUsername() : "Người dùng");
+        contentText.setText(name + " " + getActionText(type));
+    }
+
+    private String getActionText(String type) {
+        if (type == null) return context.getString(R.string.notification_message);
+        switch (type.toUpperCase()) {
+            case "LIKE":
+                return context.getString(R.string.notification_like);
+            case "COMMENT":
+                return context.getString(R.string.notification_comment);
+            case "FOLLOW":
+                return context.getString(R.string.notification_follow);
+            case "MESSAGE":
+                return context.getString(R.string.notification_message);
+            default:
+                return context.getString(R.string.notification_message);
+        }
+    }
+
     class NotificationViewHolder extends RecyclerView.ViewHolder {
         ImageView avatar;
         TextView contentText;
@@ -79,32 +157,23 @@ public class NotificationAdapter extends RecyclerView.Adapter<NotificationAdapte
         }
 
         void bind(Notification notification, int position) {
-            // Lấy thông tin actor từ userId (trong model gốc không có actorId riêng)
-            // Giả định: người gửi thông báo được lấy từ MockDataGenerator
-            String actorName = "Someone";
-            User mockUser = MockDataGenerator.generateMockUser(position);
-            if (mockUser != null) {
-                actorName = mockUser.getFullName() != null ? mockUser.getFullName() : mockUser.getUsername();
-            }
-
-            // Tạo nội dung hiển thị dựa trên type
             String type = notification.getType();
-            String contentText = buildNotificationContent(actorName, type);
+            String referenceId = notification.getReferenceId();
 
-            this.contentText.setText(contentText);
+            // Load user info from referenceId (người tạo ra hành động)
+            loadUserInfo(referenceId, contentText, type, avatar);
 
             // Format thời gian
             String timeStr = formatTime(notification.getCreatedAt());
-            this.timeText.setText(timeStr);
+            timeText.setText(timeStr);
 
             // Set icon dựa trên type
             setTypeIcon(type);
 
             // Hiển thị unread indicator
-            unreadIndicator.setVisibility(notification.isRead() ? View.GONE : View.VISIBLE);
-
-            // Avatar placeholder
-            avatar.setImageResource(R.drawable.avatar_placeholder);
+            if (unreadIndicator != null) {
+                unreadIndicator.setVisibility(notification.isRead() ? View.GONE : View.VISIBLE);
+            }
 
             // Click listener
             itemView.setOnClickListener(v -> {
@@ -125,26 +194,9 @@ public class NotificationAdapter extends RecyclerView.Adapter<NotificationAdapte
             });
         }
 
-        private String buildNotificationContent(String actorName, String type) {
-            if (type == null) {
-                return actorName + " " + context.getString(R.string.notification_message);
-            }
-
-            switch (type.toUpperCase()) {
-                case "LIKE":
-                    return actorName + " " + context.getString(R.string.notification_like);
-                case "COMMENT":
-                    return actorName + " " + context.getString(R.string.notification_comment);
-                case "FOLLOW":
-                    return actorName + " " + context.getString(R.string.notification_follow);
-                case "MESSAGE":
-                    return actorName + " " + context.getString(R.string.notification_message);
-                default:
-                    return actorName + " " + context.getString(R.string.notification_message);
-            }
-        }
-
         private void setTypeIcon(String type) {
+            if (typeIcon == null) return;
+
             if (type == null) {
                 typeIcon.setImageResource(R.drawable.ic_notification);
                 return;
@@ -181,8 +233,7 @@ public class NotificationAdapter extends RecyclerView.Adapter<NotificationAdapte
             long now = System.currentTimeMillis();
             long diff = now - date.getTime();
 
-            long seconds = diff / 1000;
-            long minutes = seconds / 60;
+            long minutes = diff / 60000;
             long hours = minutes / 60;
             long days = hours / 24;
 
