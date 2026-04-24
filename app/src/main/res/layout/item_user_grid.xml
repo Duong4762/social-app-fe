@@ -36,7 +36,7 @@
                 android:layout_marginStart="8dp"
                 android:layout_marginBottom="8dp"
                 android:text="username"
-                android:textColor="@color/white"
+                android:textColor="?attr/colorSurface"
                 android:textSize="12sp"
                 android:textStyle="bold"
                 android:shadowColor="#80000000"

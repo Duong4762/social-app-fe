@@ -17,7 +17,7 @@
         android:layout_height="52dp"
         app:cardCornerRadius="26dp"
         app:cardElevation="0dp"
-        app:cardBackgroundColor="@color/gray_light">
+        app:cardBackgroundColor="?attr/colorSurfaceVariant">
 
         <ImageView
             android:id="@+id/user_avatar"
@@ -43,7 +43,7 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:text="@string/username_placeholder"
-            android:textColor="@color/text"
+            android:textColor="?attr/colorOnSurface"
             android:textSize="15sp"
             android:textStyle="bold"
             android:maxLines="1"
@@ -55,7 +55,7 @@
             android:layout_height="wrap_content"
             android:layout_marginTop="2dp"
             android:text="@string/fullname_placeholder"
-            android:textColor="@color/muted"
+            android:textColor="?attr/colorOnSurfaceVariant"
             android:textSize="13sp"
             android:maxLines="1"
             android:ellipsize="end" />
@@ -74,7 +74,7 @@
         android:paddingBottom="8dp"
         android:text="@string/follow"
         android:textAllCaps="false"
-        android:textColor="@color/white"
+        android:textColor="?attr/colorSurface"
         android:textSize="13sp"
         android:textStyle="bold"
         android:gravity="center"

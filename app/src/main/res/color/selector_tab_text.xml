@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<selector xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- Khi hover hoặc đang nhấn -->
+    <item android:state_hovered="true" android:color="@color/white" />
+    <item android:state_pressed="true" android:color="@color/white" />
+    <!-- Khi đang được chọn (dùng cho logic hiện tại trong code) -->
+    <item android:state_selected="true" android:color="?attr/colorOnSurface" />
+    <!-- Mặc định -->
+    <item android:color="?attr/colorOnSurfaceVariant" />
+</selector>

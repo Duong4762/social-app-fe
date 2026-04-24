@@ -32,7 +32,7 @@ import com.google.firebase.firestore.FirebaseFirestore;
 import java.util.Calendar;
 import java.util.Locale;
 
-public class RegisterActivity extends AppCompatActivity {
+public class RegisterActivity extends BaseActivity {
 
     private static final String TAG = "RegisterActivity";
 
@@ -128,7 +128,7 @@ public class RegisterActivity extends AppCompatActivity {
             return;
         }
         if (TextUtils.isEmpty(selectedDateOfBirth)) {
-            Toast.makeText(this, "Vui lòng chọn ngày sinh", Toast.LENGTH_SHORT).show();
+            Toast.makeText(this, R.string.please_select_dob, Toast.LENGTH_SHORT).show();
             return;
         }
         setLoading(true);
@@ -140,7 +140,7 @@ public class RegisterActivity extends AppCompatActivity {
                     FirebaseUser firebaseUser = authResult.getUser();
                     if (firebaseUser == null) {
                         setLoading(false);
-                        Toast.makeText(this, "Tạo tài khoản thất bại", Toast.LENGTH_SHORT).show();
+                        Toast.makeText(this, R.string.register_failed, Toast.LENGTH_SHORT).show();
                         return;
                     }
 
@@ -150,7 +150,7 @@ public class RegisterActivity extends AppCompatActivity {
                 .addOnFailureListener(e -> {
                     Log.e(TAG, "Register failed", e);
                     setLoading(false);
-                    Toast.makeText(this, "Đăng ký thất bại: " + e.getMessage(), Toast.LENGTH_LONG).show();
+                    Toast.makeText(this, getString(R.string.register_failed) + ": " + e.getMessage(), Toast.LENGTH_LONG).show();
                 });
     }
 
@@ -180,13 +180,13 @@ public class RegisterActivity extends AppCompatActivity {
                 .addOnSuccessListener(unused -> {
                     Log.d(TAG, "User document created: " + uid);
                     setLoading(false);
-                    Toast.makeText(this, "Đăng ký thành công!", Toast.LENGTH_SHORT).show();
+                    Toast.makeText(this, R.string.register_success, Toast.LENGTH_SHORT).show();
                     navigateToLogin();
                 })
                 .addOnFailureListener(e -> {
                     Log.e(TAG, "Failed to create user document", e);
                     setLoading(false);
-                    Toast.makeText(this, "Tạo hồ sơ thất bại: " + e.getMessage(), Toast.LENGTH_LONG).show();
+                    Toast.makeText(this, getString(R.string.profile_creation_failed, e.getMessage()), Toast.LENGTH_LONG).show();
                 });
     }
 

@@ -21,11 +21,12 @@ import androidx.core.view.ViewCompat;
 import androidx.core.view.WindowInsetsCompat;
 
 import com.example.social_app.R;
+import com.example.social_app.data.model.User;
 import com.example.social_app.firebase.AdminUserInitializer;
 import com.example.social_app.firebase.FirebaseManager;
 import com.google.firebase.auth.FirebaseUser;
 
-public class LoginActivity extends AppCompatActivity {
+public class LoginActivity extends BaseActivity {
 
     private static final String TAG = "LoginActivity";
 
@@ -54,8 +55,9 @@ public class LoginActivity extends AppCompatActivity {
         initializeDefaultAdminUser();
 
         // Nếu đã đăng nhập rồi, bỏ qua màn hình login
-        if (firebaseManager.getAuth().getCurrentUser() != null) {
-            navigateToMain();
+        FirebaseUser currentUser = firebaseManager.getAuth().getCurrentUser();
+        if (currentUser != null) {
+            resolveLoginDestination(currentUser);
         }
     }
 
@@ -113,13 +115,17 @@ public class LoginActivity extends AppCompatActivity {
                 .addOnSuccessListener(authResult -> {
                     FirebaseUser firebaseUser = authResult.getUser();
                     Log.d(TAG, "Login success: " + (firebaseUser != null ? firebaseUser.getUid() : "null"));
-                    setLoading(false);
-                    navigateToMain();
+                    if (firebaseUser == null) {
+                        setLoading(false);
+                        Toast.makeText(this, "Đăng nhập thất bại: thiếu thông tin user", Toast.LENGTH_LONG).show();
+                        return;
+                    }
+                    resolveLoginDestination(firebaseUser);
                 })
                 .addOnFailureListener(e -> {
                     Log.e(TAG, "Login failed", e);
                     setLoading(false);
-                    Toast.makeText(this, "Đăng nhập thất bại: " + e.getMessage(), Toast.LENGTH_LONG).show();
+                    Toast.makeText(this, getString(R.string.login_failed, e.getMessage()), Toast.LENGTH_LONG).show();
                 });
     }
 
@@ -128,6 +134,46 @@ public class LoginActivity extends AppCompatActivity {
         intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
         startActivity(intent);
         finish();
+    }
+
+    private void navigateToAdmin() {
+        Intent intent = new Intent(this, AdminActivity.class);
+        intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
+        startActivity(intent);
+        finish();
+    }
+
+    private void resolveLoginDestination(FirebaseUser firebaseUser) {
+        firebaseManager.getFirestore()
+                .collection(FirebaseManager.COLLECTION_USERS)
+                .document(firebaseUser.getUid())
+                .get()
+                .addOnSuccessListener(snapshot -> {
+                    setLoading(false);
+                    if (!snapshot.exists()) {
+                        navigateToMain();
+                        return;
+                    }
+
+                    User user = snapshot.toObject(User.class);
+                    if (user != null && user.isBanned()) {
+                        firebaseManager.getAuth().signOut();
+                        Toast.makeText(this, "Tài khoản của bạn đã bị quản lý khóa", Toast.LENGTH_LONG).show();
+                        return;
+                    }
+
+                    String role = user != null ? user.getRole() : null;
+                    if ("ADMIN".equalsIgnoreCase(role)) {
+                        navigateToAdmin();
+                    } else {
+                        navigateToMain();
+                    }
+                })
+                .addOnFailureListener(e -> {
+                    setLoading(false);
+                    Log.e(TAG, "Failed to resolve login destination", e);
+                    navigateToMain();
+                });
     }
 
     private void setLoading(boolean loading) {

@@ -21,6 +21,8 @@ public class Report {
     private String targetId;
     private String type; // POST | USER
     private String status; // UNPROCESSED | PROCESSED
+    private String reason;
+    private String resolution; // DELETE_POST | WARN_USER | BLOCK_USER | BAN_USER
 
     @ServerTimestamp
     private Date createdAt;
@@ -28,11 +30,16 @@ public class Report {
     public Report() {}
 
     public Report(String id, String reporterId, String targetId, String type, String status) {
+        this(id, reporterId, targetId, type, status, null);
+    }
+
+    public Report(String id, String reporterId, String targetId, String type, String status, String reason) {
         this.id = id;
         this.reporterId = reporterId;
         this.targetId = targetId;
         this.type = type;
         this.status = status;
+        this.reason = reason;
     }
 
     // Getters & Setters
@@ -50,6 +57,12 @@ public class Report {
 
     public String getStatus() { return status; }
     public void setStatus(String status) { this.status = status; }
+
+    public String getReason() { return reason; }
+    public void setReason(String reason) { this.reason = reason; }
+
+    public String getResolution() { return resolution; }
+    public void setResolution(String resolution) { this.resolution = resolution; }
 
     public Date getCreatedAt() { return createdAt; }
     public void setCreatedAt(Date createdAt) { this.createdAt = createdAt; }

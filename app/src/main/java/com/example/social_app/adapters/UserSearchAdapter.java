@@ -107,10 +107,10 @@ public class UserSearchAdapter extends RecyclerView.Adapter<UserSearchAdapter.Us
         void bind(User user, int position) {
             String displayName = user.getFullName() != null && !user.getFullName().trim().isEmpty()
                     ? user.getFullName()
-                    : "Unknown User";
+                    : context.getString(R.string.unknown_user);
             String userHandle = user.getUsername() != null && !user.getUsername().trim().isEmpty()
                     ? "@" + user.getUsername()
-                    : "@unknown";
+                    : context.getString(R.string.unknown_handle);
 
             username.setText(displayName);
             fullName.setText(userHandle);

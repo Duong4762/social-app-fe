@@ -45,6 +45,9 @@
         <activity
             android:name=".MainActivity"
             android:exported="true" />
+        <activity
+            android:name=".AdminActivity"
+            android:exported="true" />
 
         <receiver
             android:name=".receivers.ShareReceiver"

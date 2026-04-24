@@ -17,7 +17,9 @@
         android:layout_marginTop="8dp"
         app:layout_constraintTop_toTopOf="parent"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintEnd_toEndOf="parent" />
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintBottom_toTopOf="@id/swipe_refresh_layout"
+        app:layout_constraintVertical_chainStyle="packed"/>
 
     <!-- SwipeRefreshLayout + RecyclerView - Takes remaining space -->
     <androidx.swiperefreshlayout.widget.SwipeRefreshLayout
@@ -29,8 +31,7 @@
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintTop_toBottomOf="@id/drag_handle"
         app:layout_constraintBottom_toTopOf="@id/comment_compose_container"
-        app:layout_constraintVertical_weight="1"
-        app:layout_constraintVertical_chainStyle="spread">
+        app:layout_constraintVertical_weight="1">
 
         <androidx.recyclerview.widget.RecyclerView
             android:id="@+id/comments_recycler_view"
@@ -72,7 +73,7 @@
         <EditText
             android:id="@+id/compose_comment_input"
             android:layout_width="0dp"
-            android:layout_height="36dp"
+            android:layout_height="wrap_content"
             android:layout_marginStart="8dp"
             android:layout_marginEnd="8dp"
             android:background="@drawable/rounded_edittext"
@@ -80,11 +81,14 @@
             android:inputType="textMultiLine|textCapSentences"
             android:paddingLeft="10dp"
             android:paddingRight="10dp"
+            android:paddingTop="8dp"
+            android:paddingBottom="8dp"
             android:textColor="?attr/colorOnSurface"
             android:textColorHint="?attr/colorOnSurfaceVariant"
             android:textSize="14sp"
             android:maxLines="3"
             android:minLines="1"
+            android:minHeight="36dp"
             app:layout_constraintStart_toEndOf="@id/compose_avatar"
             app:layout_constraintEnd_toStartOf="@id/compose_char_count_text"
             app:layout_constraintTop_toTopOf="@id/compose_avatar"
@@ -101,7 +105,7 @@
             app:layout_constraintBottom_toBottomOf="@id/compose_comment_input"
             app:layout_constraintEnd_toEndOf="parent"/>
 
-        <!-- Row 2: Action Buttons (Image, Emoji, Send) -->
+        <!-- Row 2: Action Buttons (Emoji, Send) -->
         <LinearLayout
             android:id="@+id/compose_action_buttons_section"
             android:layout_width="0dp"

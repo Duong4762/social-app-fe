@@ -20,12 +20,13 @@ import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
 import com.example.social_app.R;
-import com.example.social_app.adapters.PostSearchAdapter;
+import com.example.social_app.adapters.PostAdapter;
 import com.example.social_app.adapters.UserSearchAdapter;
 import com.example.social_app.data.model.Post;
 import com.example.social_app.data.model.User;
 import com.example.social_app.firebase.FirebaseManager;
-import com.example.social_app.utils.MockDataGenerator;
+import com.example.social_app.viewmodels.HomeViewModel;
+import com.example.social_app.viewmodels.NewPostViewModel;
 import com.google.android.material.tabs.TabLayout;
 import com.google.firebase.firestore.FirebaseFirestore;
 
@@ -35,7 +36,9 @@ import java.util.Locale;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
-public class SearchFragment extends Fragment {
+import androidx.lifecycle.ViewModelProvider;
+
+public class SearchFragment extends Fragment implements PostAdapter.OnPostActionListener {
 
     private EditText searchInput;
     private TextView suggestedLabel;
@@ -51,7 +54,9 @@ public class SearchFragment extends Fragment {
     private View searchResultsContainer;
 
     private UserSearchAdapter userSearchAdapter;
-    private PostSearchAdapter postSearchAdapter;
+    private PostAdapter postSearchAdapter;
+    private HomeViewModel homeViewModel;
+    private NewPostViewModel newPostViewModel;
 
     private List<User> allUsers = new ArrayList<>();
     private List<Post> allPosts = new ArrayList<>();
@@ -72,6 +77,8 @@ public class SearchFragment extends Fragment {
     @Override
     public void onViewCreated(@NonNull View view, @Nullable Bundle savedInstanceState) {
         super.onViewCreated(view, savedInstanceState);
+        homeViewModel = new ViewModelProvider(this).get(HomeViewModel.class);
+        newPostViewModel = new ViewModelProvider(this).get(NewPostViewModel.class);
 
         initViews(view);
         setupRecyclerViews();
@@ -93,8 +100,8 @@ public class SearchFragment extends Fragment {
         searchEmptyStateText = view.findViewById(R.id.searchEmptyStateText);
 
         // Khởi tạo tab
-        tabLayout.addTab(tabLayout.newTab().setText("People"));
-        tabLayout.addTab(tabLayout.newTab().setText("Posts"));
+        tabLayout.addTab(tabLayout.newTab().setText(getString(R.string.tab_users)));
+        tabLayout.addTab(tabLayout.newTab().setText(getString(R.string.tab_posts)));
     }
 
     private void setupRecyclerViews() {
@@ -108,7 +115,7 @@ public class SearchFragment extends Fragment {
 
             @Override
             public void onFollowClicked(User user, int position) {
-                Toast.makeText(requireContext(), "Follow: " + user.getFullName(), Toast.LENGTH_SHORT).show();
+                Toast.makeText(requireContext(), getString(R.string.follow_user, user.getFullName()), Toast.LENGTH_SHORT).show();
             }
         });
         suggestedUsersRecycler.setAdapter(suggestedAdapter);
@@ -123,16 +130,15 @@ public class SearchFragment extends Fragment {
 
             @Override
             public void onFollowClicked(User user, int position) {
-                Toast.makeText(requireContext(), "Follow: " + user.getFullName(), Toast.LENGTH_SHORT).show();
+                Toast.makeText(requireContext(), getString(R.string.follow_user, user.getFullName()), Toast.LENGTH_SHORT).show();
             }
         });
         usersRecyclerView.setAdapter(userSearchAdapter);
 
         // Search posts adapter
         postsRecyclerView.setLayoutManager(new LinearLayoutManager(requireContext()));
-        postSearchAdapter = new PostSearchAdapter(requireContext(), post -> {
-            Toast.makeText(requireContext(), "View post", Toast.LENGTH_SHORT).show();
-        });
+        postSearchAdapter = new PostAdapter(requireContext(), this);
+        postSearchAdapter.setUseSearchLayout(true);
         postsRecyclerView.setAdapter(postSearchAdapter);
 
         // Tab listener
@@ -188,7 +194,37 @@ public class SearchFragment extends Fragment {
 
     private void loadSearchData() {
         loadUsersFromFirebase();
-        executor.execute(() -> allPosts = MockDataGenerator.generateMockPosts(50));
+        loadPostsFromFirebase();
+    }
+
+    private void loadPostsFromFirebase() {
+        setGlobalLoading(true);
+        firestore.collection(FirebaseManager.COLLECTION_POSTS)
+                .orderBy("createdAt", com.google.firebase.firestore.Query.Direction.DESCENDING)
+                .limit(100)
+                .get()
+                .addOnSuccessListener(queryDocumentSnapshots -> {
+                    List<Post> posts = new ArrayList<>();
+                    for (com.google.firebase.firestore.DocumentSnapshot document : queryDocumentSnapshots.getDocuments()) {
+                        Post post = document.toObject(Post.class);
+                        if (post != null) {
+                            post.setId(document.getId());
+                            posts.add(post);
+                        }
+                    }
+                    if (!isAdded()) return;
+                    setGlobalLoading(false);
+                    allPosts = posts;
+                    if (isSearchMode && !lastSearchQuery.isEmpty()) {
+                        performSearch(lastSearchQuery);
+                    }
+                })
+                .addOnFailureListener(e -> {
+                    if (!isAdded()) return;
+                    setGlobalLoading(false);
+                    allPosts = new ArrayList<>();
+                    Toast.makeText(requireContext(), "Cannot load posts", Toast.LENGTH_SHORT).show();
+                });
     }
 
     private void loadUsersFromFirebase() {
@@ -345,17 +381,34 @@ public class SearchFragment extends Fragment {
         executor.shutdown();
     }
 
-    private void openOtherProfile(User user) {
-        if (user == null || user.getId() == null || user.getId().trim().isEmpty()) {
-            Toast.makeText(requireContext(), "Không tìm thấy người dùng", Toast.LENGTH_SHORT).show();
+    @Override
+    public void onUserClicked(String userId) {
+        if (userId == null || userId.trim().isEmpty()) {
+            Toast.makeText(requireContext(), R.string.user_not_found, Toast.LENGTH_SHORT).show();
             return;
+        }
+
+        String currentUserId = FirebaseManager.getInstance().getAuth().getUid();
+        androidx.fragment.app.Fragment fragment;
+
+        if (userId.equals(currentUserId)) {
+            // Thay vì replace bằng ProfileFragment mới, có thể chuyển sang tab Profile nếu cần, 
+            // nhưng ở đây ta cứ replace để đồng bộ flow OtherProfile.
+            fragment = new ProfileFragment();
+        } else {
+            fragment = OtherProfileFragment.newInstance(userId);
         }
 
         requireActivity().getSupportFragmentManager()
                 .beginTransaction()
-                .replace(R.id.nav_host_fragment, OtherProfileFragment.newInstance(user.getId()))
+                .replace(R.id.nav_host_fragment, fragment)
                 .addToBackStack(null)
                 .commit();
+    }
+
+    private void openOtherProfile(User user) {
+        if (user == null) return;
+        onUserClicked(user.getId());
     }
 
     private boolean isAdminUser(@Nullable User user) {
@@ -363,5 +416,100 @@ public class SearchFragment extends Fragment {
             return false;
         }
         return "ADMIN".equalsIgnoreCase(user.getRole().trim());
+    }
+
+    @Override
+    public void onLikeClicked(Post post, int position) {
+        homeViewModel.toggleLike(post);
+    }
+
+    @Override
+    public void onCommentClicked(Post post) {
+        BottomSheetCommentFragment bottomSheetCommentFragment = BottomSheetCommentFragment.newInstance(post.getId());
+        bottomSheetCommentFragment.show(getParentFragmentManager(), "comments_bottom_sheet");
+    }
+
+    @Override
+    public void onShareClicked(Post post) {
+        android.content.Intent shareIntent = new android.content.Intent(android.content.Intent.ACTION_SEND);
+        shareIntent.setType("text/plain");
+        shareIntent.putExtra(android.content.Intent.EXTRA_TEXT, post.getCaption());
+        startActivity(android.content.Intent.createChooser(shareIntent, "Share post"));
+    }
+
+    @Override
+    public void onBookmarkClicked(Post post) {
+        homeViewModel.toggleBookmark(post);
+    }
+
+    @Override
+    public void onComposerPostClicked(String content) {}
+
+    @Override
+    public void onComposerClicked() {}
+
+    @Override
+    public void onComposerImageClicked() {}
+
+    @Override
+    public void onEditPostClicked(Post post) {
+        NewPostFragment editFragment = NewPostFragment.newInstanceForEdit(post.getId());
+        requireActivity().getSupportFragmentManager()
+                .beginTransaction()
+                .replace(R.id.nav_host_fragment, editFragment)
+                .addToBackStack(null)
+                .commit();
+    }
+
+    @Override
+    public void onDeletePostClicked(Post post) {
+        new androidx.appcompat.app.AlertDialog.Builder(requireContext())
+                .setTitle(getString(R.string.delete_post_title))
+                .setMessage(getString(R.string.delete_post_confirm))
+                .setPositiveButton(getString(R.string.delete), (dialog, which) -> {
+                    newPostViewModel.deletePost(post.getId());
+                })
+                .setNegativeButton(getString(R.string.cancel_action), null)
+                .show();
+    }
+
+    @Override
+    public void onReportPostClicked(Post post) {
+        String[] reasons = {
+                getString(R.string.report_reason_inappropriate),
+                getString(R.string.report_reason_spam),
+                getString(R.string.report_reason_harassment),
+                getString(R.string.report_reason_false_info),
+                getString(R.string.report_reason_other)
+        };
+        new androidx.appcompat.app.AlertDialog.Builder(requireContext())
+                .setTitle(getString(R.string.report_post_title))
+                .setItems(reasons, (dialog, which) -> {
+                    String selectedReason = reasons[which];
+                    showReportDetailDialog(post, selectedReason);
+                })
+                .setNegativeButton(getString(R.string.cancel_action), null)
+                .show();
+    }
+
+    private void showReportDetailDialog(Post post, String baseReason) {
+        android.widget.EditText input = new android.widget.EditText(requireContext());
+        input.setHint(R.string.report_reason_hint);
+        int padding = (int) (16 * getResources().getDisplayMetrics().density);
+        android.widget.FrameLayout container = new android.widget.FrameLayout(requireContext());
+        container.addView(input);
+        input.setPadding(padding, padding, padding, padding);
+
+        new androidx.appcompat.app.AlertDialog.Builder(requireContext())
+                .setTitle(R.string.report_reason_title)
+                .setView(container)
+                .setPositiveButton(R.string.report_submit, (dialog, which) -> {
+                    String detail = input.getText().toString().trim();
+                    String finalReason = detail.isEmpty() ? baseReason : baseReason + ": " + detail;
+                    homeViewModel.reportPost(post, finalReason);
+                    Toast.makeText(requireContext(), getString(R.string.report_thanks), Toast.LENGTH_SHORT).show();
+                })
+                .setNegativeButton(R.string.cancel_action, null)
+                .show();
     }
 }

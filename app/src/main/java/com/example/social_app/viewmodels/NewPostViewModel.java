@@ -22,7 +22,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  * ViewModel for managing new post creation.
- * Handles post content, media uploads, location, tags, and privacy settings.
+ * Handles post content and media uploads.
  */
 public class NewPostViewModel extends AndroidViewModel {
 
@@ -100,7 +100,6 @@ public class NewPostViewModel extends AndroidViewModel {
                 .get()
                 .addOnSuccessListener(queryDocumentSnapshots -> {
                     List<PostMedia> mediaList = queryDocumentSnapshots.toObjects(PostMedia.class);
-                    // Sort manually to avoid index requirement error
                     mediaList.sort((m1, m2) -> Integer.compare(m1.getOrder(), m2.getOrder()));
                     editingMedia.setValue(mediaList);
                 })
@@ -168,7 +167,7 @@ public class NewPostViewModel extends AndroidViewModel {
         post.setId(postId);
         post.setUserId(userId);
         post.setCaption(content);
-        post.setVisibility(privacyLevel.toUpperCase());
+        post.setVisibility(privacyLevel != null ? privacyLevel.toUpperCase() : "EVERYONE");
         post.setLocation(location);
         post.setTaggedUsers(taggedPeople);
         post.setLikeCount(0);
@@ -242,7 +241,7 @@ public class NewPostViewModel extends AndroidViewModel {
         
         batch.update(db.collection(FirebaseManager.COLLECTION_POSTS).document(postId),
                 "caption", content,
-                "visibility", privacyLevel.toUpperCase(),
+                "visibility", privacyLevel != null ? privacyLevel.toUpperCase() : "EVERYONE",
                 "location", location,
                 "taggedUsers", taggedPeople,
                 "updatedAt", com.google.firebase.Timestamp.now());

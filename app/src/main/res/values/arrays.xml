@@ -2,7 +2,6 @@
 <resources>
     <string-array name="comment_sort_options">
         <item>Most Relevant</item>
-        <item>Most Recent</item>
         <item>Most Liked</item>
     </string-array>
 

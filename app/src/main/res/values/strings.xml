@@ -47,9 +47,15 @@
     <string name="nav_profile">Profile</string>
     <string name="nav_settings">Settings</string>
     <string name="logout">Log out</string>
+    <string name="theme">Theme</string>
+    <string name="dark_mode">Dark Mode</string>
+    <string name="language">Language</string>
+    <string name="english">English</string>
+    <string name="vietnamese">Vietnamese</string>
 
     <!-- Loading States -->
     <string name="loading">Loading posts...</string>
+    <string name="loading_generic">Loading...</string>
     <string name="empty_state">No posts yet. Be the first to share!</string>
     <string name="error_state">Failed to load posts. Please try again.</string>
 
@@ -64,12 +70,15 @@
     <string name="gif">GIF</string>
     <string name="send">Send</string>
     <string name="like">Like</string>
+    <string name="liked">Liked</string>
     <string name="reply">Reply</string>
     <string name="share">Share</string>
     <string name="bookmark">Bookmark</string>
     <string name="location">Location</string>
     <string name="verified">Verified</string>
-    <string name="view_more_replies">View more replies...</string>
+    <string name="view_more_replies">View more replies</string>
+    <string name="view_replies_singular">View %d reply</string>
+    <string name="view_replies_plural">View %d replies</string>
     <string name="compose_hint_comment">Write a comment...</string>
     <string name="comment_empty_error">Comment cannot be empty</string>
     <string name="drag_handle_desc">Drag to move</string>
@@ -92,6 +101,13 @@
     <string name="media_upload">Media Upload</string>
     <string name="upload_image">Upload Image</string>
     <string name="upload_video">Upload Video</string>
+    <string name="media_limit_hint">Maximum: Images &lt; 10MB, Video &lt; 15MB</string>
+    <string name="audience">Audience:</string>
+    <string name="add_location">Add Location</string>
+    <string name="tag_people">Tag People</string>
+    <string name="current_location">Current Location</string>
+    <string name="search_location">Search Location</string>
+    <string name="custom_location">Custom Location</string>
     <string name="choose_media_source">Choose media source</string>
     <string name="capture_photo">Capture photo</string>
     <string name="record_video">Record video</string>
@@ -101,6 +117,8 @@
     <string name="update">Update</string>
     <string name="update_post_success">Post updated successfully!</string>
     <string name="update_post_failed">Failed to update post</string>
+    <string name="error_image_too_large">Image too large (>10MB)</string>
+    <string name="error_video_too_large">Video too large (>15MB)</string>
 
 
     <!-- ============================================
@@ -113,7 +131,7 @@
     <string name="search_hint">Search users or posts...</string>
 
     <!-- Notification -->
-    <string name="notifications">Notifications</string>
+    <string name="notification_title">Notifications</string>
     <string name="no_notifications">No notifications yet</string>
     <string name="mark_all_read">Mark all read</string>
     <string name="notification_like">liked your post</string>
@@ -146,7 +164,20 @@
     <string name="posts_count">%s posts</string>
 
     <!-- Profile -->
-    <string name="profile_username_top">username</string>
+    <string name="session_expired">Session has expired</string>
+    <string name="profile_load_failed">Failed to load profile</string>
+    <string name="default_user_name">User</string>
+    <string name="default_username">username</string>
+    <string name="default_bio">No bio yet</string>
+    <string name="profile_camera_open_failed">Cannot open camera</string>
+    <string name="session_invalid">Invalid session</string>
+    <string name="user_not_found">User not found</string>
+    <string name="user_info_not_found">User information not found</string>
+    <string name="user_load_failed">Failed to load user information</string>
+    <string name="coming_soon">Coming soon</string>
+    <string name="following_count_label">%s Following</string>
+    <string name="followers_count_label">%s Followers</string>
+    <string name="posts_count_label">%s Posts</string>
     <string name="profile_change_avatar">Change</string>
     <string name="profile_save_avatar">Save changes</string>
     <string name="profile_pick_image_source">Choose image source</string>
@@ -168,6 +199,7 @@
     <string name="profile_edit_bio">Bio</string>
     <string name="profile_edit_gender">Gender</string>
     <string name="profile_edit_dob">Date of birth</string>
+    <string name="profile_edit_dob_hint">DD/MM/YYYY</string>
     <string name="profile_edit_cancel">Cancel</string>
     <string name="profile_edit_done">Done</string>
     <string name="profile_edit_save_failed">Failed to save profile information</string>
@@ -188,6 +220,8 @@
     <string name="profile_empty_posts">No posts yet</string>
     <string name="profile_empty_followers">No followers yet</string>
     <string name="profile_empty_following">Not following anyone yet</string>
+    <string name="admin_title">Admin Dashboard</string>
+    <string name="admin_empty">No reported users to review</string>
 
 
     <!-- Messages -->
@@ -235,4 +269,76 @@
     <string name="chat_cannot_read_images">Cannot read images from device</string>
     <string name="chat_tick_sent" translatable="false">✓</string>
     <string name="chat_tick_read" translatable="false">✓✓</string>
+    <string name="retry">Retry</string>
+    <string name="search_title">Search</string>
+    <string name="suggested_for_you">Suggested for you</string>
+    <string name="no_results_for">No results for \"%1$s\"</string>
+    <string name="no_results_found">No results found</string>
+    <string name="unknown_user">Unknown User</string>
+    <string name="unknown_handle">@unknown</string>
+    <string name="delete">Delete</string>
+    <string name="delete_post_title">Delete Post</string>
+    <string name="delete_post_confirm">Are you sure you want to delete this post?</string>
+    <string name="report_post_title">Report Post</string>
+    <string name="menu_edit">Edit</string>
+    <string name="menu_report">Report</string>
+    <string name="report_reason_title">Reason for reporting</string>
+    <string name="report_reason_hint">Enter details (optional)…</string>
+    <string name="report_submit">Submit Report</string>
+    <string name="report_thanks">Thank you for reporting.</string>
+    <string name="report_reason_inappropriate">Inappropriate content</string>
+    <string name="report_reason_spam">Spam</string>
+    <string name="report_reason_harassment">Harassment</string>
+    <string name="report_reason_false_info">False information</string>
+    <string name="report_reason_other">Other</string>
+    <string name="profile_username_top">Profile</string>
+    <string name="login_title">Welcome Back</string>
+    <string name="login_subtitle">Log in to stay connected</string>
+    <string name="login_button">Login</string>
+    <string name="login_or">OR</string>
+    <string name="login_footer">Don\'t have an account? </string>
+    <string name="sign_up">Sign up</string>
+
+    <string name="register_title">Create Account</string>
+    <string name="register_button">Sign Up</string>
+    <string name="register_footer">Already have an account? </string>
+    <string name="register_dob">Date of birth</string>
+    <string name="register_day">Day</string>
+    <string name="register_month">Month</string>
+    <string name="register_year">Year</string>
+    <string name="register_gender">Gender</string>
+
+    <string name="tag_people_title">Tag people</string>
+    <string name="done">Done</string>
+    <string name="location_placeholder">Location</string>
+    <string name="cancel_action">Cancel</string>
+    <string name="uploading_media">Uploading media...</string>
+    <string name="error_post_id_not_found">Error: Post ID not found</string>
+    <string name="marked_as_read">Marked as read</string>
+    <string name="open_post_id">Open post: %s</string>
+    <string name="register_success">Registration successful!</string>
+    <string name="error_creating_file">Error creating file: %s</string>
+    <string name="upload_failed">Upload failed: %s</string>
+    <string name="notification_clicked">Notification clicked</string>
+    <string name="action_success">Action successful!</string>
+    <string name="comment_deleted">Comment deleted</string>
+    <string name="register_failed">Registration failed</string>
+    <string name="login_failed">Login failed: %s</string>
+    <string name="edit_comment_coming_soon">Edit comment - Coming soon</string>
+    <string name="emoji_picker_coming_soon">Emoji picker - Coming soon</string>
+    <string name="follow_user">Follow: %s</string>
+    <string name="comment_reported">Comment reported</string>
+    <string name="profile_creation_failed">Profile creation failed: %s</string>
+    <string name="open_chat">Open chat</string>
+    <string name="error_comment_input_not_available">Error: Comment input not available</string>
+    <string name="gif_selected">GIF selected</string>
+    <string name="error_cannot_reply">Error: Cannot reply to this comment</string>
+    <string name="cannot_load_users">Cannot load users</string>
+    <string name="cannot_load_posts">Cannot load posts</string>
+    <string name="open_profile_id">Open profile: %s</string>
+    <string name="please_select_dob">Please select date of birth</string>
+    <string name="comment_copied">Comment copied to clipboard</string>
+    <string name="please_enter_content">Please enter content</string>
+    <string name="image_selected">Image selected</string>
+    <string name="copy_action">Copy</string>
 </resources>

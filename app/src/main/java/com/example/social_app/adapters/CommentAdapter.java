@@ -16,8 +16,10 @@ import com.bumptech.glide.Glide;
 import com.example.social_app.R;
 import com.example.social_app.data.model.Comment;
 import com.example.social_app.data.model.User;
+import com.example.social_app.firebase.FirebaseManager;
 import com.example.social_app.utils.MockDataGenerator;
 import com.example.social_app.utils.UserAvatarLoader;
+import com.google.firebase.firestore.FirebaseFirestore;
 
 import java.util.ArrayList;
 import java.util.HashSet;
@@ -43,7 +45,7 @@ public class CommentAdapter extends RecyclerView.Adapter<CommentAdapter.CommentV
      */
     public interface OnCommentActionListener {
         void onLikeClicked(Comment comment, int position);
-        void onReplyClicked(Comment comment);
+        void onReplyClicked(Comment comment, String userName);
         void onViewMoreRepliesClicked(Comment comment);
         void onCommentLongPressed(Comment comment, int position);
     }
@@ -65,20 +67,51 @@ public class CommentAdapter extends RecyclerView.Adapter<CommentAdapter.CommentV
      * @param comments New list of comments
      */
     public void setComments(List<Comment> comments) {
+        this.comments.clear();
         if (comments != null) {
-            this.comments = new ArrayList<>(comments);
-            android.util.Log.d("CommentAdapter", "setComments() called with " + this.comments.size() + " comments");
-            String preview = comments.size() > 0 ? comments.get(0).getContent() : "none";
-            if (preview != null && preview.length() > 30) {
-                preview = preview.substring(0, 30) + "...";
+            // Lấy tất cả bình luận gốc
+            List<Comment> rootComments = new ArrayList<>();
+            for (Comment c : comments) {
+                if (c.getParentId() == null) {
+                    rootComments.add(c);
+                }
             }
-            android.util.Log.d("CommentAdapter", "  First comment: " + preview);
-        } else {
-            this.comments = new ArrayList<>();
-            android.util.Log.w("CommentAdapter", "setComments() called with null, creating empty list");
+            
+            // Sắp xếp bình luận gốc: Mới nhất lên đầu
+            rootComments.sort((c1, c2) -> {
+                long t1 = c1.getCreatedAt() != null ? c1.getCreatedAt().getTime() : 0;
+                long t2 = c2.getCreatedAt() != null ? c2.getCreatedAt().getTime() : 0;
+                return Long.compare(t2, t1);
+            });
+
+            // Xây dựng cây bình luận
+            for (Comment root : rootComments) {
+                this.comments.add(root);
+                addRepliesRecursively(root.getId(), comments, 1);
+            }
         }
         notifyDataSetChanged();
-        android.util.Log.d("CommentAdapter", "✅ notifyDataSetChanged() called. RecyclerView will refresh with " + this.comments.size() + " items");
+    }
+
+    private void addRepliesRecursively(String parentId, List<Comment> allComments, int level) {
+        List<Comment> replies = new ArrayList<>();
+        for (Comment c : allComments) {
+            if (parentId.equals(c.getParentId())) {
+                replies.add(c);
+            }
+        }
+        
+        // Sắp xếp reply: Cũ nhất lên đầu để đọc theo luồng
+        replies.sort((c1, c2) -> {
+            long t1 = c1.getCreatedAt() != null ? c1.getCreatedAt().getTime() : 0;
+            long t2 = c2.getCreatedAt() != null ? c2.getCreatedAt().getTime() : 0;
+            return Long.compare(t1, t2);
+        });
+
+        for (Comment reply : replies) {
+            this.comments.add(reply);
+            addRepliesRecursively(reply.getId(), allComments, level + 1);
+        }
     }
 
     /**
@@ -151,31 +184,25 @@ public class CommentAdapter extends RecyclerView.Adapter<CommentAdapter.CommentV
 
     class CommentViewHolder extends RecyclerView.ViewHolder {
         private ImageView avatar;
-        private ImageView verifiedBadge;
         private TextView username;
         private TextView commentText;
         private TextView timestamp;
-        private TextView location;
         private TextView likeCount;
-        private TextView replyCount;
-        private ImageButton likeButton;
-        private ImageButton replyButton;
-        private TextView viewMoreReplies;
+        private TextView likeButtonText;
+        private TextView replyButtonText;
+        private ImageView likeIcon;
+        private View commentBubble;
         private View mediaContainer;
         private ImageView mediaImage;
         private ImageView gifIndicator;
 
         public CommentViewHolder(@NonNull View itemView) {
             super(itemView);
-            // Basic views
             avatar = itemView.findViewById(R.id.comment_avatar);
             username = itemView.findViewById(R.id.comment_username);
             commentText = itemView.findViewById(R.id.comment_text);
             timestamp = itemView.findViewById(R.id.comment_timestamp);
-
-            // Optional views
-            verifiedBadge = itemView.findViewById(R.id.verified_badge);
-            location = itemView.findViewById(R.id.comment_location);
+            commentBubble = itemView.findViewById(R.id.comment_bubble);
 
             // Media views
             mediaContainer = itemView.findViewById(R.id.comment_media_container);
@@ -184,98 +211,100 @@ public class CommentAdapter extends RecyclerView.Adapter<CommentAdapter.CommentV
 
             // Interaction views
             likeCount = itemView.findViewById(R.id.comment_like_count);
-            replyCount = itemView.findViewById(R.id.comment_reply_count);
-            likeButton = itemView.findViewById(R.id.comment_like_button);
-            replyButton = itemView.findViewById(R.id.comment_reply_button);
-
-            // View more replies
-            viewMoreReplies = itemView.findViewById(R.id.view_more_replies);
-            android.util.Log.d("CommentAdapter", "✅ onCreateViewHolder() - item view created");
+            likeButtonText = itemView.findViewById(R.id.comment_like_button_text);
+            replyButtonText = itemView.findViewById(R.id.comment_reply_button_text);
+            likeIcon = itemView.findViewById(R.id.comment_like_icon);
         }
 
         public void bind(Comment comment, int position) {
-            if (comment == null) {
-                Log.e(TAG, "Comment is null at position " + position);
-                return;
-            }
+            if (comment == null) return;
 
-            String userName = MockDataGenerator.getUserDisplayName(comment.getUserId());
-            String text = comment.getContent() == null ? "" : comment.getContent();
-            android.util.Log.d("CommentAdapter", "┌─── bind() START position=" + position + " ───┐");
-            android.util.Log.d("CommentAdapter", "│ User: " + userName);
-            android.util.Log.d("CommentAdapter", "│ Text: " + (text.length() > 30 ? text.substring(0, 30) + "..." : text));
-
-            // === BASIC COMMENT INFO ===
-            bindUserInfo(userName, comment.getCreatedAt() != null ? comment.getCreatedAt().getTime() : System.currentTimeMillis());
-            android.util.Log.d("CommentAdapter", "│ ✅ bindUserInfo done");
-
-            bindCommentText(text);
-            android.util.Log.d("CommentAdapter", "│ ✅ bindCommentText done");
-
-            bindCommentMedia(comment);
-            android.util.Log.d("CommentAdapter", "│ ✅ bindCommentMedia done");
-
-            bindUserAvatar(comment, userName);
-            android.util.Log.d("CommentAdapter", "│ ✅ bindUserAvatar done");
-
-            // === OPTIONAL: VERIFIED BADGE ===
-            bindVerifiedBadge(false);
-            android.util.Log.d("CommentAdapter", "│ ✅ bindVerifiedBadge done");
-
-            // === OPTIONAL: LOCATION ===
-            bindLocation(null);
-            android.util.Log.d("CommentAdapter", "│ ✅ bindLocation done");
-
-            // === INTERACTIONS ===
-            bindLikeInteraction(comment, position);
-            android.util.Log.d("CommentAdapter", "│ ✅ bindLikeInteraction done");
-
-            bindReplyInteraction(comment, position);
-            android.util.Log.d("CommentAdapter", "│ ✅ bindReplyInteraction done");
-
-            bindMoreReplies(comment);
-            android.util.Log.d("CommentAdapter", "│ ✅ bindMoreReplies done");
-
-            // === LONG PRESS FOR OPTIONS ===
-            bindLongPressListener(comment, position);
-            android.util.Log.d("CommentAdapter", "│ ✅ bindLongPressListener done");
-            android.util.Log.d("CommentAdapter", "└─── bind() END ───┘");
-        }
-
-        private void bindUserInfo(String userName, Long timestamp) {
-            if (username != null) {
-                username.setText(userName);
-                username.setVisibility(View.VISIBLE);
-            }
-            if (timestamp != null && this.timestamp != null) {
-                String timeStr = formatTimestamp(timestamp);
-                this.timestamp.setText(timeStr);
-                this.timestamp.setVisibility(View.VISIBLE);
-            }
-        }
-
-        private void bindCommentText(String text) {
-            if (commentText != null) {
-                if (text == null || text.isEmpty()) {
-                    commentText.setVisibility(View.GONE);
-                } else {
-                    commentText.setText(text);
-                    commentText.setVisibility(View.VISIBLE);
+            // Xử lý thụt lề cho reply
+            int level = 0;
+            String pid = comment.getParentId();
+            if (pid != null) {
+                level = 1;
+                String currentPid = pid;
+                int maxDepth = 4; // Facebook thường không thụt lề quá sâu
+                int depth = 1;
+                while (currentPid != null && depth < maxDepth) {
+                    boolean foundParent = false;
+                    for (Comment c : comments) {
+                        if (c.getId().equals(currentPid)) {
+                            currentPid = c.getParentId();
+                            if (currentPid != null) {
+                                depth++;
+                                level = depth;
+                            }
+                            foundParent = true;
+                            break;
+                        }
+                    }
+                    if (!foundParent) break;
                 }
+            }
+            
+            int marginStart = (int) (level * 36 * context.getResources().getDisplayMetrics().density);
+            ViewGroup.MarginLayoutParams params = (ViewGroup.MarginLayoutParams) itemView.getLayoutParams();
+            if (params != null) {
+                params.leftMargin = marginStart;
+                itemView.setLayoutParams(params);
+            }
+
+            // Load user data
+            User user = MockDataGenerator.getUserById(comment.getUserId());
+            long createdAt = comment.getCreatedAt() != null ? comment.getCreatedAt().getTime() : System.currentTimeMillis();
+
+            if (user != null) {
+                bindUserInfo(user.getFullName(), createdAt);
+                UserAvatarLoader.load(avatar, user.getAvatarUrl());
+            } else {
+                username.setText("Loading...");
+                FirebaseFirestore.getInstance().collection(FirebaseManager.COLLECTION_USERS)
+                        .document(comment.getUserId())
+                        .get()
+                        .addOnSuccessListener(documentSnapshot -> {
+                            if (getAdapterPosition() == position && documentSnapshot.exists()) {
+                                String name = documentSnapshot.getString("fullName");
+                                String avatarUrl = documentSnapshot.getString("avatarUrl");
+                                bindUserInfo(name != null ? name : "Unknown User", createdAt);
+                                UserAvatarLoader.load(avatar, avatarUrl);
+                            }
+                        });
+            }
+
+            if (commentText != null) commentText.setText(comment.getContent());
+            bindCommentMedia(comment);
+            bindLikeInteraction(comment, position);
+            
+            if (replyButtonText != null) {
+                replyButtonText.setOnClickListener(v -> {
+                    if (actionListener != null) {
+                        String name = username.getText().toString();
+                        actionListener.onReplyClicked(comment, name);
+                    }
+                });
+            }
+
+            itemView.setOnLongClickListener(v -> {
+                if (actionListener != null) actionListener.onCommentLongPressed(comment, position);
+                return true;
+            });
+        }
+
+        private void bindUserInfo(String userName, long timestampMillis) {
+            if (username != null) username.setText(userName);
+            if (timestamp != null) {
+                timestamp.setText(formatTimestamp(context, timestampMillis));
             }
         }
 
         private void bindCommentMedia(Comment comment) {
             if (mediaContainer == null || mediaImage == null) return;
-
             String mediaUrl = comment.getMediaUrl();
             if (mediaUrl != null && !mediaUrl.isEmpty()) {
                 mediaContainer.setVisibility(View.VISIBLE);
-                Glide.with(context)
-                        .load(mediaUrl)
-                        .centerCrop()
-                        .into(mediaImage);
-
+                Glide.with(context).load(mediaUrl).centerCrop().into(mediaImage);
                 if (gifIndicator != null) {
                     gifIndicator.setVisibility("gif".equals(comment.getMediaType()) ? View.VISIBLE : View.GONE);
                 }
@@ -284,154 +313,40 @@ public class CommentAdapter extends RecyclerView.Adapter<CommentAdapter.CommentV
             }
         }
 
-        private void bindUserAvatar(Comment comment, String userName) {
-            if (avatar != null) {
-                User user = MockDataGenerator.getUserById(comment.getUserId());
-                UserAvatarLoader.load(avatar, user != null ? user.getAvatarUrl() : null);
-                avatar.setContentDescription(
-                        context.getString(R.string.user_avatar) + " - " + userName
-                );
-            }
-        }
-
-        private void bindVerifiedBadge(boolean isVerified) {
-            if (verifiedBadge != null) {
-                verifiedBadge.setVisibility(isVerified ? View.VISIBLE : View.GONE);
-            }
-        }
-
-        private void bindLocation(String locationText) {
-            if (location != null) {
-                if (locationText != null && !locationText.isEmpty()) {
-                    location.setText(locationText);
-                    location.setVisibility(View.VISIBLE);
-                } else {
-                    location.setVisibility(View.GONE);
-                }
-            }
-        }
-
         private void bindLikeInteraction(Comment comment, int position) {
-            // Like count
-            if (likeCount != null) {
-                long count = comment.getLikeCount();
-                likeCount.setText(count > 0 ? String.valueOf(count) : "");
-                likeCount.setVisibility(count > 0 ? View.VISIBLE : View.GONE);
-            }
-
-            // Like button
-            if (likeButton != null) {
-                boolean isLiked = likedCommentIds.contains(comment.getId());
-                likeButton.setSelected(isLiked);
-                likeButton.setImageResource(
-                        isLiked ? R.drawable.ic_heart_filled : R.drawable.ic_heart
-                );
-                likeButton.setOnClickListener(v -> {
+            boolean isLiked = likedCommentIds.contains(comment.getId());
+            
+            if (likeButtonText != null) {
+                likeButtonText.setText(isLiked ? context.getString(R.string.liked) : context.getString(R.string.like));
+                likeButtonText.setTextColor(context.getResources().getColor(
+                        isLiked ? R.color.primary_purple : R.color.text_secondary
+                ));
+                likeButtonText.setOnClickListener(v -> {
                     if (actionListener != null) {
                         actionListener.onLikeClicked(comment, position);
-                        if (isLiked) {
-                            likedCommentIds.remove(comment.getId());
-                        } else {
-                            likedCommentIds.add(comment.getId());
-                        }
-                        updateLikeState(!isLiked);
+                        if (isLiked) likedCommentIds.remove(comment.getId());
+                        else likedCommentIds.add(comment.getId());
+                        notifyItemChanged(position);
                     }
                 });
-                likeButton.setContentDescription(isLiked ? "Unlike" : "Like");
+            }
+
+            if (likeIcon != null) {
+                likeIcon.setVisibility(comment.getLikeCount() > 0 ? View.VISIBLE : View.GONE);
+            }
+
+            if (likeCount != null) {
+                likeCount.setText(comment.getLikeCount() > 0 ? String.valueOf(comment.getLikeCount()) : "");
+                likeCount.setVisibility(comment.getLikeCount() > 0 ? View.VISIBLE : View.GONE);
             }
         }
 
-        private void bindReplyInteraction(Comment comment, int position) {
-            if (replyButton != null) {
-                replyButton.setOnClickListener(v -> {
-                    if (actionListener != null) {
-                        actionListener.onReplyClicked(comment);
-                    }
-                });
-                replyButton.setContentDescription("Reply to comment");
-            }
-
-            if (replyCount != null) {
-                int replyCountValue = countReplies(comment.getId());
-                if (replyCountValue > 0) {
-                    replyCount.setText(String.valueOf(replyCountValue));
-                    replyCount.setVisibility(View.VISIBLE);
-                } else {
-                    replyCount.setVisibility(View.GONE);
-                }
-            }
-        }
-
-        private void bindMoreReplies(Comment comment) {
-            if (viewMoreReplies != null) {
-                int replyCountValue = countReplies(comment.getId());
-
-                if (replyCountValue > 0) {
-                    viewMoreReplies.setVisibility(View.VISIBLE);
-                    String text = replyCountValue + " repl" + (replyCountValue > 1 ? "ies" : "y");
-                    viewMoreReplies.setText(text);
-                    viewMoreReplies.setOnClickListener(v -> {
-                        if (actionListener != null) {
-                            actionListener.onViewMoreRepliesClicked(comment);
-                        }
-                    });
-                } else {
-                    viewMoreReplies.setVisibility(View.GONE);
-                }
-            }
-        }
-
-        private int countReplies(String commentId) {
-            if (commentId == null) {
-                return 0;
-            }
-            int count = 0;
-            for (Comment item : comments) {
-                if (commentId.equals(item.getParentId())) {
-                    count++;
-                }
-            }
-            return count;
-        }
-
-        private void bindLongPressListener(Comment comment, int position) {
-            itemView.setOnLongClickListener(v -> {
-                if (actionListener != null) {
-                    actionListener.onCommentLongPressed(comment, position);
-                }
-                return true;
-            });
-        }
-
-        private void updateLikeState(boolean isNowLiked) {
-            if (likeButton != null) {
-                likeButton.setSelected(isNowLiked);
-                likeButton.setImageResource(
-                        isNowLiked ? R.drawable.ic_heart_filled : R.drawable.ic_heart
-                );
-            }
-        }
-
-        private String formatTimestamp(long timestamp) {
-            long currentTime = System.currentTimeMillis();
-            long difference = currentTime - timestamp;
-
-            long minute = 60000;
-            long hour = minute * 60;
-            long day = hour * 24;
-
-            if (difference < minute) {
-                return "just now";
-            } else if (difference < hour) {
-                long minutes = difference / minute;
-                return minutes + " MIN" + (minutes > 1 ? "S" : "") + " AGO";
-            } else if (difference < day) {
-                long hours = difference / hour;
-                return hours + " HOUR" + (hours > 1 ? "S" : "") + " AGO";
-            } else {
-                long days = difference / day;
-                return days + " DAY" + (days > 1 ? "S" : "") + " AGO";
-            }
+        private String formatTimestamp(Context context, long timestamp) {
+            long diff = System.currentTimeMillis() - timestamp;
+            if (diff < 60000) return context.getString(R.string.just_now);
+            if (diff < 3600000) return context.getString(R.string.minutes_ago, (int) (diff / 60000));
+            if (diff < 86400000) return context.getString(R.string.hours_ago, (int) (diff / 3600000));
+            return context.getString(R.string.days_ago, (int) (diff / 86400000));
         }
     }
 }
