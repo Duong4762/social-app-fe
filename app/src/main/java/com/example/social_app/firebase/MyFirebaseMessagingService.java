@@ -58,6 +58,14 @@ public class MyFirebaseMessagingService extends FirebaseMessagingService {
         String actorAvatar = data.get("actorAvatar");
         String actorId = data.get("actorId");
         String notifId = data.get("notifId");
+        String targetUserId = data.get("targetUserId"); // Lấy thêm ID người nhận từ payload
+
+        // KIỂM TRA: Chỉ hiện thông báo nếu đúng người đang đăng nhập trên máy này
+        String currentUserId = FirebaseAuth.getInstance().getUid();
+        if (currentUserId != null && targetUserId != null && !currentUserId.equals(targetUserId)) {
+            Log.d(TAG, "Thông báo dành cho user khác (" + targetUserId + "), bỏ qua.");
+            return;
+        }
 
         sendNotification(title, body, type, referenceId, actorName, actorAvatar, actorId, notifId);
     }

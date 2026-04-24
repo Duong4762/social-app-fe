@@ -522,13 +522,16 @@ public class OtherProfileFragment extends Fragment implements PostAdapter.OnPost
                 .set(notification, SetOptions.merge())
                 .addOnSuccessListener(unused -> {
                     // Gửi Push Notification
-                    db.collection(FirebaseManager.COLLECTION_USERS).document(currentUserId).get()
+                    FirebaseManager.getInstance().getFirestore()
+                            .collection(FirebaseManager.COLLECTION_USERS).document(currentUserId).get()
                             .addOnSuccessListener(userDoc -> {
-                                String actorName = userDoc.getString("fullName");
-                                if (actorName == null || actorName.isEmpty()) actorName = userDoc.getString("username");
-                                String title = "Người theo dõi mới";
-                                String body = actorName + " đã bắt đầu theo dõi bạn";
-                                sendPushNotification(targetUserId, title, body, "FOLLOW", currentUserId);
+                                if (userDoc.exists()) {
+                                    String actorName = userDoc.getString("fullName");
+                                    if (actorName == null || actorName.isEmpty()) actorName = userDoc.getString("username");
+                                    String title = "Người theo dõi mới";
+                                    String body = actorName + " đã bắt đầu theo dõi bạn";
+                                    sendPushNotification(targetUserId, title, body, "FOLLOW", currentUserId);
+                                }
                             });
                 });
     }
@@ -540,7 +543,7 @@ public class OtherProfileFragment extends Fragment implements PostAdapter.OnPost
                     if (documentSnapshot.exists()) {
                         String token = documentSnapshot.getString("fcmToken");
                         if (token != null && !token.isEmpty()) {
-                            com.example.social_app.firebase.FcmSender.sendNotification(token, title, body, type, refId);
+                            com.example.social_app.firebase.FcmSender.sendNotification(token, title, body, type, refId, targetUserId);
                         }
                     }
                 });

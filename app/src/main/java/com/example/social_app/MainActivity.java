@@ -479,19 +479,15 @@ public class MainActivity extends BaseActivity {
                     }
 
                     if (snapshots != null) {
-                        // 1. Cập nhật Badge dựa trên tổng số thông báo chưa đọc
+                        // Cập nhật Badge dựa trên tổng số thông báo chưa đọc
                         if (!snapshots.isEmpty()) {
                             showNotificationBadge();
+                            Log.d("MainActivity", "Có " + snapshots.size() + " thông báo chưa đọc.");
                         } else {
                             removeNotificationBadge();
-                            // Nếu lần load đầu tiên trả về rỗng, vẫn phải đánh dấu hết InitialLoad
-                            if (isInitialLoad) {
-                                isInitialLoad = false;
-                            }
-                            return;
                         }
                         
-                        // 2. Xử lý hiển thị thông báo hệ thống
+                        // Xử lý hiển thị thông báo hệ thống (Banner)
                         for (com.google.firebase.firestore.DocumentChange dc : snapshots.getDocumentChanges()) {
                             if (dc.getType() == com.google.firebase.firestore.DocumentChange.Type.ADDED) {
                                 // Nếu là lần load đầu tiên (snapshot chứa các thông báo cũ), bỏ qua việc hiện banner

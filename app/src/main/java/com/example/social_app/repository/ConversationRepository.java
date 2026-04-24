@@ -339,7 +339,7 @@ public class ConversationRepository {
                     if (documentSnapshot.exists()) {
                         String token = documentSnapshot.getString("fcmToken");
                         if (token != null && !token.isEmpty()) {
-                            com.example.social_app.firebase.FcmSender.sendNotification(token, title, body, type, refId);
+                            com.example.social_app.firebase.FcmSender.sendNotification(token, title, body, type, refId, targetUserId);
                         }
                     }
                 });

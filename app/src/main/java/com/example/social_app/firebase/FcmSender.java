@@ -22,7 +22,7 @@ public class FcmSender {
     // DÁN SERVER KEY CỦA CẬU VÀO ĐÂY (Lưu ý: Cách này chỉ dùng để demo/đồ án)
     private static final String SERVER_KEY = "AIzaSyAJOYSRCDwApxludSaEeykbYjFbmXFIOcg";
 
-    public static void sendNotification(String targetToken, String title, String body, String type, String refId) {
+    public static void sendNotification(String targetToken, String title, String body, String type, String refId, String targetUserId) {
         try {
             OkHttpClient client = new OkHttpClient();
             JSONObject json = new JSONObject();
@@ -36,6 +36,7 @@ public class FcmSender {
             data.put("body", body);
             data.put("type", type);
             data.put("referenceId", refId);
+            data.put("targetUserId", targetUserId); // Quan trọng để lọc khi đăng nhập nhiều tài khoản
 
             // notification payload giúp hiện banner hệ thống khi app ở background
             JSONObject notification = new JSONObject();
