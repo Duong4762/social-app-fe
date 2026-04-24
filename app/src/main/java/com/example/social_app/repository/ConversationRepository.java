@@ -320,7 +320,29 @@ public class ConversationRepository {
         notification.put("isRead", false); // Dùng isRead để đồng bộ với model Notification
         notification.put("createdAt", FieldValue.serverTimestamp());
 
-        db.collection(FirebaseManager.COLLECTION_NOTIFICATIONS).add(notification);
+        db.collection(FirebaseManager.COLLECTION_NOTIFICATIONS).add(notification)
+                .addOnSuccessListener(doc -> {
+                    db.collection(FirebaseManager.COLLECTION_USERS).document(actorId).get()
+                            .addOnSuccessListener(userDoc -> {
+                                String actorName = userDoc.getString("fullName");
+                                if (actorName == null || actorName.isEmpty()) actorName = userDoc.getString("username");
+                                String title = "Tin nhắn mới";
+                                String body = actorName + " đã gửi cho bạn một tin nhắn";
+                                sendPushNotification(userId, title, body, "MESSAGE", referenceId);
+                            });
+                });
+    }
+
+    private void sendPushNotification(String targetUserId, String title, String body, String type, String refId) {
+        db.collection(FirebaseManager.COLLECTION_USERS).document(targetUserId).get()
+                .addOnSuccessListener(documentSnapshot -> {
+                    if (documentSnapshot.exists()) {
+                        String token = documentSnapshot.getString("fcmToken");
+                        if (token != null && !token.isEmpty()) {
+                            com.example.social_app.firebase.FcmSender.sendNotification(token, title, body, type, refId);
+                        }
+                    }
+                });
     }
 
     @NonNull

@@ -117,6 +117,9 @@ public class MainActivity extends BaseActivity {
         // Bắt đầu lắng nghe thông báo Realtime
         setupRealtimeNotificationListener();
 
+        // Lưu Token để nhận thông báo
+        saveFCMToken();
+
         // Xử lý điều hướng nếu được mở từ thông báo
         handleIntent(getIntent());
     }
@@ -637,6 +640,24 @@ public class MainActivity extends BaseActivity {
                     });
         } else {
             notificationManager.notify(notificationId, builder.build());
+        }
+    }
+
+    private void saveFCMToken() {
+        // Cố gắng lấy token để hỗ trợ Push Notification nếu sau này có Server Key
+        try {
+            com.google.firebase.messaging.FirebaseMessaging.getInstance().getToken()
+                    .addOnSuccessListener(token -> {
+                        String userId = com.example.social_app.firebase.FirebaseManager.getInstance().getAuth().getUid();
+                        if (userId != null) {
+                            com.example.social_app.firebase.FirebaseManager.getInstance().getFirestore()
+                                    .collection(com.example.social_app.firebase.FirebaseManager.COLLECTION_USERS)
+                                    .document(userId)
+                                    .update("fcmToken", token);
+                        }
+                    });
+        } catch (Exception e) {
+            Log.e("MainActivity", "FCM Token error: " + e.getMessage());
         }
     }
 }

@@ -212,7 +212,32 @@ public class HomeViewModel extends ViewModel {
         notification.put("isRead", false);
         notification.put("createdAt", com.google.firebase.firestore.FieldValue.serverTimestamp());
 
-        db.collection(FirebaseManager.COLLECTION_NOTIFICATIONS).add(notification);
+        db.collection(FirebaseManager.COLLECTION_NOTIFICATIONS).add(notification)
+                .addOnSuccessListener(documentReference -> {
+                    // Lấy tên người thực hiện để gửi push xịn hơn
+                    db.collection(FirebaseManager.COLLECTION_USERS).document(currentUserId).get()
+                            .addOnSuccessListener(userDoc -> {
+                                String actorName = userDoc.getString("fullName");
+                                if (actorName == null || actorName.isEmpty()) actorName = userDoc.getString("username");
+                                
+                                String title = "Lượt thích mới";
+                                String body = actorName + " đã thích bài viết của bạn";
+                                
+                                sendPushNotification(post.getUserId(), title, body, "LIKE", post.getId());
+                            });
+                });
+    }
+
+    private void sendPushNotification(String targetUserId, String title, String body, String type, String refId) {
+        db.collection(FirebaseManager.COLLECTION_USERS).document(targetUserId).get()
+                .addOnSuccessListener(documentSnapshot -> {
+                    if (documentSnapshot.exists()) {
+                        String token = documentSnapshot.getString("fcmToken");
+                        if (token != null && !token.isEmpty()) {
+                            com.example.social_app.firebase.FcmSender.sendNotification(token, title, body, type, refId);
+                        }
+                    }
+                });
     }
 
     private void loadUserEngagement() {

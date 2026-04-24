@@ -115,7 +115,17 @@ public class CommentViewModel extends ViewModel {
                             notification.put("isRead", false);
                             notification.put("createdAt", com.google.firebase.firestore.FieldValue.serverTimestamp());
                             
-                            db.collection(FirebaseManager.COLLECTION_NOTIFICATIONS).add(notification);
+                            db.collection(FirebaseManager.COLLECTION_NOTIFICATIONS).add(notification)
+                                    .addOnSuccessListener(doc -> {
+                                        db.collection(FirebaseManager.COLLECTION_USERS).document(currentUserId).get()
+                                                .addOnSuccessListener(userDoc -> {
+                                                    String actorName = userDoc.getString("fullName");
+                                                    if (actorName == null || actorName.isEmpty()) actorName = userDoc.getString("username");
+                                                    String title = "Phản hồi mới";
+                                                    String body = actorName + " đã phản hồi bình luận của bạn";
+                                                    sendPushNotification(parentOwnerId, title, body, "REPLY_COMMENT", postId);
+                                                });
+                                    });
                         }
                     }
                 });
@@ -207,7 +217,17 @@ public class CommentViewModel extends ViewModel {
         notification.put("isRead", false);
         notification.put("createdAt", com.google.firebase.firestore.FieldValue.serverTimestamp());
         
-        db.collection(FirebaseManager.COLLECTION_NOTIFICATIONS).add(notification);
+        db.collection(FirebaseManager.COLLECTION_NOTIFICATIONS).add(notification)
+                .addOnSuccessListener(doc -> {
+                    db.collection(FirebaseManager.COLLECTION_USERS).document(currentUserId).get()
+                            .addOnSuccessListener(userDoc -> {
+                                String actorName = userDoc.getString("fullName");
+                                if (actorName == null || actorName.isEmpty()) actorName = userDoc.getString("username");
+                                String title = "Lượt thích bình luận";
+                                String body = actorName + " đã thích bình luận của bạn";
+                                sendPushNotification(comment.getUserId(), title, body, "LIKE_COMMENT", comment.getPostId());
+                            });
+                });
     }
 
     /**
@@ -293,7 +313,18 @@ public class CommentViewModel extends ViewModel {
                             notification.put("createdAt", com.google.firebase.firestore.FieldValue.serverTimestamp());
                             
                             db.collection(FirebaseManager.COLLECTION_NOTIFICATIONS).add(notification)
-                                    .addOnSuccessListener(doc -> android.util.Log.d("CommentNotif", "Notification created: " + doc.getId()))
+                                    .addOnSuccessListener(doc -> {
+                                        android.util.Log.d("CommentNotif", "Notification created: " + doc.getId());
+                                        // Gửi Push Notification qua FCM
+                                        db.collection(FirebaseManager.COLLECTION_USERS).document(currentUserId).get()
+                                                .addOnSuccessListener(userDoc -> {
+                                                    String actorName = userDoc.getString("fullName");
+                                                    if (actorName == null || actorName.isEmpty()) actorName = userDoc.getString("username");
+                                                    String title = "Bình luận mới";
+                                                    String body = actorName + " đã bình luận vào bài viết của bạn";
+                                                    sendPushNotification(postOwnerId, title, body, "COMMENT", postId);
+                                                });
+                                    })
                                     .addOnFailureListener(e -> android.util.Log.e("CommentNotif", "Failed to create notif", e));
                         }
                     } else {
@@ -301,5 +332,17 @@ public class CommentViewModel extends ViewModel {
                     }
                 })
                 .addOnFailureListener(e -> android.util.Log.e("CommentNotif", "Error fetching post", e));
+    }
+
+    private void sendPushNotification(String targetUserId, String title, String body, String type, String refId) {
+        db.collection(FirebaseManager.COLLECTION_USERS).document(targetUserId).get()
+                .addOnSuccessListener(documentSnapshot -> {
+                    if (documentSnapshot.exists()) {
+                        String token = documentSnapshot.getString("fcmToken");
+                        if (token != null && !token.isEmpty()) {
+                            com.example.social_app.firebase.FcmSender.sendNotification(token, title, body, type, refId);
+                        }
+                    }
+                });
     }
 }
