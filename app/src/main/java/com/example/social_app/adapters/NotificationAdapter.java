@@ -125,18 +125,24 @@ public class NotificationAdapter extends RecyclerView.Adapter<NotificationAdapte
     }
 
     private String getActionText(String type) {
-        if (type == null) return context.getString(R.string.notification_message);
-        switch (type.toUpperCase()) {
-            case "LIKE":
-                return context.getString(R.string.notification_like);
-            case "COMMENT":
-                return context.getString(R.string.notification_comment);
-            case "FOLLOW":
-                return context.getString(R.string.notification_follow);
-            case "MESSAGE":
-                return context.getString(R.string.notification_message);
-            default:
-                return context.getString(R.string.notification_message);
+        if (context == null) return "đã tương tác";
+        if (type == null) return "đã gửi cho bạn một thông báo";
+        
+        try {
+            switch (type.toUpperCase()) {
+                case "LIKE":
+                    return "đã thích bài viết của bạn";
+                case "COMMENT":
+                    return "đã bình luận về bài viết của bạn";
+                case "FOLLOW":
+                    return "đã bắt đầu theo dõi bạn";
+                case "MESSAGE":
+                    return "đã gửi cho bạn một tin nhắn";
+                default:
+                    return "đã tương tác với bạn";
+            }
+        } catch (Exception e) {
+            return "đã tương tác";
         }
     }
 
@@ -158,10 +164,10 @@ public class NotificationAdapter extends RecyclerView.Adapter<NotificationAdapte
 
         void bind(Notification notification, int position) {
             String type = notification.getType();
-            String referenceId = notification.getReferenceId();
+            String actorId = notification.getActorId();
 
-            // Load user info from referenceId (người tạo ra hành động)
-            loadUserInfo(referenceId, contentText, type, avatar);
+            // Load user info from actorId (người tạo ra hành động)
+            loadUserInfo(actorId, contentText, type, avatar);
 
             // Format thời gian
             String timeStr = formatTime(notification.getCreatedAt());
@@ -226,9 +232,7 @@ public class NotificationAdapter extends RecyclerView.Adapter<NotificationAdapte
         }
 
         private String formatTime(Date date) {
-            if (date == null) {
-                return context.getString(R.string.just_now);
-            }
+            if (date == null) return "Vừa xong";
 
             long now = System.currentTimeMillis();
             long diff = now - date.getTime();
@@ -238,13 +242,13 @@ public class NotificationAdapter extends RecyclerView.Adapter<NotificationAdapte
             long days = hours / 24;
 
             if (days > 0) {
-                return context.getString(R.string.days_ago, (int) days);
+                return days + " ngày trước";
             } else if (hours > 0) {
-                return context.getString(R.string.hours_ago, (int) hours);
+                return hours + " giờ trước";
             } else if (minutes > 0) {
-                return context.getString(R.string.minutes_ago, (int) minutes);
+                return minutes + " phút trước";
             } else {
-                return context.getString(R.string.just_now);
+                return "Vừa xong";
             }
         }
     }

@@ -13,6 +13,7 @@ import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 import androidx.swiperefreshlayout.widget.SwipeRefreshLayout;
 
+import com.example.social_app.MainActivity;
 import com.example.social_app.R;
 import com.example.social_app.adapters.NotificationAdapter;
 import com.example.social_app.data.model.Notification;
@@ -31,6 +32,7 @@ public class NotificationFragment extends Fragment {
     private SwipeRefreshLayout swipeRefresh;
     private ProgressBar loadingProgress;
     private TextView emptyStateText;
+    private TextView btnMarkAllRead;
 
     private List<Notification> notifications = new ArrayList<>();
     private FirebaseFirestore db;
@@ -50,6 +52,11 @@ public class NotificationFragment extends Fragment {
         swipeRefresh = view.findViewById(R.id.swipe_refresh);
         loadingProgress = view.findViewById(R.id.loading_progress);
         emptyStateText = view.findViewById(R.id.empty_state_text);
+        btnMarkAllRead = view.findViewById(R.id.btn_mark_all_read);
+
+        if (btnMarkAllRead != null) {
+            btnMarkAllRead.setOnClickListener(v -> markAllAsRead());
+        }
 
         setupRecyclerView();
         setupSwipeRefresh();
@@ -142,7 +149,7 @@ public class NotificationFragment extends Fragment {
     }
 
     private void markAsRead(Notification notification) {
-        if (notification.isRead()) return;
+        if (notification == null || notification.getId() == null || notification.isRead()) return;
 
         db.collection(FirebaseManager.COLLECTION_NOTIFICATIONS)
                 .document(notification.getId())
@@ -150,7 +157,28 @@ public class NotificationFragment extends Fragment {
                 .addOnSuccessListener(aVoid -> {
                     notification.setRead(true);
                     notificationAdapter.notifyDataSetChanged();
-                    android.util.Log.d("NotificationFragment", "Marked as read: " + notification.getId());
+                })
+                .addOnFailureListener(e -> android.util.Log.e("NotificationFragment", "Error marking read", e));
+    }
+
+    private void markAllAsRead() {
+        String currentUserId = FirebaseManager.getInstance().getAuth().getUid();
+        if (currentUserId == null) return;
+
+        db.collection(FirebaseManager.COLLECTION_NOTIFICATIONS)
+                .whereEqualTo("userId", currentUserId)
+                .whereEqualTo("isRead", false)
+                .get()
+                .addOnSuccessListener(queryDocumentSnapshots -> {
+                    if (queryDocumentSnapshots.isEmpty()) return;
+                    
+                    var batch = db.batch();
+                    for (var doc : queryDocumentSnapshots.getDocuments()) {
+                        batch.update(doc.getReference(), "isRead", true);
+                    }
+                    batch.commit().addOnSuccessListener(aVoid -> {
+                        Toast.makeText(requireContext(), "Đã đánh dấu tất cả là đã đọc", Toast.LENGTH_SHORT).show();
+                    });
                 });
     }
 
@@ -166,7 +194,7 @@ public class NotificationFragment extends Fragment {
             case "LIKE":
             case "COMMENT":
                 if (referenceId != null) {
-                    Toast.makeText(requireContext(), "Mở bài viết: " + referenceId, Toast.LENGTH_SHORT).show();
+                    openPostDetail(referenceId);
                 }
                 break;
             case "FOLLOW":
@@ -177,6 +205,15 @@ public class NotificationFragment extends Fragment {
             case "MESSAGE":
                 Toast.makeText(requireContext(), "Mở tin nhắn", Toast.LENGTH_SHORT).show();
                 break;
+        }
+    }
+
+    private void openPostDetail(String postId) {
+        if (getActivity() instanceof MainActivity) {
+            MainActivity mainActivity = (MainActivity) getActivity();
+            HomeFragment homeFragment = HomeFragment.newInstance(postId);
+            homeFragment.setBottomNavigationCallback(mainActivity::setupScrollListener);
+            mainActivity.loadFragment(homeFragment);
         }
     }
 
