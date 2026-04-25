@@ -31,17 +31,24 @@
 
         <FrameLayout
             android:id="@+id/chat_header_avatar_wrap"
-            android:layout_width="40dp"
-            android:layout_height="40dp"
+            android:layout_width="44dp"
+            android:layout_height="44dp"
             android:layout_marginStart="4dp"
             app:layout_constraintBottom_toBottomOf="parent"
             app:layout_constraintStart_toEndOf="@id/btn_chat_back"
             app:layout_constraintTop_toTopOf="parent">
 
-            <com.google.android.material.imageview.ShapeableImageView
-                android:id="@+id/chat_header_avatar"
+            <View
+                android:id="@+id/chat_header_story_ring"
                 android:layout_width="match_parent"
                 android:layout_height="match_parent"
+                android:visibility="gone" />
+
+            <com.google.android.material.imageview.ShapeableImageView
+                android:id="@+id/chat_header_avatar"
+                android:layout_width="40dp"
+                android:layout_height="40dp"
+                android:layout_gravity="center"
                 android:background="@color/avatar_background"
                 android:scaleType="centerCrop"
                 android:src="@drawable/avatar_placeholder"
@@ -64,7 +71,7 @@
             android:layout_marginEnd="8dp"
             android:orientation="vertical"
             app:layout_constraintBottom_toBottomOf="parent"
-            app:layout_constraintEnd_toStartOf="@id/btn_chat_call"
+            app:layout_constraintEnd_toStartOf="@id/btn_chat_edit_group"
             app:layout_constraintStart_toEndOf="@id/chat_header_avatar_wrap"
             app:layout_constraintTop_toTopOf="parent">
 
@@ -87,6 +94,21 @@
                 android:textColor="?attr/colorOnSurfaceVariant"
                 android:textSize="12sp" />
         </LinearLayout>
+
+        <ImageButton
+            android:id="@+id/btn_chat_edit_group"
+            android:layout_width="44dp"
+            android:layout_height="44dp"
+            android:background="?attr/selectableItemBackgroundBorderless"
+            android:contentDescription="@string/cd_chat_rename_group"
+            android:padding="10dp"
+            android:src="@drawable/ic_edit_pen"
+            android:visibility="gone"
+            app:layout_constraintBottom_toBottomOf="parent"
+            app:layout_constraintEnd_toStartOf="@id/btn_chat_call"
+            app:layout_constraintTop_toTopOf="parent"
+            app:tint="?attr/colorOnSurface"
+            tools:visibility="visible" />
 
         <ImageButton
             android:id="@+id/btn_chat_call"

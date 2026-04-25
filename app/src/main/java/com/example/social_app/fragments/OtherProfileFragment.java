@@ -29,8 +29,11 @@ import com.example.social_app.data.model.User;
 import com.example.social_app.firebase.FirebaseManager;
 import com.example.social_app.repository.ConversationRepository;
 import com.example.social_app.utils.UserAvatarLoader;
+import com.example.social_app.data.model.Story;
+import com.example.social_app.utils.StoryRingUi;
 import com.example.social_app.viewmodels.HomeViewModel;
 import com.example.social_app.viewmodels.NewPostViewModel;
+import com.example.social_app.viewmodels.StoryViewModel;
 import com.google.firebase.auth.FirebaseUser;
 import com.google.firebase.firestore.SetOptions;
 
@@ -59,6 +62,8 @@ public class OtherProfileFragment extends Fragment implements PostAdapter.OnPost
     private TextView tabReposts;
     private TextView tabEmptyState;
     private ImageView imgAvatar;
+    @Nullable
+    private View otherProfileStoryRing;
     private ImageView btnBack;
     private ImageView btnMore;
     private View tabIndicator;
@@ -126,6 +131,22 @@ public class OtherProfileFragment extends Fragment implements PostAdapter.OnPost
         bindViews(view);
         setupActions();
         loadUserProfile();
+
+        StoryViewModel storyVm = new ViewModelProvider(requireActivity()).get(StoryViewModel.class);
+        storyVm.getStories().observe(getViewLifecycleOwner(), stories -> {
+            applyOtherProfileStoryRing(stories);
+            if (postAdapter != null) {
+                postAdapter.setStoriesForAvatarRings(stories);
+            }
+        });
+    }
+
+    private void applyOtherProfileStoryRing(@Nullable List<Story> stories) {
+        if (otherProfileStoryRing == null || TextUtils.isEmpty(targetUserId)) {
+            return;
+        }
+        StoryRingUi.Tone tone = StoryRingUi.toneForUser(targetUserId, stories, currentUserId);
+        StoryRingUi.apply(otherProfileStoryRing, tone, 84f);
     }
 
     private void bindViews(View view) {
@@ -141,6 +162,7 @@ public class OtherProfileFragment extends Fragment implements PostAdapter.OnPost
         tabReposts = view.findViewById(R.id.tabReposts);
         tabEmptyState = view.findViewById(R.id.tabEmptyState);
         imgAvatar = view.findViewById(R.id.imgAvatar);
+        otherProfileStoryRing = view.findViewById(R.id.other_profile_story_ring);
         btnBack = view.findViewById(R.id.btnBack);
         btnMore = view.findViewById(R.id.btnMore);
         tabIndicator = view.findViewById(R.id.tabIndicator);

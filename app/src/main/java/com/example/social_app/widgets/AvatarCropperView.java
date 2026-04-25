@@ -10,8 +10,8 @@ import android.graphics.Paint;
 import android.graphics.Path;
 import android.graphics.PorterDuff;
 import android.graphics.PorterDuffXfermode;
-import android.graphics.RectF;
 import android.graphics.Rect;
+import android.graphics.RectF;
 import android.net.Uri;
 import android.util.AttributeSet;
 import android.view.MotionEvent;
@@ -26,12 +26,11 @@ import java.io.InputStream;
 
 public class AvatarCropperView extends View {
 
-    private static final float MIN_SCALE = 1f;
-    private static final float MAX_SCALE = 5f;
+    /** Zoom tối đa so với mức scale tối thiểu để phủ vùng crop (không dùng scale tuyệt đối của matrix). */
+    private static final float MAX_ZOOM_FACTOR = 5f;
 
     private final Paint bitmapPaint = new Paint(Paint.ANTI_ALIAS_FLAG | Paint.FILTER_BITMAP_FLAG);
     private final Paint ringOverlayPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
-    private final Paint cropSquarePaint = new Paint(Paint.ANTI_ALIAS_FLAG);
     private final Paint cropCirclePaint = new Paint(Paint.ANTI_ALIAS_FLAG);
 
     private final Matrix imageMatrix = new Matrix();
@@ -40,6 +39,8 @@ public class AvatarCropperView extends View {
 
     private Bitmap bitmap;
     private final RectF cropRect = new RectF();
+    /** Scale tối thiểu (đồng đều) để ảnh luôn phủ hết vùng crop — neo pinch zoom ở đây. */
+    private float minScaleCover = 1f;
     private float lastTouchX;
     private float lastTouchY;
     private boolean isDragging = false;
@@ -55,9 +56,6 @@ public class AvatarCropperView extends View {
     public AvatarCropperView(Context context, @Nullable AttributeSet attrs, int defStyleAttr) {
         super(context, attrs, defStyleAttr);
         ringOverlayPaint.setColor(Color.parseColor("#66000000"));
-        cropSquarePaint.setStyle(Paint.Style.STROKE);
-        cropSquarePaint.setStrokeWidth(dp(1f));
-        cropSquarePaint.setColor(Color.parseColor("#66FFFFFF"));
         cropCirclePaint.setStyle(Paint.Style.STROKE);
         cropCirclePaint.setStrokeWidth(dp(2f));
         cropCirclePaint.setColor(Color.parseColor("#CCFFFFFF"));
@@ -68,19 +66,22 @@ public class AvatarCropperView extends View {
                     return false;
                 }
                 float scaleFactor = detector.getScaleFactor();
-                float currentScale = getCurrentScale();
-                float targetScale = currentScale * scaleFactor;
-                if (targetScale < MIN_SCALE) {
-                    scaleFactor = MIN_SCALE / currentScale;
-                } else if (targetScale > MAX_SCALE) {
-                    scaleFactor = MAX_SCALE / currentScale;
+                float s = getUniformScale();
+                float minS = minScaleCover;
+                float maxS = minScaleCover * MAX_ZOOM_FACTOR;
+                float target = s * scaleFactor;
+                if (target < minS) {
+                    scaleFactor = minS / s;
+                } else if (target > maxS) {
+                    scaleFactor = maxS / s;
                 }
                 imageMatrix.postScale(scaleFactor, scaleFactor, detector.getFocusX(), detector.getFocusY());
-                ensureImageCoversCropRect();
+                clampPanToCoverCrop();
                 invalidate();
                 return true;
             }
         });
+        scaleDetector.setQuickScaleEnabled(false);
     }
 
     public void setImageUri(@NonNull Uri uri) {
@@ -176,7 +177,6 @@ public class AvatarCropperView extends View {
         squarePath.op(circlePath, Path.Op.DIFFERENCE);
         canvas.drawPath(squarePath, ringOverlayPaint);
 
-        canvas.drawRect(cropRect, cropSquarePaint);
         canvas.drawCircle(cropRect.centerX(), cropRect.centerY(), cropRect.width() / 2f, cropCirclePaint);
     }
 
@@ -198,7 +198,7 @@ public class AvatarCropperView extends View {
                     float dx = event.getX() - lastTouchX;
                     float dy = event.getY() - lastTouchY;
                     imageMatrix.postTranslate(dx, dy);
-                    ensureImageCoversCropRect();
+                    clampPanToCoverCrop();
                     invalidate();
                     lastTouchX = event.getX();
                     lastTouchY = event.getY();
@@ -231,40 +231,38 @@ public class AvatarCropperView extends View {
         }
         imageMatrix.reset();
 
-        float scale = Math.max(
+        minScaleCover = Math.max(
                 cropRect.width() / bitmap.getWidth(),
                 cropRect.height() / bitmap.getHeight()
         );
-        imageMatrix.postScale(scale, scale);
+
+        imageMatrix.postScale(minScaleCover, minScaleCover);
 
         RectF imageRect = getMappedImageRect();
         float dx = cropRect.centerX() - imageRect.centerX();
         float dy = cropRect.centerY() - imageRect.centerY();
         imageMatrix.postTranslate(dx, dy);
-        ensureImageCoversCropRect();
+        clampPanToCoverCrop();
     }
 
-    private void ensureImageCoversCropRect() {
-        if (bitmap == null) {
+    /**
+     * Giữ scale trong [minScaleCover, minScaleCover * MAX_ZOOM_FACTOR] và pan để ảnh luôn phủ vùng crop.
+     */
+    private void clampPanToCoverCrop() {
+        if (bitmap == null || cropRect.width() <= 0f) {
             return;
         }
 
-        RectF imageRect = getMappedImageRect();
-        float scaleAdjustment = 1f;
-        if (imageRect.width() < cropRect.width()) {
-            scaleAdjustment = Math.max(scaleAdjustment, cropRect.width() / imageRect.width());
-        }
-        if (imageRect.height() < cropRect.height()) {
-            scaleAdjustment = Math.max(scaleAdjustment, cropRect.height() / imageRect.height());
-        }
-        if (scaleAdjustment > 1f) {
-            float currentScale = getCurrentScale();
-            float targetScale = Math.min(currentScale * scaleAdjustment, MAX_SCALE);
-            float postScale = targetScale / currentScale;
-            imageMatrix.postScale(postScale, postScale, cropRect.centerX(), cropRect.centerY());
-            imageRect = getMappedImageRect();
+        float s = getUniformScale();
+        float minS = minScaleCover;
+        float maxS = minScaleCover * MAX_ZOOM_FACTOR;
+        if (s < minS - 1e-4f) {
+            imageMatrix.postScale(minS / s, minS / s, cropRect.centerX(), cropRect.centerY());
+        } else if (s > maxS + 1e-4f) {
+            imageMatrix.postScale(maxS / s, maxS / s, cropRect.centerX(), cropRect.centerY());
         }
 
+        RectF imageRect = getMappedImageRect();
         float dx = 0f;
         float dy = 0f;
         if (imageRect.left > cropRect.left) {
@@ -288,9 +286,14 @@ public class AvatarCropperView extends View {
         return rect;
     }
 
-    private float getCurrentScale() {
+    /**
+     * Độ scale đồng đều (không dùng MSCALE_X tuyệt đối làm ngưỡng [1,5] khi scale khởi tạo đã &gt; 1).
+     */
+    private float getUniformScale() {
         imageMatrix.getValues(matrixValues);
-        return matrixValues[Matrix.MSCALE_X];
+        float sx = matrixValues[Matrix.MSCALE_X];
+        float sy = matrixValues[Matrix.MSCALE_Y];
+        return (Math.abs(sx) + Math.abs(sy)) / 2f;
     }
 
     private float dp(float value) {

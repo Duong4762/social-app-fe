@@ -295,4 +295,18 @@
     <string name="admin_additional_metrics">Chỉ số bổ sung</string>
     <string name="admin_active_users">Người dùng hoạt động</string>
     <string name="admin_total_posts">Tổng bài viết</string>
+    <string name="call_status_group_waiting">Đang chờ thành viên nhóm…</string>
+    <string name="call_status_group_incoming">Cuộc gọi nhóm đến…</string>
+    <string name="call_group_too_many_members">Gọi thoại nhóm tối đa %d người. Giảm số thành viên trong chat hoặc chia nhóm.</string>
+    <string name="cd_chat_rename_group">Tùy chọn nhóm</string>
+    <string name="chat_group_rename">Đổi tên nhóm</string>
+    <string name="group_chat_name_label">Tên nhóm</string>
+    <string name="group_chat_name_hint">Nhập tên cho nhóm</string>
+    <string name="group_chat_rename_update">Cập nhật</string>
+    <string name="group_chat_rename_empty">Vui lòng nhập tên nhóm</string>
+    <string name="group_chat_rename_success">Đã cập nhật tên nhóm</string>
+    <string name="group_chat_rename_failed">Không thể đổi tên nhóm</string>
+    <string name="call_need_camera_permission">Cần quyền camera để hiển thị video của bạn</string>
+    <string name="call_toggle_camera">Bật hoặc tắt camera</string>
+    <string name="call_switch_camera">Đổi camera trước hoặc sau</string>
 </resources>

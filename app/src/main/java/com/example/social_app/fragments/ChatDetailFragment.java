@@ -21,11 +21,14 @@ import android.widget.Toast;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
+import androidx.appcompat.app.AlertDialog;
+import androidx.appcompat.widget.PopupMenu;
 import androidx.core.content.ContextCompat;
 import androidx.core.view.ViewCompat;
 import androidx.core.view.WindowInsetsCompat;
 import androidx.core.view.WindowInsetsControllerCompat;
 import androidx.fragment.app.Fragment;
+import androidx.lifecycle.ViewModelProvider;
 import androidx.recyclerview.widget.GridLayoutManager;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
@@ -33,11 +36,16 @@ import androidx.recyclerview.widget.RecyclerView;
 import com.example.social_app.R;
 import com.example.social_app.adapters.ChatMessagesAdapter;
 import com.example.social_app.data.model.Message;
+import com.example.social_app.data.model.Story;
+import com.example.social_app.utils.StoryRingUi;
+import com.example.social_app.viewmodels.StoryViewModel;
 import com.example.social_app.repository.ConversationRepository;
 import com.example.social_app.repository.VoiceCallRepository;
 import com.example.social_app.utils.CloudinaryUploadUtil;
 import com.example.social_app.utils.UserAvatarLoader;
 import com.google.android.material.button.MaterialButton;
+import com.google.android.material.dialog.MaterialAlertDialogBuilder;
+import com.google.android.material.textfield.TextInputEditText;
 import com.google.android.gms.tasks.Task;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseUser;
@@ -75,12 +83,15 @@ public class ChatDetailFragment extends Fragment {
     @Nullable
     private String mPeerAvatarUrl;
     private TextView headerStatus;
+    private TextView chatHeaderTitle;
     private View headerOnlineDot;
     private View mediaPickerSheet;
     private RecyclerView mediaPickerList;
     private MaterialButton sendImageButton;
     private View chatInputContainer;
     private View chatTypingRow;
+    @Nullable
+    private View headerStoryRing;
     private Uri selectedImageUri;
     private boolean isUploadingImage;
     private View rootView;
@@ -169,12 +180,14 @@ public class ChatDetailFragment extends Fragment {
         back.setOnClickListener(v -> requireActivity().getSupportFragmentManager().popBackStack());
 
         ImageView headerAvatar = view.findViewById(R.id.chat_header_avatar);
-        TextView headerName = view.findViewById(R.id.chat_header_name);
+        headerStoryRing = view.findViewById(R.id.chat_header_story_ring);
+        chatHeaderTitle = view.findViewById(R.id.chat_header_name);
         headerStatus = view.findViewById(R.id.chat_header_status);
         headerOnlineDot = view.findViewById(R.id.chat_header_online_dot);
-        headerName.setText(peerName);
+        chatHeaderTitle.setText(peerName);
         if (mIsGroup) {
             headerAvatar.setImageResource(R.drawable.ic_group_chat);
+            StoryRingUi.apply(headerStoryRing, StoryRingUi.Tone.NONE, 40f);
             if (headerOnlineDot != null) {
                 headerOnlineDot.setVisibility(View.GONE);
             }
@@ -186,6 +199,13 @@ public class ChatDetailFragment extends Fragment {
             updateHeaderStatusUi(false);
         }
 
+        ImageButton btnEditGroup = view.findViewById(R.id.btn_chat_edit_group);
+        if (mIsGroup) {
+            btnEditGroup.setVisibility(View.VISIBLE);
+            btnEditGroup.setOnClickListener(v -> showGroupHeaderOptions(v));
+        } else {
+            btnEditGroup.setVisibility(View.GONE);
+        }
         view.findViewById(R.id.btn_chat_call).setOnClickListener(v -> startVoiceCall());
 
         FirebaseUser user = FirebaseAuth.getInstance().getCurrentUser();
@@ -196,7 +216,12 @@ public class ChatDetailFragment extends Fragment {
         }
         mMyUid = user.getUid();
 
-        messagesAdapter = new ChatMessagesAdapter(mMyUid, mIsGroup ? null : peerAvatar);
+        messagesAdapter = new ChatMessagesAdapter(
+                mMyUid,
+                mIsGroup ? null : peerAvatar,
+                mPeerUid,
+                mIsGroup
+        );
         recyclerView = view.findViewById(R.id.chat_messages_list);
         layoutManager = new LinearLayoutManager(requireContext());
         layoutManager.setStackFromEnd(true);
@@ -260,6 +285,21 @@ public class ChatDetailFragment extends Fragment {
         if (!mIsGroup) {
             listenPeerActiveStatus();
         }
+
+        StoryViewModel storyVm = new ViewModelProvider(requireActivity()).get(StoryViewModel.class);
+        storyVm.getStories().observe(getViewLifecycleOwner(), this::onStoriesForRingsUpdated);
+    }
+
+    private void onStoriesForRingsUpdated(@Nullable List<Story> stories) {
+        if (messagesAdapter != null) {
+            messagesAdapter.setStoriesForRings(stories);
+        }
+        if (mIsGroup || mPeerUid == null || mPeerUid.isEmpty()) {
+            StoryRingUi.apply(headerStoryRing, StoryRingUi.Tone.NONE, 40f);
+        } else {
+            StoryRingUi.Tone tone = StoryRingUi.toneForUser(mPeerUid, stories, mMyUid);
+            StoryRingUi.apply(headerStoryRing, tone, 40f);
+        }
     }
 
     private void startVoiceCall() {
@@ -285,11 +325,53 @@ public class ChatDetailFragment extends Fragment {
                 callerName = getString(R.string.unknown_user);
             }
         }
+        final String callerDisplay = callerName.trim();
         VoiceCallRepository voiceRepo = new VoiceCallRepository();
+        if (mIsGroup) {
+            voiceRepo.loadGroupMemberUids(mConversationId).continueWithTask(task -> {
+                if (!task.isSuccessful()) {
+                    Exception ex = task.getException();
+                    throw ex != null ? ex : new IllegalStateException("load members failed");
+                }
+                List<String> membersRaw = task.getResult();
+                List<String> membersList = membersRaw != null ? membersRaw : Collections.emptyList();
+                if (membersList.size() > VoiceCallRepository.MAX_GROUP_VOICE_MEMBERS) {
+                    throw new IllegalStateException("too many members");
+                }
+                String groupTitle = mPeerName != null ? mPeerName : "";
+                return voiceRepo.startGroupVoiceCall(
+                        user.getUid(),
+                        callerDisplay,
+                        null,
+                        mConversationId,
+                        groupTitle,
+                        membersList
+                );
+            }).addOnFailureListener(e -> {
+                if (!isAdded()) {
+                    return;
+                }
+                String msg = e != null && e.getMessage() != null ? e.getMessage() : "";
+                if (msg.contains("too many")) {
+                    Toast.makeText(
+                            requireContext(),
+                            getString(R.string.call_group_too_many_members, VoiceCallRepository.MAX_GROUP_VOICE_MEMBERS),
+                            Toast.LENGTH_LONG
+                    ).show();
+                } else {
+                    Toast.makeText(
+                            requireContext(),
+                            R.string.call_start_failed,
+                            Toast.LENGTH_SHORT
+                    ).show();
+                }
+            });
+            return;
+        }
         voiceRepo.startOutgoingCall(
                 user.getUid(),
                 mPeerUid,
-                callerName.trim(),
+                callerDisplay,
                 null,
                 mPeerName,
                 mPeerAvatarUrl,
@@ -646,6 +728,70 @@ public class ChatDetailFragment extends Fragment {
                 Toast.makeText(requireContext(), R.string.call_need_mic_permission, Toast.LENGTH_LONG).show();
             }
         }
+    }
+
+    private void showGroupHeaderOptions(@NonNull View anchor) {
+        PopupMenu pm = new PopupMenu(requireContext(), anchor);
+        pm.inflate(R.menu.menu_chat_group_header);
+        pm.setOnMenuItemClickListener(item -> {
+            if (item.getItemId() == R.id.action_rename_group) {
+                showRenameGroupDialog();
+                return true;
+            }
+            return false;
+        });
+        pm.show();
+    }
+
+    private void showRenameGroupDialog() {
+        View dialogView = LayoutInflater.from(requireContext()).inflate(R.layout.dialog_rename_group, null);
+        TextInputEditText input = dialogView.findViewById(R.id.rename_group_input);
+        if (input != null) {
+            String current = mPeerName != null ? mPeerName : "";
+            input.setText(current);
+            input.setSelection(current.length());
+        }
+        MaterialAlertDialogBuilder builder = new MaterialAlertDialogBuilder(requireContext());
+        builder.setView(dialogView);
+        AlertDialog dialog = builder.create();
+        MaterialButton btnUpdate = dialogView.findViewById(R.id.rename_group_btn_update);
+        btnUpdate.setOnClickListener(v -> {
+            if (input == null) {
+                return;
+            }
+            String name = input.getText() != null ? input.getText().toString().trim() : "";
+            if (name.isEmpty()) {
+                Toast.makeText(requireContext(), R.string.group_chat_rename_empty, Toast.LENGTH_SHORT).show();
+                return;
+            }
+            btnUpdate.setEnabled(false);
+            repository.updateGroupConversationName(mConversationId, name)
+                    .addOnCompleteListener(task -> {
+                        btnUpdate.setEnabled(true);
+                        if (!isAdded()) {
+                            return;
+                        }
+                        if (task.isSuccessful()) {
+                            mPeerName = name;
+                            if (chatHeaderTitle != null) {
+                                chatHeaderTitle.setText(name);
+                            }
+                            dialog.dismiss();
+                            Toast.makeText(
+                                    requireContext(),
+                                    R.string.group_chat_rename_success,
+                                    Toast.LENGTH_SHORT
+                            ).show();
+                        } else {
+                            Toast.makeText(
+                                    requireContext(),
+                                    R.string.group_chat_rename_failed,
+                                    Toast.LENGTH_SHORT
+                            ).show();
+                        }
+                    });
+        });
+        dialog.show();
     }
 
     private final class GalleryImagesAdapter extends RecyclerView.Adapter<GalleryImagesAdapter.ImageVH> {

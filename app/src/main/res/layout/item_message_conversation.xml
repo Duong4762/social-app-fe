@@ -14,15 +14,27 @@
         android:layout_height="wrap_content"
         android:orientation="horizontal">
 
-        <com.google.android.material.imageview.ShapeableImageView
-            android:id="@+id/conversation_avatar"
-            android:layout_width="52dp"
-            android:layout_height="52dp"
-            android:background="@color/avatar_background"
-            android:contentDescription="@string/user_avatar"
-            android:scaleType="centerCrop"
-            android:src="@drawable/avatar_placeholder"
-            app:shapeAppearanceOverlay="@style/ShapeAppearanceOverlay.SocialApp.Circle" />
+        <FrameLayout
+            android:layout_width="56dp"
+            android:layout_height="56dp">
+
+            <View
+                android:id="@+id/conversation_story_ring"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:visibility="gone" />
+
+            <com.google.android.material.imageview.ShapeableImageView
+                android:id="@+id/conversation_avatar"
+                android:layout_width="52dp"
+                android:layout_height="52dp"
+                android:layout_gravity="center"
+                android:background="@color/avatar_background"
+                android:contentDescription="@string/user_avatar"
+                android:scaleType="centerCrop"
+                android:src="@drawable/avatar_placeholder"
+                app:shapeAppearanceOverlay="@style/ShapeAppearanceOverlay.SocialApp.Circle" />
+        </FrameLayout>
 
         <LinearLayout
             android:layout_width="0dp"

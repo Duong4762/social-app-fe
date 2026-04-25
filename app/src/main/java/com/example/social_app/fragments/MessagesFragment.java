@@ -12,6 +12,7 @@ import android.widget.Toast;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.fragment.app.Fragment;
+import androidx.lifecycle.ViewModelProvider;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
@@ -19,6 +20,7 @@ import com.example.social_app.MainActivity;
 import com.example.social_app.R;
 import com.example.social_app.adapters.MessagesConversationAdapter;
 import com.example.social_app.repository.ConversationRepository;
+import com.example.social_app.viewmodels.StoryViewModel;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseUser;
 import com.google.firebase.firestore.ListenerRegistration;
@@ -89,6 +91,10 @@ public class MessagesFragment extends Fragment {
         }
 
         startListening(user.getUid(), conversationsAdapter);
+
+        StoryViewModel storyVm = new ViewModelProvider(requireActivity()).get(StoryViewModel.class);
+        storyVm.getStories().observe(getViewLifecycleOwner(), stories ->
+                conversationsAdapter.setStoriesForRings(stories, user.getUid()));
     }
 
     /**

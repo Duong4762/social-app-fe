@@ -1,9 +1,15 @@
 package com.example.social_app.data.model;
 
+import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 
+import com.google.firebase.firestore.Exclude;
+
+import java.util.Collections;
+import java.util.List;
+
 /**
- * Document {@code voice_calls/{callId}} — tín hiệu cuộc gọi giữa hai user.
+ * Document {@code voice_calls/{callId}} — gọi 1-1 hoặc gọi nhóm (mesh).
  */
 public class VoiceCallSession {
 
@@ -27,6 +33,68 @@ public class VoiceCallSession {
     /** SDP answer (callee) — WebRTC. */
     @Nullable
     private String sdpAnswer;
+
+    /** Gọi nhóm: true. */
+    @Nullable
+    private Boolean groupCall;
+    @Nullable
+    private String groupDisplayName;
+    @Nullable
+    private String groupConversationId;
+    @Nullable
+    private List<String> groupMemberIds;
+    @Nullable
+    private List<String> joinedMemberIds;
+
+    @Exclude
+    public boolean isGroupCall() {
+        return Boolean.TRUE.equals(groupCall);
+    }
+
+    @Nullable
+    public Boolean getGroupCall() {
+        return groupCall;
+    }
+
+    public void setGroupCall(@Nullable Boolean groupCall) {
+        this.groupCall = groupCall;
+    }
+
+    @Nullable
+    public String getGroupDisplayName() {
+        return groupDisplayName;
+    }
+
+    public void setGroupDisplayName(@Nullable String groupDisplayName) {
+        this.groupDisplayName = groupDisplayName;
+    }
+
+    @Nullable
+    public String getGroupConversationId() {
+        return groupConversationId;
+    }
+
+    public void setGroupConversationId(@Nullable String groupConversationId) {
+        this.groupConversationId = groupConversationId;
+    }
+
+    @NonNull
+    public List<String> getGroupMemberIds() {
+        return groupMemberIds != null ? groupMemberIds : Collections.emptyList();
+    }
+
+    public void setGroupMemberIds(@Nullable List<String> groupMemberIds) {
+        this.groupMemberIds = groupMemberIds;
+    }
+
+    @NonNull
+    public List<String> getJoinedMemberIds() {
+        return joinedMemberIds != null ? joinedMemberIds : Collections.emptyList();
+    }
+
+    public void setJoinedMemberIds(@Nullable List<String> joinedMemberIds) {
+        this.joinedMemberIds = joinedMemberIds;
+    }
 
     public String getCallerId() {
         return callerId;

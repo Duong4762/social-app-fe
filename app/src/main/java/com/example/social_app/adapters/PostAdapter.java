@@ -19,21 +19,25 @@ import android.widget.VideoView;
 import android.widget.Toast;
 
 import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
 import androidx.recyclerview.widget.RecyclerView;
 import androidx.constraintlayout.widget.ConstraintLayout;
 
 import com.bumptech.glide.Glide;
 import com.example.social_app.R;
 import com.example.social_app.data.model.PostMedia;
+import com.example.social_app.data.model.Story;
 import com.example.social_app.data.model.User;
 import com.example.social_app.data.model.Post;
 import com.example.social_app.firebase.FirebaseManager;
 import com.example.social_app.utils.MockDataGenerator;
+import com.example.social_app.utils.StoryRingUi;
 import com.example.social_app.utils.UserAvatarLoader;
 import com.google.firebase.firestore.FirebaseFirestore;
 import com.google.firebase.firestore.ListenerRegistration;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
@@ -49,6 +53,7 @@ public class PostAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
     private final Set<String> likedPostIds = new HashSet<>();
     private String currentUserAvatarUrl;
     private boolean useSearchLayout = false;
+    private List<Story> storiesForAvatarRings = Collections.emptyList();
 
     public interface OnPostActionListener {
         void onUserClicked(String userId);
@@ -90,6 +95,11 @@ public class PostAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
     public void setCurrentUserAvatarUrl(String avatarUrl) {
         this.currentUserAvatarUrl = avatarUrl;
         notifyItemChanged(0);
+    }
+
+    public void setStoriesForAvatarRings(@Nullable List<Story> stories) {
+        this.storiesForAvatarRings = stories != null ? stories : Collections.emptyList();
+        notifyDataSetChanged();
     }
 
     public void setUseSearchLayout(boolean useSearchLayout) {
@@ -156,12 +166,14 @@ public class PostAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
 
     private class ComposerViewHolder extends RecyclerView.ViewHolder {
         private ImageView composerAvatar;
+        private View composerStoryRing;
         private com.google.android.material.button.MaterialButton composerInput;
         private ImageButton composerImageBtn;
 
         ComposerViewHolder(@NonNull View itemView) {
             super(itemView);
             composerAvatar = itemView.findViewById(R.id.composer_avatar);
+            composerStoryRing = itemView.findViewById(R.id.composer_story_ring);
             composerInput = itemView.findViewById(R.id.composer_input);
             composerImageBtn = itemView.findViewById(R.id.composer_image_btn);
 
@@ -180,11 +192,15 @@ public class PostAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
 
         void bind() {
             UserAvatarLoader.load(composerAvatar, currentUserAvatarUrl);
+            String uid = FirebaseManager.getInstance().getAuth().getUid();
+            StoryRingUi.Tone tone = StoryRingUi.toneForUser(uid, storiesForAvatarRings, uid);
+            StoryRingUi.apply(composerStoryRing, tone, 44f);
         }
     }
 
     private class PostViewHolder extends RecyclerView.ViewHolder {
         private ImageView userAvatar;
+        private View userStoryRing;
         private TextView username;
         private TextView timestamp;
         private TextView postContent;
@@ -203,6 +219,7 @@ public class PostAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
         PostViewHolder(@NonNull View itemView) {
             super(itemView);
             userAvatar = itemView.findViewById(R.id.post_user_avatar);
+            userStoryRing = itemView.findViewById(R.id.post_user_story_ring);
             username = itemView.findViewById(R.id.post_username);
             timestamp = itemView.findViewById(R.id.post_timestamp);
             postContent = itemView.findViewById(R.id.post_content);
@@ -221,12 +238,20 @@ public class PostAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
             this.boundPosition = position;
 
             // Set user info
+            String viewerId = FirebaseManager.getInstance().getAuth().getUid();
             User postUser = MockDataGenerator.getUserById(post.getUserId());
             if (postUser != null) {
                 username.setText(postUser.getFullName());
                 UserAvatarLoader.load(userAvatar, postUser.getAvatarUrl());
+                StoryRingUi.Tone tone = StoryRingUi.toneForUser(
+                        post.getUserId(),
+                        storiesForAvatarRings,
+                        viewerId
+                );
+                StoryRingUi.apply(userStoryRing, tone, 48f);
             } else {
                 username.setText("Loading...");
+                StoryRingUi.apply(userStoryRing, StoryRingUi.Tone.NONE, 48f);
                 FirebaseFirestore.getInstance().collection(FirebaseManager.COLLECTION_USERS)
                         .document(post.getUserId())
                         .get()
@@ -236,14 +261,22 @@ public class PostAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
                                 String avatar = documentSnapshot.getString("avatarUrl");
                                 username.setText(name != null ? name : "Unknown User");
                                 UserAvatarLoader.load(userAvatar, avatar);
+                                StoryRingUi.Tone tone = StoryRingUi.toneForUser(
+                                        post.getUserId(),
+                                        storiesForAvatarRings,
+                                        viewerId
+                                );
+                                StoryRingUi.apply(userStoryRing, tone, 48f);
                             } else {
                                 username.setText("Unknown User");
                                 UserAvatarLoader.load(userAvatar, null);
+                                StoryRingUi.apply(userStoryRing, StoryRingUi.Tone.NONE, 48f);
                             }
                         })
                         .addOnFailureListener(e -> {
                             username.setText("Unknown User");
                             UserAvatarLoader.load(userAvatar, null);
+                            StoryRingUi.apply(userStoryRing, StoryRingUi.Tone.NONE, 48f);
                         });
             }
 

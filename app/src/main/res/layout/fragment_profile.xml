@@ -18,20 +18,33 @@
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="parent" />
 
-    <ImageView
-        android:id="@+id/imgAvatar"
-        android:layout_width="84dp"
-        android:layout_height="84dp"
+    <FrameLayout
+        android:id="@+id/profile_avatar_frame"
+        android:layout_width="88dp"
+        android:layout_height="88dp"
         android:layout_marginTop="16dp"
         android:layout_marginEnd="16dp"
-        android:background="@drawable/bg_avatar_circle_plain"
-        android:clipToOutline="true"
-        android:contentDescription="@string/user_avatar"
-        android:outlineProvider="background"
-        android:scaleType="centerCrop"
-        android:src="@drawable/avatar_placeholder"
         app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintTop_toBottomOf="@id/tvUsernameTop" />
+        app:layout_constraintTop_toBottomOf="@id/tvUsernameTop">
+
+        <View
+            android:id="@+id/profile_story_ring"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:visibility="gone" />
+
+        <ImageView
+            android:id="@+id/imgAvatar"
+            android:layout_width="84dp"
+            android:layout_height="84dp"
+            android:layout_gravity="center"
+            android:background="@drawable/bg_avatar_circle_plain"
+            android:clipToOutline="true"
+            android:contentDescription="@string/user_avatar"
+            android:outlineProvider="background"
+            android:scaleType="centerCrop"
+            android:src="@drawable/avatar_placeholder" />
+    </FrameLayout>
 
     <TextView
         android:id="@+id/tvChangeAvatar"
@@ -41,9 +54,9 @@
         android:text="@string/profile_change_avatar"
         android:textColor="@color/primary_blue"
         android:textStyle="bold"
-        app:layout_constraintEnd_toEndOf="@id/imgAvatar"
-        app:layout_constraintStart_toStartOf="@id/imgAvatar"
-        app:layout_constraintTop_toBottomOf="@id/imgAvatar" />
+        app:layout_constraintEnd_toEndOf="@id/profile_avatar_frame"
+        app:layout_constraintStart_toStartOf="@id/profile_avatar_frame"
+        app:layout_constraintTop_toBottomOf="@id/profile_avatar_frame" />
 
     <TextView
         android:id="@+id/tvName"
@@ -55,9 +68,9 @@
         android:textColor="?attr/colorOnSurface"
         android:textSize="22sp"
         android:textStyle="bold"
-        app:layout_constraintEnd_toStartOf="@id/imgAvatar"
+        app:layout_constraintEnd_toStartOf="@id/profile_avatar_frame"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toTopOf="@id/imgAvatar" />
+        app:layout_constraintTop_toTopOf="@id/profile_avatar_frame" />
 
     <TextView
         android:id="@+id/tvHandle"

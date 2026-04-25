@@ -13,42 +13,114 @@
         android:layout_width="match_parent"
         android:layout_height="match_parent">
 
-        <com.google.android.material.imageview.ShapeableImageView
-            android:id="@+id/call_peer_avatar"
-            android:layout_width="120dp"
-            android:layout_height="120dp"
-            android:background="@color/avatar_background"
-            android:scaleType="centerCrop"
-            android:src="@drawable/avatar_placeholder"
+        <org.webrtc.SurfaceViewRenderer
+            android:id="@+id/call_remote_video"
+            android:layout_width="0dp"
+            android:layout_height="0dp"
+            android:visibility="gone"
+            app:layout_constraintBottom_toBottomOf="parent"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toTopOf="parent" />
+
+        <org.webrtc.SurfaceViewRenderer
+            android:id="@+id/call_local_pip"
+            android:layout_width="112dp"
+            android:layout_height="112dp"
+            android:layout_marginTop="52dp"
+            android:layout_marginEnd="14dp"
+            android:visibility="gone"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintTop_toTopOf="parent" />
+
+        <LinearLayout
+            android:id="@+id/call_single_peer_block"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:gravity="center_horizontal"
+            android:orientation="vertical"
             app:layout_constraintBottom_toBottomOf="parent"
             app:layout_constraintEnd_toEndOf="parent"
             app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintTop_toTopOf="parent"
-            app:layout_constraintVertical_bias="0.38"
-            app:shapeAppearanceOverlay="@style/ShapeAppearanceOverlay.SocialApp.Circle" />
+            app:layout_constraintVertical_bias="0.32"
+            app:layout_constraintWidth_max="400dp">
 
-        <TextView
-            android:id="@+id/call_peer_name"
+            <com.google.android.material.imageview.ShapeableImageView
+                android:id="@+id/call_peer_avatar"
+                android:layout_width="120dp"
+                android:layout_height="120dp"
+                android:background="@color/avatar_background"
+                android:scaleType="centerCrop"
+                android:src="@drawable/avatar_placeholder"
+                app:shapeAppearanceOverlay="@style/ShapeAppearanceOverlay.SocialApp.Circle" />
+
+            <TextView
+                android:id="@+id/call_peer_name"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="16dp"
+                android:gravity="center"
+                android:textColor="@android:color/white"
+                android:textSize="22sp"
+                android:textStyle="bold"
+                tools:text="Người dùng" />
+        </LinearLayout>
+
+        <LinearLayout
+            android:id="@+id/call_group_header"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
-            android:layout_marginStart="24dp"
-            android:layout_marginTop="16dp"
-            android:layout_marginEnd="24dp"
-            android:gravity="center"
-            android:textColor="@android:color/white"
-            android:textSize="22sp"
-            android:textStyle="bold"
+            android:gravity="center_vertical"
+            android:orientation="horizontal"
+            android:paddingStart="24dp"
+            android:paddingEnd="24dp"
+            android:visibility="gone"
+            app:layout_constraintBottom_toBottomOf="parent"
             app:layout_constraintEnd_toEndOf="parent"
             app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintTop_toBottomOf="@id/call_peer_avatar"
-            tools:text="Người dùng" />
+            app:layout_constraintTop_toTopOf="parent"
+            app:layout_constraintVertical_bias="0.28"
+            app:layout_constraintWidth_max="400dp"
+            tools:visibility="visible">
+
+            <com.google.android.material.imageview.ShapeableImageView
+                android:id="@+id/call_group_icon"
+                android:layout_width="72dp"
+                android:layout_height="72dp"
+                android:background="@color/avatar_background"
+                android:padding="14dp"
+                android:scaleType="centerInside"
+                android:src="@drawable/ic_group_chat"
+                app:shapeAppearanceOverlay="@style/ShapeAppearanceOverlay.SocialApp.Circle" />
+
+            <TextView
+                android:id="@+id/call_group_name"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="16dp"
+                android:layout_weight="1"
+                android:ellipsize="end"
+                android:maxLines="2"
+                android:textColor="@android:color/white"
+                android:textSize="22sp"
+                android:textStyle="bold"
+                tools:text="Nhóm ABC" />
+        </LinearLayout>
+
+        <androidx.constraintlayout.widget.Barrier
+            android:id="@+id/call_peer_header_barrier"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            app:barrierDirection="bottom"
+            app:constraint_referenced_ids="call_single_peer_block,call_group_header" />
 
         <TextView
             android:id="@+id/call_status_text"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_marginStart="24dp"
-            android:layout_marginTop="8dp"
+            android:layout_marginTop="12dp"
             android:layout_marginEnd="24dp"
             android:alpha="0.85"
             android:gravity="center"
@@ -56,16 +128,46 @@
             android:textSize="15sp"
             app:layout_constraintEnd_toEndOf="parent"
             app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintTop_toBottomOf="@id/call_peer_name"
+            app:layout_constraintTop_toBottomOf="@id/call_peer_header_barrier"
             tools:text="Đang chờ…" />
+
+        <androidx.recyclerview.widget.RecyclerView
+            android:id="@+id/call_participant_grid"
+            android:layout_width="0dp"
+            android:layout_height="0dp"
+            android:layout_marginStart="12dp"
+            android:layout_marginTop="12dp"
+            android:layout_marginEnd="12dp"
+            android:clipToPadding="false"
+            android:overScrollMode="never"
+            android:paddingBottom="8dp"
+            android:visibility="gone"
+            app:layout_constraintBottom_toTopOf="@id/call_controls_top_barrier"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toBottomOf="@id/call_status_text"
+            tools:listitem="@layout/item_call_participant_cell"
+            tools:visibility="visible" />
+
+        <androidx.constraintlayout.widget.Barrier
+            android:id="@+id/call_controls_top_barrier"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            app:barrierDirection="top"
+            app:constraint_referenced_ids="call_row_incoming_actions,call_row_active_controls" />
 
         <LinearLayout
             android:id="@+id/call_row_incoming_actions"
-            android:layout_width="wrap_content"
+            android:layout_width="0dp"
             android:layout_height="wrap_content"
-            android:layout_marginBottom="48dp"
-            android:gravity="center"
+            android:layout_marginStart="16dp"
+            android:layout_marginEnd="16dp"
+            android:layout_marginBottom="44dp"
+            android:elevation="12dp"
+            android:gravity="center_vertical"
             android:orientation="horizontal"
+            android:paddingStart="8dp"
+            android:paddingEnd="8dp"
             android:visibility="gone"
             app:layout_constraintBottom_toBottomOf="parent"
             app:layout_constraintEnd_toEndOf="parent"
@@ -74,9 +176,10 @@
             <com.google.android.material.button.MaterialButton
                 android:id="@+id/call_btn_accept"
                 style="@style/Widget.MaterialComponents.Button.UnelevatedButton"
-                android:layout_width="wrap_content"
+                android:layout_width="0dp"
                 android:layout_height="56dp"
                 android:layout_marginEnd="20dp"
+                android:layout_weight="1"
                 android:minWidth="140dp"
                 android:text="@string/call_accept"
                 android:textAllCaps="false"
@@ -88,9 +191,10 @@
             <com.google.android.material.button.MaterialButton
                 android:id="@+id/call_btn_decline"
                 style="@style/Widget.MaterialComponents.Button.UnelevatedButton"
-                android:layout_width="wrap_content"
+                android:layout_width="0dp"
                 android:layout_height="56dp"
                 android:layout_marginStart="20dp"
+                android:layout_weight="1"
                 android:minWidth="140dp"
                 android:text="@string/call_decline"
                 android:textAllCaps="false"
@@ -100,39 +204,88 @@
                 app:cornerRadius="28dp" />
         </LinearLayout>
 
-        <LinearLayout
+        <androidx.constraintlayout.widget.ConstraintLayout
             android:id="@+id/call_row_active_controls"
-            android:layout_width="wrap_content"
+            android:layout_width="0dp"
             android:layout_height="wrap_content"
-            android:layout_marginBottom="56dp"
-            android:gravity="center_vertical"
-            android:orientation="horizontal"
+            android:layout_marginStart="12dp"
+            android:layout_marginEnd="12dp"
+            android:layout_marginBottom="44dp"
+            android:elevation="12dp"
             android:visibility="gone"
             app:layout_constraintBottom_toBottomOf="parent"
             app:layout_constraintEnd_toEndOf="parent"
             app:layout_constraintStart_toStartOf="parent">
 
             <ImageButton
+                android:id="@+id/call_btn_camera"
+                android:layout_width="0dp"
+                android:layout_height="0dp"
+                android:background="@drawable/bg_call_speaker_circle"
+                android:contentDescription="@string/call_toggle_camera"
+                android:padding="12dp"
+                android:scaleType="centerInside"
+                android:src="@drawable/ic_camera"
+                app:layout_constraintBottom_toBottomOf="parent"
+                app:layout_constraintDimensionRatio="1:1"
+                app:layout_constraintEnd_toStartOf="@id/call_btn_switch_camera"
+                app:layout_constraintHorizontal_chainStyle="spread_inside"
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintTop_toTopOf="parent"
+                app:layout_constraintWidth_default="percent"
+                app:layout_constraintWidth_percent="0.15"
+                app:tint="@android:color/white" />
+
+            <ImageButton
+                android:id="@+id/call_btn_switch_camera"
+                android:layout_width="0dp"
+                android:layout_height="0dp"
+                android:background="@drawable/bg_call_speaker_circle"
+                android:contentDescription="@string/call_switch_camera"
+                android:padding="12dp"
+                android:scaleType="centerInside"
+                android:src="@drawable/ic_switch_camera"
+                app:layout_constraintBottom_toBottomOf="parent"
+                app:layout_constraintDimensionRatio="1:1"
+                app:layout_constraintEnd_toStartOf="@id/call_btn_speaker"
+                app:layout_constraintStart_toEndOf="@id/call_btn_camera"
+                app:layout_constraintTop_toTopOf="parent"
+                app:layout_constraintWidth_default="percent"
+                app:layout_constraintWidth_percent="0.15" />
+
+            <ImageButton
                 android:id="@+id/call_btn_speaker"
-                android:layout_width="64dp"
-                android:layout_height="64dp"
-                android:layout_marginEnd="48dp"
+                android:layout_width="0dp"
+                android:layout_height="0dp"
                 android:background="@drawable/bg_call_speaker_circle"
                 android:contentDescription="@string/call_speaker"
-                android:padding="16dp"
+                android:padding="12dp"
                 android:scaleType="centerInside"
-                android:src="@drawable/ic_call_speaker" />
+                android:src="@drawable/ic_call_speaker"
+                app:layout_constraintBottom_toBottomOf="parent"
+                app:layout_constraintDimensionRatio="1:1"
+                app:layout_constraintEnd_toStartOf="@id/call_btn_hangup"
+                app:layout_constraintStart_toEndOf="@id/call_btn_switch_camera"
+                app:layout_constraintTop_toTopOf="parent"
+                app:layout_constraintWidth_default="percent"
+                app:layout_constraintWidth_percent="0.15" />
 
             <ImageButton
                 android:id="@+id/call_btn_hangup"
-                android:layout_width="72dp"
-                android:layout_height="72dp"
-                android:layout_marginStart="48dp"
+                android:layout_width="0dp"
+                android:layout_height="0dp"
                 android:background="@drawable/bg_call_end_circle"
                 android:contentDescription="@string/call_hangup"
-                android:padding="18dp"
+                android:padding="12dp"
                 android:scaleType="centerInside"
-                android:src="@drawable/ic_call_phone_white" />
-        </LinearLayout>
+                android:src="@drawable/ic_call_phone_white"
+                app:layout_constraintBottom_toBottomOf="parent"
+                app:layout_constraintDimensionRatio="1:1"
+                app:layout_constraintEnd_toEndOf="parent"
+                app:layout_constraintStart_toEndOf="@id/call_btn_speaker"
+                app:layout_constraintTop_toTopOf="parent"
+                app:layout_constraintWidth_default="percent"
+                app:layout_constraintWidth_percent="0.15" />
+        </androidx.constraintlayout.widget.ConstraintLayout>
     </androidx.constraintlayout.widget.ConstraintLayout>
 </FrameLayout>

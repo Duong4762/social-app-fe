@@ -40,6 +40,7 @@ import com.example.social_app.viewmodels.NewPostViewModel;
 import com.example.social_app.viewmodels.StoryViewModel;
 import com.google.android.material.imageview.ShapeableImageView;
 
+import java.util.ArrayList;
 import java.util.List;
 
 public class HomeFragment extends Fragment implements PostAdapter.OnPostActionListener {
@@ -97,7 +98,7 @@ public class HomeFragment extends Fragment implements PostAdapter.OnPostActionLi
 
         newPostViewModel = new ViewModelProvider(this).get(NewPostViewModel.class);
         homeViewModel = new ViewModelProvider(this).get(HomeViewModel.class);
-        storyViewModel = new ViewModelProvider(this).get(StoryViewModel.class);
+        storyViewModel = new ViewModelProvider(requireActivity()).get(StoryViewModel.class);
 
         setupObservers();
         setupStoryPickerLaunchers();
@@ -155,8 +156,12 @@ public class HomeFragment extends Fragment implements PostAdapter.OnPostActionLi
         storyRecyclerView.setLayoutManager(new LinearLayoutManager(requireContext(), LinearLayoutManager.HORIZONTAL, false));
         storyAdapter = new StoryAdapter(requireContext(), new StoryAdapter.OnStoryClickListener() {
             @Override
-            public void onStoryClick(Story story, User user) {
-                StoryDetailFragment fragment = StoryDetailFragment.newInstance(story, user);
+            public void onStoryClick(@NonNull List<Story> storiesForUser, @NonNull User user) {
+                StoryDetailFragment fragment = StoryDetailFragment.newInstance(
+                        new ArrayList<>(storiesForUser),
+                        user,
+                        0
+                );
                 fragment.show(getParentFragmentManager(), "story_detail");
             }
 
@@ -170,6 +175,9 @@ public class HomeFragment extends Fragment implements PostAdapter.OnPostActionLi
         storyViewModel.getStories().observe(getViewLifecycleOwner(), stories -> {
             if (storyAdapter != null) {
                 storyAdapter.setStories(stories);
+            }
+            if (postAdapter != null) {
+                postAdapter.setStoriesForAvatarRings(stories);
             }
         });
         storyViewModel.loadStories();

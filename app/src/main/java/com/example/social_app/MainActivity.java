@@ -20,6 +20,7 @@ import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
 import androidx.fragment.app.Fragment;
 import androidx.fragment.app.FragmentManager;
+import androidx.lifecycle.ViewModelProvider;
 import androidx.recyclerview.widget.RecyclerView;
 
 import com.example.social_app.firebase.FirebaseManager;
@@ -34,6 +35,7 @@ import com.example.social_app.fragments.ProfileFragment;
 import com.example.social_app.fragments.MessagesFragment;
 import com.example.social_app.fragments.SettingsFragment;
 import com.example.social_app.utils.LanguageUtils;
+import com.example.social_app.viewmodels.StoryViewModel;
 import com.bumptech.glide.Glide;
 import com.bumptech.glide.request.target.CustomTarget;
 import com.bumptech.glide.request.transition.Transition;
@@ -110,6 +112,10 @@ public class MainActivity extends BaseActivity {
             reloadMessagesListIfReturnedFromChatOverlay();
         });
 
+        StoryViewModel storyViewModel = new ViewModelProvider(this).get(StoryViewModel.class);
+        storyViewModel.loadStories();
+        storyViewModel.cleanExpiredStories();
+
         // Load home fragment by default
         if (savedInstanceState == null) {
             HomeFragment homeFragment = new HomeFragment();
@@ -146,7 +152,7 @@ public class MainActivity extends BaseActivity {
         }
         fragmentManager.beginTransaction()
                 .add(R.id.call_overlay_host, new CallOverlayFragment())
-                .commit();
+                .commitNow();
     }
 
     @Override

@@ -696,6 +696,22 @@ public class ConversationRepository {
     }
 
     /**
+     * Cập nhật tên hiển thị của nhóm chat ({@code conversations.name}).
+     */
+    @NonNull
+    public Task<Void> updateGroupConversationName(
+            @NonNull String conversationId,
+            @Nullable String newDisplayName) {
+        String trimmed = newDisplayName != null ? newDisplayName.trim() : "";
+        Map<String, Object> patch = new HashMap<>();
+        patch.put("name", trimmed.isEmpty() ? null : trimmed);
+        patch.put("updatedAt", FieldValue.serverTimestamp());
+        return db.collection(FirebaseManager.COLLECTION_CONVERSATIONS)
+                .document(conversationId)
+                .update(patch);
+    }
+
+    /**
      * Gửi tin nhắn chữ trong nhóm (không tạo hội thoại 1-1).
      */
     @NonNull

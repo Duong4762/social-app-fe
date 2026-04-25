@@ -14,6 +14,8 @@ import androidx.recyclerview.widget.RecyclerView;
 import com.bumptech.glide.Glide;
 import com.example.social_app.R;
 import com.example.social_app.data.model.Message;
+import com.example.social_app.data.model.Story;
+import com.example.social_app.utils.StoryRingUi;
 import com.example.social_app.utils.UserAvatarLoader;
 
 import java.text.SimpleDateFormat;
@@ -35,16 +37,26 @@ public class ChatMessagesAdapter extends RecyclerView.Adapter<RecyclerView.ViewH
     private static final int TYPE_OUT = 2;
 
     private final String currentUserId;
+    private final String peerUserId;
+    private final boolean isGroupChat;
     private String peerAvatarUrl;
+    private List<Story> storiesForRings = Collections.emptyList();
     /** ID tin nhắn mà đối phương đã đọc (từ {@code message_reads}). */
     private Set<String> peerReadMessageIds = Collections.emptySet();
     private final List<Row> rows = new ArrayList<>();
     private final SimpleDateFormat timeFormat;
     private final SimpleDateFormat dateFormat;
 
-    public ChatMessagesAdapter(@NonNull String currentUserId, @Nullable String peerAvatarUrl) {
+    public ChatMessagesAdapter(
+            @NonNull String currentUserId,
+            @Nullable String peerAvatarUrl,
+            @NonNull String peerUserId,
+            boolean isGroupChat
+    ) {
         this.currentUserId = currentUserId;
         this.peerAvatarUrl = peerAvatarUrl;
+        this.peerUserId = peerUserId != null ? peerUserId : "";
+        this.isGroupChat = isGroupChat;
         Locale loc = Locale.getDefault();
         this.timeFormat = new SimpleDateFormat("h:mm a", loc);
         this.dateFormat = new SimpleDateFormat("MMM d, yyyy", loc);
@@ -52,6 +64,11 @@ public class ChatMessagesAdapter extends RecyclerView.Adapter<RecyclerView.ViewH
 
     public void setPeerAvatarUrl(String peerAvatarUrl) {
         this.peerAvatarUrl = peerAvatarUrl;
+    }
+
+    public void setStoriesForRings(@Nullable List<Story> stories) {
+        this.storiesForRings = stories != null ? stories : Collections.emptyList();
+        notifyDataSetChanged();
     }
 
     public void submitMessages(
@@ -151,7 +168,15 @@ public class ChatMessagesAdapter extends RecyclerView.Adapter<RecyclerView.ViewH
         if (holder instanceof DateVH) {
             ((DateVH) holder).bind(row.dateLabel);
         } else if (holder instanceof InVH) {
-            ((InVH) holder).bind(row.message, timeFormat, peerAvatarUrl);
+            ((InVH) holder).bind(
+                    row.message,
+                    timeFormat,
+                    peerAvatarUrl,
+                    isGroupChat,
+                    peerUserId,
+                    storiesForRings,
+                    currentUserId
+            );
         } else if (holder instanceof OutVH) {
             ((OutVH) holder).bind(row.message, timeFormat, peerReadMessageIds);
         }
@@ -201,6 +226,7 @@ public class ChatMessagesAdapter extends RecyclerView.Adapter<RecyclerView.ViewH
 
     static final class InVH extends RecyclerView.ViewHolder {
         final ImageView avatar;
+        final View storyRing;
         final TextView bubble;
         final ImageView image;
         final TextView time;
@@ -208,12 +234,21 @@ public class ChatMessagesAdapter extends RecyclerView.Adapter<RecyclerView.ViewH
         InVH(@NonNull View itemView) {
             super(itemView);
             avatar = itemView.findViewById(R.id.chat_in_avatar);
+            storyRing = itemView.findViewById(R.id.chat_in_story_ring);
             bubble = itemView.findViewById(R.id.chat_in_bubble);
             image = itemView.findViewById(R.id.chat_in_image);
             time = itemView.findViewById(R.id.chat_in_time);
         }
 
-        void bind(Message m, SimpleDateFormat tf, String peerAvatar) {
+        void bind(
+                Message m,
+                SimpleDateFormat tf,
+                String peerAvatar,
+                boolean isGroupChat,
+                @NonNull String peerUid,
+                @NonNull List<Story> stories,
+                @NonNull String viewerUid
+        ) {
             String body = m.getContent() != null ? m.getContent() : "";
             if ("IMAGE".equalsIgnoreCase(m.getMessageType())) {
                 bubble.setVisibility(View.GONE);
@@ -236,6 +271,12 @@ public class ChatMessagesAdapter extends RecyclerView.Adapter<RecyclerView.ViewH
             Date c = m.getCreatedAt();
             time.setText(c != null ? tf.format(c) : "");
             UserAvatarLoader.load(avatar, peerAvatar);
+            if (isGroupChat || peerUid.isEmpty()) {
+                StoryRingUi.apply(storyRing, StoryRingUi.Tone.NONE, 32f);
+            } else {
+                StoryRingUi.Tone tone = StoryRingUi.toneForUser(peerUid, stories, viewerUid);
+                StoryRingUi.apply(storyRing, tone, 32f);
+            }
         }
     }
 

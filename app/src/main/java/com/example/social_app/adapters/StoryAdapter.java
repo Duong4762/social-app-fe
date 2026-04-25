@@ -19,7 +19,10 @@ import com.example.social_app.utils.UserAvatarLoader;
 import com.google.firebase.firestore.FirebaseFirestore;
 
 import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Date;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -28,21 +31,46 @@ public class StoryAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> 
     private static final int TYPE_ADD = 0;
     private static final int TYPE_STORY = 1;
 
+    /**
+     * Một user — nhiều story; trên trang chủ chỉ hiển thị một vòng avatar.
+     */
+    public static final class StoryGroup {
+        @NonNull
+        private final String userId;
+        @NonNull
+        private final List<Story> stories;
+
+        public StoryGroup(@NonNull String userId, @NonNull List<Story> stories) {
+            this.userId = userId;
+            this.stories = stories;
+        }
+
+        @NonNull
+        public String getUserId() {
+            return userId;
+        }
+
+        /** Cũ nhất trước → mới nhất sau (thứ tự xem trong popup). */
+        @NonNull
+        public List<Story> getStories() {
+            return stories;
+        }
+    }
+
     private final Context context;
-    private List<Story> stories;
+    private List<StoryGroup> storyGroups = new ArrayList<>();
     private final Map<String, User> userCache = new HashMap<>();
     private final OnStoryClickListener listener;
     private final String currentUserId;
 
     public interface OnStoryClickListener {
-        void onStoryClick(Story story, User user);
+        void onStoryClick(@NonNull List<Story> storiesForUser, @NonNull User user);
 
         void onAddStoryClick();
     }
 
     public StoryAdapter(Context context, OnStoryClickListener listener) {
         this.context = context;
-        this.stories = new ArrayList<>();
         this.listener = listener;
         this.currentUserId = FirebaseManager.getInstance().getAuth().getUid();
 
@@ -70,12 +98,14 @@ public class StoryAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> 
 
     public void setStories(List<Story> stories) {
         List<Story> list = stories != null ? new ArrayList<>(stories) : new ArrayList<>();
-        this.stories = reorderOwnStoriesFirst(list);
+        list = reorderOwnStoriesFirst(list);
+        this.storyGroups = buildGroups(list);
+        this.storyGroups = reorderGroupsOwnFirst(this.storyGroups);
         notifyDataSetChanged();
         loadAllUserInfo();
     }
 
-    /** Story của tài khoản hiện tại đứng ngay sau ô “Thêm”. */
+    /** Story của tài khoản hiện tại đứng đầu danh sách phẳng trước khi gộp nhóm. */
     @NonNull
     private List<Story> reorderOwnStoriesFirst(@NonNull List<Story> input) {
         if (currentUserId == null) {
@@ -94,19 +124,81 @@ public class StoryAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> 
         return own;
     }
 
+    /**
+     * Gộp theo userId, giữ thứ tự xuất hiện user lần đầu; trong mỗi nhóm sort theo thời gian tạo tăng dần (xem cũ → mới).
+     */
+    @NonNull
+    private List<StoryGroup> buildGroups(@NonNull List<Story> flat) {
+        Map<String, List<Story>> byUser = new LinkedHashMap<>();
+        List<String> userOrder = new ArrayList<>();
+        for (Story s : flat) {
+            String uid = s.getUserId();
+            if (uid == null) {
+                continue;
+            }
+            if (!byUser.containsKey(uid)) {
+                userOrder.add(uid);
+                byUser.put(uid, new ArrayList<>());
+            }
+            byUser.get(uid).add(s);
+        }
+        List<StoryGroup> groups = new ArrayList<>();
+        for (String uid : userOrder) {
+            List<Story> lst = byUser.get(uid);
+            if (lst == null || lst.isEmpty()) {
+                continue;
+            }
+            Collections.sort(lst, (a, b) -> {
+                Date da = a.getCreatedAt();
+                Date db = b.getCreatedAt();
+                if (da == null && db == null) {
+                    return 0;
+                }
+                if (da == null) {
+                    return -1;
+                }
+                if (db == null) {
+                    return 1;
+                }
+                return da.compareTo(db);
+            });
+            groups.add(new StoryGroup(uid, lst));
+        }
+        return groups;
+    }
+
+    @NonNull
+    private List<StoryGroup> reorderGroupsOwnFirst(@NonNull List<StoryGroup> groups) {
+        if (currentUserId == null) {
+            return groups;
+        }
+        List<StoryGroup> own = new ArrayList<>();
+        List<StoryGroup> rest = new ArrayList<>();
+        for (StoryGroup g : groups) {
+            if (currentUserId.equals(g.getUserId())) {
+                own.add(g);
+            } else {
+                rest.add(g);
+            }
+        }
+        own.addAll(rest);
+        return own;
+    }
+
     private void loadAllUserInfo() {
-        for (Story story : stories) {
-            if (!userCache.containsKey(story.getUserId())) {
+        for (StoryGroup group : storyGroups) {
+            String uid = group.getUserId();
+            if (!userCache.containsKey(uid)) {
                 FirebaseFirestore.getInstance()
                         .collection(FirebaseManager.COLLECTION_USERS)
-                        .document(story.getUserId())
+                        .document(uid)
                         .get()
                         .addOnSuccessListener(doc -> {
                             User user = doc.toObject(User.class);
                             if (user != null) {
                                 user.setId(doc.getId());
                                 Log.d("STORY", "Loaded user: " + user.getFullName());
-                                userCache.put(story.getUserId(), user);
+                                userCache.put(uid, user);
                                 notifyDataSetChanged();
                             }
                         });
@@ -121,7 +213,7 @@ public class StoryAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> 
 
     @Override
     public int getItemCount() {
-        return stories.size() + 1;
+        return storyGroups.size() + 1;
     }
 
     @NonNull
@@ -141,10 +233,10 @@ public class StoryAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> 
             ((AddStoryViewHolder) holder).bind(listener);
         } else if (holder instanceof StoryViewHolder) {
             int idx = position - 1;
-            if (idx >= 0 && idx < stories.size()) {
-                Story story = stories.get(idx);
-                User user = userCache.get(story.getUserId());
-                ((StoryViewHolder) holder).bind(story, user);
+            if (idx >= 0 && idx < storyGroups.size()) {
+                StoryGroup group = storyGroups.get(idx);
+                User user = userCache.get(group.getUserId());
+                ((StoryViewHolder) holder).bind(group, user);
             }
         }
     }
@@ -176,7 +268,7 @@ public class StoryAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> 
             username = itemView.findViewById(R.id.story_username);
         }
 
-        void bind(@NonNull Story story, @Nullable User user) {
+        void bind(@NonNull StoryGroup group, @Nullable User user) {
             if (user != null) {
                 username.setText(user.getFullName() != null ? user.getFullName() : user.getUsername());
                 UserAvatarLoader.load(avatar, user.getAvatarUrl());
@@ -185,10 +277,18 @@ public class StoryAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> 
                 avatar.setImageResource(R.drawable.avatar_placeholder);
             }
 
-            boolean ownStory = currentUserId != null && currentUserId.equals(story.getUserId());
-            boolean isViewed = story.getViewedBy() != null && story.getViewedBy().contains(currentUserId);
+            boolean allViewed = true;
+            for (Story s : group.getStories()) {
+                boolean seen = currentUserId != null
+                        && s.getViewedBy() != null
+                        && s.getViewedBy().contains(currentUserId);
+                if (!seen) {
+                    allViewed = false;
+                    break;
+                }
+            }
 
-            if (ownStory || isViewed) {
+            if (allViewed) {
                 storyRing.setBackgroundResource(R.drawable.story_ring_gray);
             } else {
                 storyRing.setBackgroundResource(R.drawable.story_ring);
@@ -198,7 +298,7 @@ public class StoryAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> 
 
             itemView.setOnClickListener(v -> {
                 if (listener != null && user != null) {
-                    listener.onStoryClick(story, user);
+                    listener.onStoryClick(new ArrayList<>(group.getStories()), user);
                 }
             });
         }

@@ -310,20 +310,34 @@
     <string name="chat_need_image_permission">App needs image permission</string>
     <string name="chat_cannot_read_images">Cannot read images from device</string>
     <string name="cd_chat_voice_call">Voice call</string>
+    <string name="cd_chat_rename_group">Group options</string>
+    <string name="chat_group_rename">Rename group</string>
+    <string name="group_chat_name_label">Group name</string>
+    <string name="group_chat_name_hint">Enter a name for this group</string>
+    <string name="group_chat_rename_update">Update</string>
+    <string name="group_chat_rename_empty">Please enter a group name</string>
+    <string name="group_chat_rename_success">Group name updated</string>
+    <string name="group_chat_rename_failed">Could not update group name</string>
     <string name="call_accept">Accept</string>
     <string name="call_decline">Decline</string>
     <string name="call_speaker">Speaker</string>
     <string name="call_hangup">End call</string>
     <string name="call_status_incoming">Incoming call…</string>
     <string name="call_status_waiting">Waiting for the other side…</string>
+    <string name="call_status_group_waiting">Waiting for group members…</string>
+    <string name="call_status_group_incoming">Incoming group call…</string>
     <string name="call_status_connected">Connected</string>
     <string name="call_peer_declined">Call declined</string>
     <string name="call_peer_cancelled">Caller cancelled</string>
     <string name="call_ended">Call ended</string>
     <string name="call_action_failed">Could not update call</string>
     <string name="call_start_failed">Could not start call</string>
+    <string name="call_group_too_many_members">Group voice supports up to %d people. Remove some members from the chat or split the group.</string>
     <string name="call_webrtc_error">Voice connection issue</string>
     <string name="call_need_mic_permission">Microphone permission is required for voice</string>
+    <string name="call_need_camera_permission">Camera permission is needed to show your video</string>
+    <string name="call_toggle_camera">Turn camera on or off</string>
+    <string name="call_switch_camera">Switch front or back camera</string>
     <string name="chat_tick_sent" translatable="false">✓</string>
     <string name="chat_tick_read" translatable="false">✓✓</string>
     <string name="retry">Retry</string>

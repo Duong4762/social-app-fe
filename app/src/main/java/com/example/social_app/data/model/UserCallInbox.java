@@ -20,12 +20,18 @@ public class UserCallInbox {
     private String peerUid;
     private String peerName;
     private String peerAvatarUrl;
+    @Nullable
+    private Boolean groupCall;
+    @Nullable
+    private String groupDisplayName;
 
     @NonNull
     public static UserCallInbox idle() {
         UserCallInbox i = new UserCallInbox();
         i.phase = PHASE_IDLE;
         i.callId = "";
+        i.groupCall = false;
+        i.groupDisplayName = "";
         return i;
     }
 
@@ -37,6 +43,8 @@ public class UserCallInbox {
         i.peerUid = snap.getString("peerUid");
         i.peerName = snap.getString("peerName");
         i.peerAvatarUrl = snap.getString("peerAvatarUrl");
+        i.groupCall = readGroupCallSafe(snap);
+        i.groupDisplayName = snap.getString("groupDisplayName");
         if (i.phase == null) {
             i.phase = PHASE_IDLE;
         }
@@ -44,6 +52,18 @@ public class UserCallInbox {
             i.callId = "";
         }
         return i;
+    }
+
+    /**
+     * Tránh crash khi field {@code groupCall} không đúng kiểu boolean trên Firestore.
+     */
+    private static boolean readGroupCallSafe(@NonNull DocumentSnapshot snap) {
+        try {
+            Boolean b = snap.getBoolean("groupCall");
+            return Boolean.TRUE.equals(b);
+        } catch (RuntimeException ignored) {
+            return false;
+        }
     }
 
     public boolean isActive() {
@@ -95,5 +115,22 @@ public class UserCallInbox {
 
     public void setPeerAvatarUrl(@Nullable String peerAvatarUrl) {
         this.peerAvatarUrl = peerAvatarUrl;
+    }
+
+    public boolean isGroupCall() {
+        return Boolean.TRUE.equals(groupCall);
+    }
+
+    @Nullable
+    public String getGroupDisplayName() {
+        return groupDisplayName;
+    }
+
+    public void setGroupCall(@Nullable Boolean groupCall) {
+        this.groupCall = groupCall;
+    }
+
+    public void setGroupDisplayName(@Nullable String groupDisplayName) {
+        this.groupDisplayName = groupDisplayName;
     }
 }

@@ -7,19 +7,31 @@
     android:padding="12dp"
     android:background="?attr/colorSurface">
 
-    <!-- User Avatar -->
-    <com.google.android.material.imageview.ShapeableImageView
-        android:id="@+id/composer_avatar"
-        android:layout_width="44dp"
-        android:layout_height="44dp"
-        android:background="@color/avatar_background"
-        android:contentDescription="@string/user_avatar"
-        android:scaleType="centerCrop"
-        android:src="@drawable/avatar_placeholder"
+    <FrameLayout
+        android:id="@+id/composer_avatar_ring_container"
+        android:layout_width="48dp"
+        android:layout_height="48dp"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="parent"
-        app:layout_constraintBottom_toBottomOf="parent"
-        app:shapeAppearanceOverlay="@style/ShapeAppearanceOverlay.SocialApp.Circle" />
+        app:layout_constraintBottom_toBottomOf="parent">
+
+        <View
+            android:id="@+id/composer_story_ring"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:visibility="gone" />
+
+        <com.google.android.material.imageview.ShapeableImageView
+            android:id="@+id/composer_avatar"
+            android:layout_width="44dp"
+            android:layout_height="44dp"
+            android:layout_gravity="center"
+            android:background="@color/avatar_background"
+            android:contentDescription="@string/user_avatar"
+            android:scaleType="centerCrop"
+            android:src="@drawable/avatar_placeholder"
+            app:shapeAppearanceOverlay="@style/ShapeAppearanceOverlay.SocialApp.Circle" />
+    </FrameLayout>
 
     <!-- What's new? Button (MaterialButton) -->
     <com.google.android.material.button.MaterialButton
@@ -35,10 +47,10 @@
         android:insetLeft="0dp"
         android:insetRight="0dp"
         app:cornerRadius="20dp"
-        app:layout_constraintStart_toEndOf="@id/composer_avatar"
+        app:layout_constraintStart_toEndOf="@id/composer_avatar_ring_container"
         app:layout_constraintEnd_toStartOf="@id/composer_image_btn"
-        app:layout_constraintTop_toTopOf="@id/composer_avatar"
-        app:layout_constraintBottom_toBottomOf="@id/composer_avatar" />
+        app:layout_constraintTop_toTopOf="@id/composer_avatar_ring_container"
+        app:layout_constraintBottom_toBottomOf="@id/composer_avatar_ring_container" />
 
     <!-- Image Icon Button -->
     <ImageButton
@@ -51,8 +63,8 @@
         android:scaleType="centerInside"
         app:tint="?attr/colorOnSurface"
         app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintTop_toTopOf="@id/composer_avatar"
-        app:layout_constraintBottom_toBottomOf="@id/composer_avatar"
+        app:layout_constraintTop_toTopOf="@id/composer_avatar_ring_container"
+        app:layout_constraintBottom_toBottomOf="@id/composer_avatar_ring_container"
         android:layout_marginEnd="0dp" />
 
 </androidx.constraintlayout.widget.ConstraintLayout>

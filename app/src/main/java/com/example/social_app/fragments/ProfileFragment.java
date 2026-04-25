@@ -60,6 +60,10 @@ import java.util.Calendar;
 
 import androidx.lifecycle.ViewModelProvider;
 
+import com.example.social_app.data.model.Story;
+import com.example.social_app.utils.StoryRingUi;
+import com.example.social_app.viewmodels.StoryViewModel;
+
 public class ProfileFragment extends Fragment implements PostAdapter.OnPostActionListener {
 
     private TextView tvUsernameTop;
@@ -77,6 +81,8 @@ public class ProfileFragment extends Fragment implements PostAdapter.OnPostActio
     private View tabIndicator;
     private View tabLoading;
     private ImageView imgAvatar;
+    @Nullable
+    private View profileStoryRing;
     private Button btnEditProfile;
     private RecyclerView rvPosts;
 
@@ -144,6 +150,22 @@ public class ProfileFragment extends Fragment implements PostAdapter.OnPostActio
         newPostViewModel = new ViewModelProvider(this).get(NewPostViewModel.class);
         bindViews(view);
         loadCurrentUserProfile();
+
+        StoryViewModel storyVm = new ViewModelProvider(requireActivity()).get(StoryViewModel.class);
+        storyVm.getStories().observe(getViewLifecycleOwner(), stories -> {
+            applyProfileStoryRing(stories);
+            if (postAdapter != null) {
+                postAdapter.setStoriesForAvatarRings(stories);
+            }
+        });
+    }
+
+    private void applyProfileStoryRing(@Nullable List<Story> stories) {
+        if (profileStoryRing == null || currentUserId == null) {
+            return;
+        }
+        StoryRingUi.Tone tone = StoryRingUi.toneForUser(currentUserId, stories, currentUserId);
+        StoryRingUi.apply(profileStoryRing, tone, 84f);
     }
 
     private void bindViews(View view) {
@@ -152,6 +174,7 @@ public class ProfileFragment extends Fragment implements PostAdapter.OnPostActio
         tvHandle = view.findViewById(R.id.tvHandle);
         tvBio = view.findViewById(R.id.tvBio);
         imgAvatar = view.findViewById(R.id.imgAvatar);
+        profileStoryRing = view.findViewById(R.id.profile_story_ring);
         tvChangeAvatar = view.findViewById(R.id.tvChangeAvatar);
         tabThreads = view.findViewById(R.id.tabThreads);
         tabReplies = view.findViewById(R.id.tabReplies);

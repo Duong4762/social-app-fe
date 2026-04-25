@@ -27,8 +27,12 @@ public class FirebaseManager {
     public static final String COLLECTION_VOICE_CALLS = "voice_calls";
     /** Mỗi user một document: phase + peer để lắng nghe realtime toàn app. */
     public static final String COLLECTION_USER_CALL_INBOX = "user_call_inbox";
-    /** Subcollection của {@code voice_calls/{callId}} — ICE trickle WebRTC. */
+    /** Subcollection của {@code voice_calls/{callId}} — ICE trickle WebRTC (gọi 1-1). */
     public static final String SUBCOLLECTION_VOICE_CALL_WEBRTC_ICE = "webrtc_ice";
+    /** Gọi nhóm mesh: SDP theo cặp {@code minUid_maxUid}. */
+    public static final String SUBCOLLECTION_VOICE_CALL_WEBRTC_EDGES = "webrtc_edges";
+    /** ICE trickle cho một cạnh mesh. */
+    public static final String SUBCOLLECTION_VOICE_CALL_EDGE_ICE = "webrtc_edge_ice";
     // -------------------------------------------------------
     // Firebase Storage Paths
     // -------------------------------------------------------

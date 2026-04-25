@@ -9,13 +9,17 @@ import android.widget.ImageView;
 import android.widget.TextView;
 
 import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
 import androidx.core.widget.ImageViewCompat;
 import androidx.recyclerview.widget.RecyclerView;
 
 import com.example.social_app.R;
+import com.example.social_app.data.model.Story;
+import com.example.social_app.utils.StoryRingUi;
 import com.example.social_app.utils.UserAvatarLoader;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 
 public class MessagesConversationAdapter extends RecyclerView.Adapter<MessagesConversationAdapter.VH> {
@@ -63,6 +67,9 @@ public class MessagesConversationAdapter extends RecyclerView.Adapter<MessagesCo
 
     private final List<Item> items = new ArrayList<>();
     private OnConversationClickListener clickListener;
+    private List<Story> storiesForRings = Collections.emptyList();
+    @Nullable
+    private String viewerUserId;
 
     public interface OnConversationClickListener {
         void onConversationClick(Item item);
@@ -70,6 +77,12 @@ public class MessagesConversationAdapter extends RecyclerView.Adapter<MessagesCo
 
     public void setOnConversationClickListener(OnConversationClickListener listener) {
         this.clickListener = listener;
+    }
+
+    public void setStoriesForRings(@Nullable List<Story> stories, @Nullable String viewerUserId) {
+        this.storiesForRings = stories != null ? stories : Collections.emptyList();
+        this.viewerUserId = viewerUserId;
+        notifyDataSetChanged();
     }
 
     public void setItems(List<Item> newItems) {
@@ -103,8 +116,15 @@ public class MessagesConversationAdapter extends RecyclerView.Adapter<MessagesCo
         h.photoIcon.setVisibility(item.showPhotoIcon ? View.VISIBLE : View.GONE);
         if (item.isGroup) {
             h.avatar.setImageResource(R.drawable.ic_group_chat);
+            StoryRingUi.apply(h.storyRing, StoryRingUi.Tone.NONE, 52f);
         } else {
             UserAvatarLoader.load(h.avatar, item.avatarUrl);
+            StoryRingUi.Tone tone = StoryRingUi.toneForUser(
+                    item.peerUserId.isEmpty() ? null : item.peerUserId,
+                    storiesForRings,
+                    viewerUserId
+            );
+            StoryRingUi.apply(h.storyRing, tone, 52f);
         }
         boolean last = position == getItemCount() - 1;
         h.divider.setVisibility(last ? View.GONE : View.VISIBLE);
@@ -134,6 +154,7 @@ public class MessagesConversationAdapter extends RecyclerView.Adapter<MessagesCo
         final View unreadDot;
         final ImageView photoIcon;
         final ImageView avatar;
+        final View storyRing;
         final View divider;
 
         VH(@NonNull View itemView) {
@@ -144,6 +165,7 @@ public class MessagesConversationAdapter extends RecyclerView.Adapter<MessagesCo
             unreadDot = itemView.findViewById(R.id.unread_dot);
             photoIcon = itemView.findViewById(R.id.preview_photo_icon);
             avatar = itemView.findViewById(R.id.conversation_avatar);
+            storyRing = itemView.findViewById(R.id.conversation_story_ring);
             divider = itemView.findViewById(R.id.row_divider);
         }
     }

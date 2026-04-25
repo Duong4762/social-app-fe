@@ -27,6 +27,7 @@ import com.example.social_app.data.model.User;
 import com.example.social_app.firebase.FirebaseManager;
 import com.example.social_app.viewmodels.HomeViewModel;
 import com.example.social_app.viewmodels.NewPostViewModel;
+import com.example.social_app.viewmodels.StoryViewModel;
 import com.google.android.material.tabs.TabLayout;
 import com.google.firebase.firestore.FirebaseFirestore;
 import com.google.firebase.firestore.FieldValue;
@@ -151,6 +152,13 @@ public class SearchFragment extends Fragment implements PostAdapter.OnPostAction
         postSearchAdapter = new PostAdapter(requireContext(), this);
         postSearchAdapter.setUseSearchLayout(true);
         postsRecyclerView.setAdapter(postSearchAdapter);
+
+        StoryViewModel storyVm = new ViewModelProvider(requireActivity()).get(StoryViewModel.class);
+        storyVm.getStories().observe(getViewLifecycleOwner(), stories -> {
+            if (postSearchAdapter != null) {
+                postSearchAdapter.setStoriesForAvatarRings(stories);
+            }
+        });
 
         // Tab listener
         tabLayout.addOnTabSelectedListener(new TabLayout.OnTabSelectedListener() {

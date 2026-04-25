@@ -1,23 +1,17 @@
 package com.example.social_app.webrtc;
 
-import android.Manifest;
 import android.content.Context;
-import android.content.pm.PackageManager;
 import android.os.Handler;
 import android.os.Looper;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
-import androidx.core.content.ContextCompat;
 
-import com.example.social_app.data.model.VoiceCallSession;
 import com.example.social_app.repository.VoiceCallRepository;
 import com.google.firebase.firestore.ListenerRegistration;
 
 import org.webrtc.AudioSource;
 import org.webrtc.AudioTrack;
-import org.webrtc.Camera2Enumerator;
-import org.webrtc.CameraVideoCapturer;
 import org.webrtc.DataChannel;
 import org.webrtc.DefaultVideoDecoderFactory;
 import org.webrtc.DefaultVideoEncoderFactory;
@@ -32,8 +26,6 @@ import org.webrtc.RtpReceiver;
 import org.webrtc.RtpTransceiver;
 import org.webrtc.SdpObserver;
 import org.webrtc.SessionDescription;
-import org.webrtc.SurfaceTextureHelper;
-import org.webrtc.VideoSource;
 import org.webrtc.VideoTrack;
 
 import java.util.ArrayDeque;
@@ -44,19 +36,10 @@ import java.util.Queue;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
- * Luồng âm thanh + video WebRTC P2P; SDP và ICE trao đổi qua Firestore ({@link VoiceCallRepository}).
+ * Một cạnh mesh WebRTC (audio) với {@code remoteUid}; SDP/ICE trên
+ * {@code voice_calls/{callId}/webrtc_edges/{edgeId}}.
  */
-public final class WebRtcAudioSession {
-
-    public interface P2pCallVideoCallback {
-        void onEglReady(@NonNull EglBase eglBase);
-
-        void onLocalVideoTrack(@NonNull VideoTrack track);
-
-        void onRemoteVideoTrack(@NonNull VideoTrack track);
-
-        void onRemoteVideoCleared();
-    }
+public final class WebRtcMeshPeerSession {
 
     private static final Object INIT_LOCK = new Object();
     private static boolean libraryInitialized;
@@ -64,8 +47,10 @@ public final class WebRtcAudioSession {
     private final Context appContext;
     private final VoiceCallRepository repository;
     private final String callId;
+    private final String edgeId;
     private final String myUid;
-    private final boolean isCaller;
+    private final String remoteUid;
+    private final boolean isOfferer;
     private final Runnable onError;
 
     private final Handler main = new Handler(Looper.getMainLooper());
@@ -73,66 +58,38 @@ public final class WebRtcAudioSession {
     private final AtomicBoolean offerPosted = new AtomicBoolean(false);
     private final AtomicBoolean disposed = new AtomicBoolean(false);
 
-    private ListenerRegistration callListener;
+    private ListenerRegistration edgeListener;
     private ListenerRegistration iceListener;
     private PeerConnectionFactory factory;
     private EglBase eglBase;
     private PeerConnection peerConnection;
     private AudioTrack localAudioTrack;
-
+    private final boolean usingSharedFactory;
     @Nullable
-    private P2pCallVideoCallback p2pVideoCallback;
-    @Nullable
-    private CameraVideoCapturer videoCapturer;
-    @Nullable
-    private SurfaceTextureHelper videoSurfaceHelper;
-    @Nullable
-    private VideoSource videoSource;
-    @Nullable
-    private VideoTrack localVideoTrack;
-    @Nullable
-    private VideoTrack remoteVideoTrack;
+    private final WebRtcMeshMediaShare mediaShare;
 
     private String lastSeenRemoteOffer = "";
     private String lastSeenRemoteAnswer = "";
 
-    public WebRtcAudioSession(
+    public WebRtcMeshPeerSession(
             @NonNull Context context,
             @NonNull VoiceCallRepository repository,
             @NonNull String callId,
             @NonNull String myUid,
-            boolean isCaller,
-            @NonNull Runnable onError
+            @NonNull String remoteUid,
+            @NonNull Runnable onError,
+            @Nullable WebRtcMeshMediaShare mediaShare
     ) {
         this.appContext = context.getApplicationContext();
         this.repository = repository;
         this.callId = callId;
         this.myUid = myUid;
-        this.isCaller = isCaller;
+        this.remoteUid = remoteUid;
+        this.edgeId = VoiceCallRepository.meshEdgeId(myUid, remoteUid);
+        this.isOfferer = myUid.compareTo(remoteUid) < 0;
         this.onError = onError;
-    }
-
-    public void setP2pCallVideoCallback(@Nullable P2pCallVideoCallback callback) {
-        this.p2pVideoCallback = callback;
-    }
-
-    public void setCameraEnabled(boolean enabled) {
-        main.post(() -> {
-            if (localVideoTrack != null) {
-                localVideoTrack.setEnabled(enabled);
-            }
-        });
-    }
-
-    public void switchCamera() {
-        main.post(() -> {
-            if (videoCapturer instanceof CameraVideoCapturer) {
-                try {
-                    ((CameraVideoCapturer) videoCapturer).switchCamera(null);
-                } catch (Exception ignored) {
-                }
-            }
-        });
+        this.mediaShare = mediaShare;
+        this.usingSharedFactory = mediaShare != null;
     }
 
     public void start() {
@@ -143,22 +100,11 @@ public final class WebRtcAudioSession {
             ensureLibraryInitialized(appContext);
             try {
                 buildPeerConnectionFactory();
-                if (p2pVideoCallback != null) {
-                    p2pVideoCallback.onEglReady(eglBase);
-                }
                 buildPeerConnection();
                 attachLocalAudio();
-                if (ContextCompat.checkSelfPermission(appContext, Manifest.permission.CAMERA)
-                        == PackageManager.PERMISSION_GRANTED) {
-                    attachLocalVideoP2p();
-                } else {
-                    peerConnection.addTransceiver(
-                            MediaStreamTrack.MediaType.MEDIA_TYPE_VIDEO,
-                            new RtpTransceiver.RtpTransceiverInit(RtpTransceiver.RtpTransceiverDirection.RECV_ONLY));
-                }
-                wireFirestoreSignaling();
+                wireEdgeSignaling();
                 wireIceListener();
-                if (isCaller) {
+                if (isOfferer) {
                     postCreateOffer();
                 }
             } catch (Exception e) {
@@ -177,50 +123,29 @@ public final class WebRtcAudioSession {
             iceListener.remove();
             iceListener = null;
         }
-        if (callListener != null) {
-            callListener.remove();
-            callListener = null;
+        if (edgeListener != null) {
+            edgeListener.remove();
+            edgeListener = null;
         }
         pendingRemoteIce.clear();
         if (peerConnection != null) {
             peerConnection.close();
             peerConnection = null;
         }
-        if (p2pVideoCallback != null) {
-            p2pVideoCallback.onRemoteVideoCleared();
-        }
-        p2pVideoCallback = null;
-        remoteVideoTrack = null;
-        if (localVideoTrack != null) {
-            localVideoTrack.dispose();
-            localVideoTrack = null;
-        }
-        if (videoSource != null) {
-            videoSource.dispose();
-            videoSource = null;
-        }
-        if (videoCapturer != null) {
-            try {
-                videoCapturer.stopCapture();
-            } catch (Exception ignored) {
-            }
-            videoCapturer.dispose();
-            videoCapturer = null;
-        }
-        if (videoSurfaceHelper != null) {
-            videoSurfaceHelper.dispose();
-            videoSurfaceHelper = null;
-        }
         if (localAudioTrack != null) {
             localAudioTrack.dispose();
             localAudioTrack = null;
         }
-        if (factory != null) {
+        if (!usingSharedFactory && factory != null) {
             factory.dispose();
             factory = null;
+        } else {
+            factory = null;
         }
-        if (eglBase != null) {
+        if (!usingSharedFactory && eglBase != null) {
             eglBase.release();
+            eglBase = null;
+        } else {
             eglBase = null;
         }
     }
@@ -238,6 +163,12 @@ public final class WebRtcAudioSession {
     }
 
     private void buildPeerConnectionFactory() {
+        if (mediaShare != null) {
+            mediaShare.prepare();
+            eglBase = mediaShare.getEglBase();
+            factory = mediaShare.getFactory();
+            return;
+        }
         eglBase = EglBase.create();
         PeerConnectionFactory.Options options = new PeerConnectionFactory.Options();
         DefaultVideoEncoderFactory enc = new DefaultVideoEncoderFactory(
@@ -282,8 +213,9 @@ public final class WebRtcAudioSession {
                 if (disposed.get()) {
                     return;
                 }
-                repository.pushIceCandidate(
+                repository.pushMeshEdgeIceCandidate(
                         callId,
+                        edgeId,
                         myUid,
                         candidate.sdpMid,
                         candidate.sdpMLineIndex,
@@ -317,16 +249,8 @@ public final class WebRtcAudioSession {
                     receiver.track().setEnabled(true);
                 } else if (receiver.track() instanceof VideoTrack) {
                     VideoTrack vt = (VideoTrack) receiver.track();
-                    // Không gọi setEnabled(true) ở đây: sẽ khiến UI tưởng đối phương đang bật cam
-                    // (fullscreen đen) dù họ chỉ thoại; UI dựa vào frame thực tế / trạng thái track phía gửi.
-                    if (p2pVideoCallback != null) {
-                        main.post(() -> {
-                            if (remoteVideoTrack != null && remoteVideoTrack != vt) {
-                                p2pVideoCallback.onRemoteVideoCleared();
-                            }
-                            remoteVideoTrack = vt;
-                            p2pVideoCallback.onRemoteVideoTrack(vt);
-                        });
+                    if (mediaShare != null) {
+                        mediaShare.notifyRemoteVideo(remoteUid, vt);
                     }
                 }
             }
@@ -339,112 +263,31 @@ public final class WebRtcAudioSession {
     private void attachLocalAudio() {
         MediaConstraints audioConstraints = new MediaConstraints();
         AudioSource source = factory.createAudioSource(audioConstraints);
-        localAudioTrack = factory.createAudioTrack("social_voice_a", source);
+        localAudioTrack = factory.createAudioTrack("mesh_a_" + remoteUid, source);
         localAudioTrack.setEnabled(true);
-        peerConnection.addTrack(localAudioTrack, Collections.singletonList("social_voice_s"));
-    }
-
-    private void addRecvOnlyVideoTransceiver() {
-        if (peerConnection == null || disposed.get()) {
-            return;
-        }
-        peerConnection.addTransceiver(
-                MediaStreamTrack.MediaType.MEDIA_TYPE_VIDEO,
-                new RtpTransceiver.RtpTransceiverInit(RtpTransceiver.RtpTransceiverDirection.RECV_ONLY));
-    }
-
-    /** Unified Plan: không dùng OfferToReceive*; thử nhiều profile vì một số máy từ chối 640x480@24. */
-    private static boolean tryStartP2pCapture(@NonNull CameraVideoCapturer capturer) {
-        int[][] profiles = {
-                {640, 480, 24},
-                {640, 360, 24},
-                {480, 360, 15},
-                {320, 240, 15}
-        };
-        for (int[] p : profiles) {
-            try {
-                capturer.startCapture(p[0], p[1], p[2]);
-                return true;
-            } catch (Exception ignored) {
+        peerConnection.addTrack(localAudioTrack, Collections.singletonList("mesh_s_" + remoteUid));
+        if (mediaShare != null) {
+            VideoTrack v = mediaShare.getLocalVideoTrack();
+            if (v != null) {
+                peerConnection.addTrack(v, Collections.singletonList("mesh_s_" + remoteUid));
+            } else {
+                peerConnection.addTransceiver(
+                        MediaStreamTrack.MediaType.MEDIA_TYPE_VIDEO,
+                        new RtpTransceiver.RtpTransceiverInit(RtpTransceiver.RtpTransceiverDirection.RECV_ONLY));
             }
         }
-        return false;
     }
 
-    private void disposeFailedP2pVideoCaptureOnly() {
-        if (videoCapturer != null) {
-            try {
-                videoCapturer.stopCapture();
-            } catch (Exception ignored) {
-            }
-            try {
-                videoCapturer.dispose();
-            } catch (Exception ignored) {
-            }
-            videoCapturer = null;
-        }
-        if (videoSource != null) {
-            videoSource.dispose();
-            videoSource = null;
-        }
-        if (videoSurfaceHelper != null) {
-            videoSurfaceHelper.dispose();
-            videoSurfaceHelper = null;
-        }
-    }
-
-    private void attachLocalVideoP2p() {
-        Camera2Enumerator enumerator = new Camera2Enumerator(appContext);
-        String[] names = enumerator.getDeviceNames();
-        if (names == null || names.length == 0) {
-            addRecvOnlyVideoTransceiver();
-            return;
-        }
-        String chosen = null;
-        for (String n : names) {
-            if (enumerator.isFrontFacing(n)) {
-                chosen = n;
-                break;
-            }
-        }
-        if (chosen == null) {
-            chosen = names[0];
-        }
-        videoCapturer = enumerator.createCapturer(chosen, null);
-        if (videoCapturer == null) {
-            addRecvOnlyVideoTransceiver();
-            return;
-        }
-        videoSurfaceHelper = SurfaceTextureHelper.create("p2p_vcap", eglBase.getEglBaseContext());
-        videoSource = factory.createVideoSource(videoCapturer.isScreencast());
-        videoCapturer.initialize(videoSurfaceHelper, appContext, videoSource.getCapturerObserver());
-        if (!tryStartP2pCapture(videoCapturer)) {
-            disposeFailedP2pVideoCaptureOnly();
-            addRecvOnlyVideoTransceiver();
-            return;
-        }
-        localVideoTrack = factory.createVideoTrack("social_voice_v", videoSource);
-        localVideoTrack.setEnabled(false);
-        peerConnection.addTrack(localVideoTrack, Collections.singletonList("social_voice_s"));
-        if (p2pVideoCallback != null) {
-            final VideoTrack t = localVideoTrack;
-            main.post(() -> p2pVideoCallback.onLocalVideoTrack(t));
-        }
-    }
-
-    private void wireFirestoreSignaling() {
-        callListener = repository.listenCall(callId, new VoiceCallRepository.CallSnapshotCallback() {
+    private void wireEdgeSignaling() {
+        edgeListener = repository.listenMeshEdge(callId, edgeId, new VoiceCallRepository.MeshEdgeCallback() {
             @Override
-            public void onCall(@Nullable VoiceCallSession session) {
-                if (disposed.get() || session == null) {
+            public void onEdge(@Nullable String sdpOffer, @Nullable String sdpAnswer) {
+                if (disposed.get()) {
                     return;
                 }
-                if (!VoiceCallSession.STATE_CONNECTED.equals(session.getState())) {
-                    return;
-                }
-                String offer = nonNull(session.getSdpOffer());
-                String answer = nonNull(session.getSdpAnswer());
-                if (isCaller) {
+                String offer = nonNull(sdpOffer);
+                String answer = nonNull(sdpAnswer);
+                if (isOfferer) {
                     if (!answer.isEmpty() && !answer.equals(lastSeenRemoteAnswer)) {
                         lastSeenRemoteAnswer = answer;
                         applyRemoteAnswer(answer);
@@ -465,7 +308,7 @@ public final class WebRtcAudioSession {
     }
 
     private void wireIceListener() {
-        iceListener = repository.listenIceCandidates(callId, new VoiceCallRepository.IceCandidateCallback() {
+        iceListener = repository.listenMeshEdgeIce(callId, edgeId, myUid, new VoiceCallRepository.IceCandidateCallback() {
             @Override
             public void onIceCandidate(
                     @NonNull String fromUid,
@@ -506,7 +349,7 @@ public final class WebRtcAudioSession {
                         if (disposed.get() || !offerPosted.compareAndSet(false, true)) {
                             return;
                         }
-                        repository.publishSdpOffer(callId, localOffer.description)
+                        repository.publishMeshEdgeOffer(callId, edgeId, localOffer.description)
                                 .addOnFailureListener(e -> main.post(onError));
                     }
 
@@ -578,7 +421,7 @@ public final class WebRtcAudioSession {
 
                     @Override
                     public void onSetSuccess() {
-                        repository.publishSdpAnswer(callId, localAnswer.description)
+                        repository.publishMeshEdgeAnswer(callId, edgeId, localAnswer.description)
                                 .addOnFailureListener(e -> main.post(onError));
                     }
 
